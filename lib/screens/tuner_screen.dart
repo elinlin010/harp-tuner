@@ -425,30 +425,51 @@ class _PermissionBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: AppColors.sharp.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.sharp.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
         border:
             Border.all(color: AppColors.sharp.withValues(alpha: 0.35), width: 1),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.mic_off_rounded, size: 16, color: AppColors.sharp),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Microphone access denied. Enable it in Settings.',
-              style: AppTextStyles.sans(12, color: AppColors.sharp),
-            ),
+          Row(
+            children: [
+              Icon(Icons.mic_off_rounded, size: 15, color: AppColors.sharp),
+              const SizedBox(width: 8),
+              Text(
+                'Microphone access denied',
+                style: AppTextStyles.sans(13,
+                    weight: FontWeight.w600, color: AppColors.sharp),
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
+          const SizedBox(height: 6),
+          Text(
+            'Go to Settings → Harp Tuner → Microphone and turn it on.',
+            style: AppTextStyles.sans(12,
+                color: AppColors.sharp.withValues(alpha: 0.85)),
+          ),
+          const SizedBox(height: 10),
           GestureDetector(
             onTap: () => openAppSettings(),
-            child: Text(
-              'Settings',
-              style: AppTextStyles.sans(12,
-                  weight: FontWeight.w600, color: AppColors.sharp),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              decoration: BoxDecoration(
+                color: AppColors.sharp.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppColors.sharp.withValues(alpha: 0.45), width: 1),
+              ),
+              child: Text(
+                'Open Settings',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.sans(13,
+                    weight: FontWeight.w600, color: AppColors.sharp),
+              ),
             ),
           ),
         ],

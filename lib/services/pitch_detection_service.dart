@@ -36,7 +36,11 @@ class PitchDetectionService {
 
   Future<bool> requestPermission() async {
     final status = await Permission.microphone.request();
-    return status.isGranted;
+    // Only hard-block when the user has explicitly and permanently denied.
+    // isDenied can also mean "not yet asked" on some iOS versions — let mic
+    // stream attempt to open and surface a real error if access truly fails.
+    if (status.isPermanentlyDenied) return false;
+    return true;
   }
 
   /// Returns a broadcast stream of [PitchResult] (or null when no pitch found).
