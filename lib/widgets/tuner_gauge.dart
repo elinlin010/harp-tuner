@@ -354,6 +354,16 @@ class _SignalReadout extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
 
+        const SizedBox(height: 10),
+
+        // Hz — prominent, its own line
+        if (detectedHz != null)
+          Text(
+            '${detectedHz!.toStringAsFixed(1)} Hz',
+            style: theme.mono(28, weight: FontWeight.w500, color: theme.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+
         const SizedBox(height: 14),
 
         // Status pill — "In Tune" / "Sharp" / "Flat"
@@ -370,27 +380,14 @@ class _SignalReadout extends StatelessWidget {
             ),
           ),
 
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
 
-        // Cents + Hz — secondary info
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              '$centsStr¢',
-              style: theme.mono(20, weight: FontWeight.w500,
-                  color: stateColor.withValues(alpha: 0.80)),
-            ),
-            if (detectedHz != null) ...[
-              const SizedBox(width: 14),
-              Text(
-                '${detectedHz!.toStringAsFixed(1)} Hz',
-                style: theme.mono(15, color: theme.textSecondary),
-              ),
-            ],
-          ],
+        // Cents — secondary
+        Text(
+          '$centsStr¢',
+          style: theme.mono(18, weight: FontWeight.w500,
+              color: stateColor.withValues(alpha: 0.75)),
+          textAlign: TextAlign.center,
         ),
       ],
     );
