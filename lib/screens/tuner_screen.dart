@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../models/harp_string_model.dart';
 import '../models/harp_type.dart';
@@ -318,37 +319,25 @@ class _GaugeCard extends StatelessWidget {
             isListening: tuner.isListening,
           ),
           const SizedBox(height: 14),
-          // Action row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (mode == TunerMode.auto)
-                _ListenButton(
-                  isListening: tuner.isListening,
-                  controller: listenBtnCtrl,
-                  onTap: onToggleListen,
-                )
-              else
-                Text(
-                  'Tap a string below to tune it',
-                  style: AppTextStyles.sans(13,
-                      color: AppColors.textSecondary),
-                ),
-            ],
-          ),
-          // Debug simulate button — tiny, unobtrusive
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: onMockDetect,
-            behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                'simulate',
-                style: AppTextStyles.sans(11, color: AppColors.textDim),
+          // Permission denied banner
+          if (tuner.permissionDenied) ...[
+            const SizedBox(height: 8),
+            _PermissionBanner(),
+          ] else ...[
+            const SizedBox(height: 14),
+            // Action row
+            if (mode == TunerMode.auto)
+              _ListenButton(
+                isListening: tuner.isListening,
+                controller: listenBtnCtrl,
+                onTap: onToggleListen,
+              )
+            else
+              Text(
+                'Tap a string below to tune it',
+                style: AppTextStyles.sans(13, color: AppColors.textSecondary),
               ),
-            ),
-          ),
+          ],
         ],
       ),
     );
@@ -425,6 +414,65 @@ class _ListenButton extends StatelessWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── Permission denied banner ──────────────────────────────────────────────────
+
+class _PermissionBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: AppColors.sharp.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(12),
+        border:
+            Border.all(color: AppColors.sharp.withValues(alpha: 0.35), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.mic_off_rounded, size: 15, color: AppColors.sharp),
+              const SizedBox(width: 8),
+              Text(
+                'Microphone access denied',
+                style: AppTextStyles.sans(13,
+                    weight: FontWeight.w600, color: AppColors.sharp),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Go to Settings → Harp Tuner → Microphone and turn it on.',
+            style: AppTextStyles.sans(12,
+                color: AppColors.sharp.withValues(alpha: 0.85)),
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => openAppSettings(),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 9),
+              decoration: BoxDecoration(
+                color: AppColors.sharp.withValues(alpha: 0.18),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: AppColors.sharp.withValues(alpha: 0.45), width: 1),
+              ),
+              child: Text(
+                'Open Settings',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.sans(13,
+                    weight: FontWeight.w600, color: AppColors.sharp),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
