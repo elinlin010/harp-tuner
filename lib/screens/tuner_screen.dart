@@ -42,32 +42,32 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
       backgroundColor: theme.bg,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
               // ── App title ─────────────────────────────────────────────────
               Center(
                 child: Text(
                   'TUNER',
-                  style: theme.label(13, color: theme.textDim),
+                  style: theme.label(14, color: theme.textDim),
                 ),
               ),
 
-              const SizedBox(height: 20),
-
-              // ── Gauge — bare, no card ──────────────────────────────────────
-              TunerGauge(
-                cents: tuner.cents,
-                noteName: tuner.closestNoteName,
-                detectedHz: tuner.detectedHz,
-                isListening: tuner.isListening,
-                theme: theme,
+              // ── Gauge + readout, vertically centered ──────────────────────
+              Expanded(
+                child: Center(
+                  child: TunerGauge(
+                    cents: tuner.cents,
+                    noteName: tuner.closestNoteName,
+                    detectedHz: tuner.detectedHz,
+                    isListening: tuner.isListening,
+                    theme: theme,
+                  ),
+                ),
               ),
-
-              const SizedBox(height: 28),
 
               // ── Flat/Sharp toggle ─────────────────────────────────────────
               Center(
@@ -79,28 +79,26 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-              // ── Listen button ─────────────────────────────────────────────
-              Center(
-                child: _ListenButton(
-                  isListening: tuner.isListening,
-                  controller: _listenBtnCtrl,
-                  onTap: () =>
-                      ref.read(tunerProvider.notifier).toggleListening(),
-                  theme: theme,
-                ),
+              // ── Listen button — full width, big ───────────────────────────
+              _ListenButton(
+                isListening: tuner.isListening,
+                controller: _listenBtnCtrl,
+                onTap: () =>
+                    ref.read(tunerProvider.notifier).toggleListening(),
+                theme: theme,
               ),
 
               // ── Permission denied banner ───────────────────────────────────
               if (tuner.permissionDenied) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 _PermissionBanner(theme: theme),
               ],
 
               // ── Mic hardware/API error banner ──────────────────────────────
               if (tuner.micError != null) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: 16),
                 _MicErrorBanner(
                   message: tuner.micError!,
                   onDismiss: () =>
@@ -108,6 +106,8 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   theme: theme,
                 ),
               ],
+
+              const SizedBox(height: 36),
             ],
           ),
         ),
@@ -134,11 +134,11 @@ class _FlatSharpToggle extends StatelessWidget {
     return GestureDetector(
       onTap: onToggle,
       child: Container(
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: theme.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: theme.surfaceRim, width: 0.5),
+          color: theme.surfaceHi,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: theme.surfaceRim, width: 1),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -181,18 +181,22 @@ class _ToggleTab extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
         decoration: BoxDecoration(
           color: active ? theme.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(19),
+          borderRadius: BorderRadius.circular(24),
           border: active
               ? Border.all(color: theme.surfaceRim, width: 1.0)
+              : null,
+          boxShadow: active
+              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4)]
               : null,
         ),
         child: Text(
           label,
-          style: theme.label(
-            12,
+          style: theme.sans(
+            16,
+            weight: active ? FontWeight.w600 : FontWeight.w400,
             color: active ? theme.textPrimary : theme.textDim,
           ),
         ),
@@ -225,45 +229,52 @@ class _ListenButton extends StatelessWidget {
         builder: (ctx, child) {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(18),
               color: isListening
-                  ? theme.inTune.withValues(alpha: 0.12)
+                  ? theme.inTune.withValues(alpha: 0.14)
                   : theme.surface,
               border: Border.all(
                 color: isListening
                     ? theme.inTune.withValues(
-                        alpha: 0.35 + controller.value * 0.20)
+                        alpha: 0.40 + controller.value * 0.20)
                     : theme.surfaceRim,
-                width: 1,
+                width: 1.5,
               ),
               boxShadow: isListening
                   ? [
                       BoxShadow(
                         color: theme.inTune.withValues(
-                            alpha: 0.10 + controller.value * 0.12),
-                        blurRadius: 14,
-                        spreadRadius: 1,
+                            alpha: 0.12 + controller.value * 0.14),
+                        blurRadius: 20,
+                        spreadRadius: 2,
                       )
                     ]
-                  : [],
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      )
+                    ],
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                  size: 16,
-                  color: isListening ? theme.inTune : theme.textDim,
+                  size: 28,
+                  color: isListening ? theme.inTune : theme.textSecondary,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Text(
                   isListening ? 'Stop' : 'Start Tuning',
                   style: theme.sans(
-                    14,
-                    weight: FontWeight.w600,
-                    color: isListening ? theme.inTune : theme.textDim,
+                    20,
+                    weight: FontWeight.w700,
+                    color: isListening ? theme.inTune : theme.textSecondary,
                   ),
                 ),
               ],
@@ -293,10 +304,10 @@ class _MicErrorBanner extends StatelessWidget {
     return GestureDetector(
       onTap: onDismiss,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: BoxDecoration(
           color: Colors.amber.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
               color: Colors.amber.withValues(alpha: 0.40), width: 1),
         ),
@@ -304,17 +315,17 @@ class _MicErrorBanner extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(Icons.warning_amber_rounded,
-                size: 15, color: Colors.amber.shade400),
-            const SizedBox(width: 8),
+                size: 20, color: Colors.amber.shade400),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
                 'Microphone unavailable: $message',
-                style: theme.sans(12, color: Colors.amber.shade300),
+                style: theme.sans(15, color: Colors.amber.shade300),
               ),
             ),
             const SizedBox(width: 8),
             Icon(Icons.close_rounded,
-                size: 14, color: Colors.amber.withValues(alpha: 0.60)),
+                size: 18, color: Colors.amber.withValues(alpha: 0.60)),
           ],
         ),
       ),
@@ -332,10 +343,10 @@ class _PermissionBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
         color: theme.sharp.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border:
             Border.all(color: theme.sharp.withValues(alpha: 0.35), width: 1),
       ),
@@ -344,35 +355,35 @@ class _PermissionBanner extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.mic_off_rounded, size: 15, color: theme.sharp),
-              const SizedBox(width: 8),
+              Icon(Icons.mic_off_rounded, size: 20, color: theme.sharp),
+              const SizedBox(width: 10),
               Text(
                 'Microphone access denied',
-                style: theme.sans(13, weight: FontWeight.w600, color: theme.sharp),
+                style: theme.sans(16, weight: FontWeight.w700, color: theme.sharp),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             'Go to Settings → Tuner → Microphone and turn it on.',
-            style: theme.sans(12, color: theme.sharp.withValues(alpha: 0.85)),
+            style: theme.sans(15, color: theme.sharp.withValues(alpha: 0.85)),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           GestureDetector(
             onTap: () => openAppSettings(),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 9),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: theme.sharp.withValues(alpha: 0.18),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                     color: theme.sharp.withValues(alpha: 0.45), width: 1),
               ),
               child: Text(
                 'Open Settings',
                 textAlign: TextAlign.center,
-                style: theme.sans(13, weight: FontWeight.w600, color: theme.sharp),
+                style: theme.sans(16, weight: FontWeight.w700, color: theme.sharp),
               ),
             ),
           ),

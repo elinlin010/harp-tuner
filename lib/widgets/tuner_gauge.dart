@@ -52,9 +52,9 @@ class _TunerGaugeState extends State<TunerGauge>
   String get _tuneWord {
     final c = widget.cents;
     if (c == null) return '';
-    if (c.abs() <= 5) return 'IN TUNE';
-    if (c > 0) return 'SHARP';
-    return 'FLAT';
+    if (c.abs() <= 5) return 'In Tune';
+    if (c > 0) return 'Sharp';
+    return 'Flat';
   }
 
   @override
@@ -64,44 +64,52 @@ class _TunerGaugeState extends State<TunerGauge>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          height: 148,
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: AnimatedBuilder(
-                  animation: _pulseCtrl,
-                  builder: (ctx, child) => CustomPaint(
-                    painter: _ArcPainter(
-                      cents: widget.cents,
-                      stateColor: _stateColor,
-                      isListening: widget.isListening,
-                      pulse: _pulseCtrl.value,
-                      theme: widget.theme,
+        // Arc gauge — fills full available width
+        LayoutBuilder(
+          builder: (ctx, constraints) {
+            final gaugeHeight = constraints.maxWidth / 2 + 16;
+            return SizedBox(
+              height: gaugeHeight,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: _pulseCtrl,
+                      builder: (ctx, child) => CustomPaint(
+                        painter: _ArcPainter(
+                          cents: widget.cents,
+                          stateColor: _stateColor,
+                          isListening: widget.isListening,
+                          pulse: _pulseCtrl.value,
+                          theme: widget.theme,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  Positioned(
+                    bottom: 0,
+                    left: 14,
+                    child: _ScaleLabel('−50', theme: widget.theme),
+                  ),
+                  Positioned(
+                    top: 6,
+                    left: 0,
+                    right: 0,
+                    child: Center(child: _ScaleLabel('0', theme: widget.theme)),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 14,
+                    child: _ScaleLabel('+50', theme: widget.theme),
+                  ),
+                ],
               ),
-              Positioned(
-                bottom: 0,
-                left: 14,
-                child: _ScaleLabel('−50', theme: widget.theme),
-              ),
-              Positioned(
-                top: 4,
-                left: 0,
-                right: 0,
-                child: Center(child: _ScaleLabel('0', theme: widget.theme)),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 14,
-                child: _ScaleLabel('+50', theme: widget.theme),
-              ),
-            ],
-          ),
+            );
+          },
         ),
-        const SizedBox(height: 16),
+
+        const SizedBox(height: 24),
+
         if (!hasSignal)
           _IdleReadout(
             isListening: widget.isListening,
@@ -134,7 +142,7 @@ class _ScaleLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: theme.mono(10, color: theme.textDim),
+      style: theme.mono(13, color: theme.textDim),
     );
   }
 }
@@ -177,7 +185,7 @@ class _ArcPainter extends CustomPainter {
       false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
+        ..strokeWidth = 2.0
         ..color = theme.surfaceRim,
     );
 
@@ -191,9 +199,9 @@ class _ArcPainter extends CustomPainter {
       false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 3
+        ..strokeWidth = 5
         ..strokeCap = StrokeCap.round
-        ..color = theme.inTune.withValues(alpha: 0.30),
+        ..color = theme.inTune.withValues(alpha: 0.35),
     );
 
     // ── Ticks ─────────────────────────────────────────────────────────────────
@@ -201,13 +209,13 @@ class _ArcPainter extends CustomPainter {
       final isMajor = c % 10 == 0;
       final angle = _centsToAngle(c.toDouble());
       final outer = r - 2;
-      final inner = r - (isMajor ? 14.0 : 7.0);
+      final inner = r - (isMajor ? 20.0 : 10.0);
       canvas.drawLine(
         Offset(cx + inner * cos(angle), cy + inner * sin(angle)),
         Offset(cx + outer * cos(angle), cy + outer * sin(angle)),
         Paint()
           ..color = isMajor ? theme.textSecondary : theme.textDim
-          ..strokeWidth = isMajor ? 1.5 : 1.0
+          ..strokeWidth = isMajor ? 2.0 : 1.2
           ..style = PaintingStyle.stroke,
       );
     }
@@ -215,7 +223,7 @@ class _ArcPainter extends CustomPainter {
     // ── Needle ───────────────────────────────────────────────────────────────
     final hasSignal = cents != null;
     final angle = hasSignal ? _centsToAngle(cents!) : _centsToAngle(0);
-    final needleLen = r - 14;
+    final needleLen = r - 18;
     final tipX = cx + needleLen * cos(angle);
     final tipY = cy + needleLen * sin(angle);
 
@@ -224,8 +232,8 @@ class _ArcPainter extends CustomPainter {
       canvas.drawLine(
         Offset(cx, cy), Offset(tipX, tipY),
         Paint()
-          ..color = stateColor.withValues(alpha: 0.12 + pulse * 0.08)
-          ..strokeWidth = 10
+          ..color = stateColor.withValues(alpha: 0.15 + pulse * 0.10)
+          ..strokeWidth = 18
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,
       );
@@ -234,7 +242,7 @@ class _ArcPainter extends CustomPainter {
         Offset(cx, cy), Offset(tipX, tipY),
         Paint()
           ..color = stateColor
-          ..strokeWidth = 2.0
+          ..strokeWidth = 3.5
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,
       );
@@ -243,7 +251,7 @@ class _ArcPainter extends CustomPainter {
     // Pivot dot
     canvas.drawCircle(
       Offset(cx, cy),
-      hasSignal ? 3.5 : 3.0,
+      hasSignal ? 6.0 : 4.0,
       Paint()
         ..color = hasSignal ? stateColor : theme.textDim.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill,
@@ -253,10 +261,10 @@ class _ArcPainter extends CustomPainter {
     if (isListening && !hasSignal) {
       canvas.drawCircle(
         Offset(cx, cy),
-        12 + pulse * 8,
+        16 + pulse * 10,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.0
+          ..strokeWidth = 1.5
           ..color = theme.textSecondary.withValues(alpha: 0.15 + pulse * 0.20),
       );
     }
@@ -292,10 +300,21 @@ class _IdleReadout extends StatelessWidget {
         opacity: isListening ? (0.55 + pulse.value * 0.45) : 1.0,
         child: child,
       ),
-      child: Text(
-        isListening ? 'Listening for a note…' : 'Play a note to begin tuning',
-        style: theme.display(16, weight: FontWeight.w400, color: theme.textSecondary),
-        textAlign: TextAlign.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isListening ? Icons.mic_rounded : Icons.music_note_rounded,
+            size: 48,
+            color: isListening ? theme.textSecondary : theme.textDim,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isListening ? 'Listening for a note…' : 'Tap the button below\nto start tuning',
+            style: theme.sans(22, weight: FontWeight.w500, color: theme.textSecondary),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
@@ -328,36 +347,47 @@ class _SignalReadout extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Note name — Libre Baskerville, large, ink
+        // Note name — big serif
         Text(
           noteName,
-          style: theme.display(72, weight: FontWeight.w400)
-              .copyWith(height: 1),
+          style: theme.display(100, weight: FontWeight.w400).copyWith(height: 1),
           textAlign: TextAlign.center,
         ),
-        const SizedBox(height: 8),
+
+        const SizedBox(height: 14),
+
+        // Status pill — "In Tune" / "Sharp" / "Flat"
+        if (tuneWord.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 7),
+            decoration: BoxDecoration(
+              color: stateColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Text(
+              tuneWord,
+              style: theme.sans(22, weight: FontWeight.w700, color: stateColor),
+            ),
+          ),
+
+        const SizedBox(height: 12),
+
+        // Cents + Hz — secondary info
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.baseline,
           textBaseline: TextBaseline.alphabetic,
           children: [
-            // Cents — JetBrains Mono, state-colored
             Text(
               '$centsStr¢',
-              style: theme.mono(22, weight: FontWeight.w500, color: stateColor),
+              style: theme.mono(20, weight: FontWeight.w500,
+                  color: stateColor.withValues(alpha: 0.80)),
             ),
-            if (tuneWord.isNotEmpty) ...[
-              const SizedBox(width: 10),
-              Text(
-                tuneWord,
-                style: theme.label(9, color: stateColor.withValues(alpha: 0.80)),
-              ),
-            ],
             if (detectedHz != null) ...[
-              const SizedBox(width: 10),
+              const SizedBox(width: 14),
               Text(
                 '${detectedHz!.toStringAsFixed(1)} Hz',
-                style: theme.mono(11, color: theme.textSecondary),
+                style: theme.mono(15, color: theme.textSecondary),
               ),
             ],
           ],
