@@ -1,14 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
-import '../models/harp_string_model.dart';
-import '../models/harp_type.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
-import '../widgets/string_tile.dart';
 import '../widgets/tuner_gauge.dart';
 
 class TunerScreen extends ConsumerStatefulWidget {
@@ -20,13 +15,11 @@ class TunerScreen extends ConsumerStatefulWidget {
 
 class _TunerScreenState extends ConsumerState<TunerScreen>
     with SingleTickerProviderStateMixin {
-  late ScrollController _scrollCtrl;
   late AnimationController _listenBtnCtrl;
 
   @override
   void initState() {
     super.initState();
-    _scrollCtrl = ScrollController();
     _listenBtnCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -35,170 +28,138 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
   @override
   void dispose() {
-    _scrollCtrl.dispose();
     _listenBtnCtrl.dispose();
     super.dispose();
   }
 
-  void _mockDetect(List<HarpStringModel> strings) {
-    if (strings.isEmpty) return;
-    final rng = math.Random();
-    final s = strings[rng.nextInt(strings.length)];
-    final cents = rng.nextDouble() * 60 - 30;
-    ref.read(tunerProvider.notifier).mockReading(
-      cents: cents,
-      hz: s.frequency * math.pow(2, cents / 1200).toDouble(),
-      string: s,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final harpType = ref.watch(selectedHarpProvider);
-    final strings = ref.watch(harpStringsProvider);
-    final mode = ref.watch(tunerModeProvider);
     final tuner = ref.watch(tunerProvider);
-    final selectedIdx = ref.watch(selectedStringIndexProvider);
-    final selectedStr = ref.watch(selectedStringProvider);
-
-    final gaugeString =
-        mode == TunerMode.auto ? tuner.closestString : selectedStr;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
-      body: Column(
-        children: [
-          // ── Top bar (includes mode toggle) ────────────────────────────────
-          _TopBar(
-            harpType: harpType?.displayName ?? '',
-            mode: mode,
-            onModeChanged: (m) {
-              ref.read(tunerModeProvider.notifier).state = m;
-              ref.read(selectedStringIndexProvider.notifier).state = null;
-            },
-          ),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 24),
 
-          // ── Gauge card ────────────────────────────────────────────────────
-          _GaugeCard(
-            mode: mode,
-            tuner: tuner,
-            gaugeString: gaugeString,
-            listenBtnCtrl: _listenBtnCtrl,
-            onToggleListen: () {
-              ref.read(tunerProvider.notifier).toggleListening();
-              if (!tuner.isListening) _mockDetect(strings);
-            },
-            onMockDetect: () => _mockDetect(strings),
-          ),
+              // ── App title ─────────────────────────────────────────────────
+              Center(
+                child: Text(
+                  'TUNER',
+                  style: AppTextStyles.label(13, color: AppColors.gold),
+                ),
+              ),
 
-          // ── Strings header ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-            child: Row(
-              children: [
-                Text('STRINGS',
-                    style: AppTextStyles.label(11,
-                        color: AppColors.textSecondary)),
-                const Spacer(),
-                Text('${strings.length} strings',
-                    style: AppTextStyles.sans(12, color: AppColors.textDim)),
+              const SizedBox(height: 20),
+
+              // ── Gauge card ────────────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceHi,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: AppColors.surfaceRim, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.45),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: TunerGauge(
+                  cents: tuner.cents,
+                  noteName: tuner.closestNoteName,
+                  detectedHz: tuner.detectedHz,
+                  isListening: tuner.isListening,
+                ),
+              ),
+
+              const SizedBox(height: 28),
+
+              // ── Flat/Sharp toggle ─────────────────────────────────────────
+              Center(
+                child: _FlatSharpToggle(
+                  preferFlats: tuner.preferFlats,
+                  onToggle: () =>
+                      ref.read(tunerProvider.notifier).togglePreferFlats(),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Listen button ─────────────────────────────────────────────
+              Center(
+                child: _ListenButton(
+                  isListening: tuner.isListening,
+                  controller: _listenBtnCtrl,
+                  onTap: () =>
+                      ref.read(tunerProvider.notifier).toggleListening(),
+                ),
+              ),
+
+              // ── Permission denied banner ───────────────────────────────────
+              if (tuner.permissionDenied) ...[
+                const SizedBox(height: 20),
+                _PermissionBanner(),
               ],
-            ),
-          ),
 
-          // ── String list ───────────────────────────────────────────────────
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: const EdgeInsets.only(bottom: 32),
-              itemCount: strings.length,
-              itemBuilder: (context, i) {
-                final dispIdx = strings.length - 1 - i;
-                final s = strings[dispIdx];
-                final isSelected =
-                    mode == TunerMode.manual && selectedIdx == dispIdx;
-                final isClosest = mode == TunerMode.auto &&
-                    tuner.closestString?.label == s.label;
-                return StringTile(
-                  key: ValueKey(s.label),
-                  string: s,
-                  isSelected: isSelected,
-                  isClosest: isClosest,
-                  onTap: () {
-                    ref.read(selectedStringIndexProvider.notifier).state =
-                        (selectedIdx == dispIdx) ? null : dispIdx;
-                  },
-                  onPlayTone: () =>
-                      ref.read(tunerProvider.notifier).playTone(s),
-                );
-              },
-            ),
+              // ── Mic hardware/API error banner ──────────────────────────────
+              if (tuner.micError != null) ...[
+                const SizedBox(height: 20),
+                _MicErrorBanner(
+                  message: tuner.micError!,
+                  onDismiss: () =>
+                      ref.read(tunerProvider.notifier).clearMicError(),
+                ),
+              ],
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-// ── Top bar ───────────────────────────────────────────────────────────────────
+// ── Flat/Sharp toggle ─────────────────────────────────────────────────────────
 
-class _TopBar extends StatelessWidget {
-  final String harpType;
-  final TunerMode mode;
-  final ValueChanged<TunerMode> onModeChanged;
+class _FlatSharpToggle extends StatelessWidget {
+  final bool preferFlats;
+  final VoidCallback onToggle;
 
-  const _TopBar({
-    required this.harpType,
-    required this.mode,
-    required this.onModeChanged,
+  const _FlatSharpToggle({
+    required this.preferFlats,
+    required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      bottom: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+    return GestureDetector(
+      onTap: onToggle,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: AppColors.surfaceRim, width: 0.5),
+        ),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Back button — 44px touch target
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              behavior: HitTestBehavior.opaque,
-              child: SizedBox(
-                width: 44,
-                height: 44,
-                child: Center(
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.surfaceRim),
-                      color: AppColors.surface,
-                    ),
-                    child: const Icon(Icons.chevron_left_rounded,
-                        color: AppColors.textSecondary, size: 22),
-                  ),
-                ),
-              ),
+            _ToggleTab(
+              label: 'b  Flats',
+              active: preferFlats,
+              onTap: onToggle,
             ),
-            const SizedBox(width: 8),
-            // Title
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(harpType,
-                      style: AppTextStyles.sans(16, weight: FontWeight.w700)),
-                  Text('TUNER',
-                      style: AppTextStyles.label(9, color: AppColors.gold)),
-                ],
-              ),
+            _ToggleTab(
+              label: '#  Sharps',
+              active: !preferFlats,
+              onTap: onToggle,
             ),
-            // Mode toggle — inline in top bar
-            _ModeToggle(mode: mode, onChanged: onModeChanged),
           ],
         ),
       ),
@@ -206,45 +167,16 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-class _ModeToggle extends StatelessWidget {
-  final TunerMode mode;
-  final ValueChanged<TunerMode> onChanged;
-
-  const _ModeToggle({required this.mode, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.surfaceRim, width: 0.5),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _ModeTab(
-              label: 'AUTO',
-              active: mode == TunerMode.auto,
-              onTap: () => onChanged(TunerMode.auto)),
-          _ModeTab(
-              label: 'MANUAL',
-              active: mode == TunerMode.manual,
-              onTap: () => onChanged(TunerMode.manual)),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModeTab extends StatelessWidget {
+class _ToggleTab extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
 
-  const _ModeTab(
-      {required this.label, required this.active, required this.onTap});
+  const _ToggleTab({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -252,12 +184,12 @@ class _ModeTab extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         decoration: BoxDecoration(
           color: active
               ? AppColors.gold.withValues(alpha: 0.18)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(17),
+          borderRadius: BorderRadius.circular(19),
           border: active
               ? Border.all(
                   color: AppColors.gold.withValues(alpha: 0.45), width: 0.5)
@@ -265,80 +197,11 @@ class _ModeTab extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: AppTextStyles.label(11,
-              color: active ? AppColors.goldBright : AppColors.textDim),
+          style: AppTextStyles.label(
+            12,
+            color: active ? AppColors.goldBright : AppColors.textDim,
+          ),
         ),
-      ),
-    );
-  }
-}
-
-// ── Gauge card ────────────────────────────────────────────────────────────────
-
-class _GaugeCard extends StatelessWidget {
-  final TunerMode mode;
-  final TunerState tuner;
-  final HarpStringModel? gaugeString;
-  final AnimationController listenBtnCtrl;
-  final VoidCallback onToggleListen;
-  final VoidCallback onMockDetect;
-
-  const _GaugeCard({
-    required this.mode,
-    required this.tuner,
-    required this.gaugeString,
-    required this.listenBtnCtrl,
-    required this.onToggleListen,
-    required this.onMockDetect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceHi,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.surfaceRim, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.45),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TunerGauge(
-            cents: tuner.cents,
-            noteName: gaugeString?.label,
-            detectedHz: tuner.detectedHz,
-            isListening: tuner.isListening,
-          ),
-          const SizedBox(height: 14),
-          // Permission denied banner
-          if (tuner.permissionDenied) ...[
-            const SizedBox(height: 8),
-            _PermissionBanner(),
-          ] else ...[
-            const SizedBox(height: 14),
-            // Action row
-            if (mode == TunerMode.auto)
-              _ListenButton(
-                isListening: tuner.isListening,
-                controller: listenBtnCtrl,
-                onTap: onToggleListen,
-              )
-            else
-              Text(
-                'Tap a string below to tune it',
-                style: AppTextStyles.sans(13, color: AppColors.textSecondary),
-              ),
-          ],
-        ],
       ),
     );
   }
@@ -366,8 +229,7 @@ class _ListenButton extends StatelessWidget {
         builder: (ctx, child) {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
               color: isListening
@@ -404,16 +266,61 @@ class _ListenButton extends StatelessWidget {
                 const SizedBox(width: 8),
                 Text(
                   isListening ? 'Stop' : 'Start Tuning',
-                  style: AppTextStyles.sans(14,
-                      weight: FontWeight.w600,
-                      color: isListening
-                          ? AppColors.goldBright
-                          : AppColors.textSecondary),
+                  style: AppTextStyles.sans(
+                    14,
+                    weight: FontWeight.w600,
+                    color: isListening
+                        ? AppColors.goldBright
+                        : AppColors.textSecondary,
+                  ),
                 ),
               ],
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+// ── Mic hardware/API error banner ─────────────────────────────────────────────
+
+class _MicErrorBanner extends StatelessWidget {
+  final String message;
+  final VoidCallback onDismiss;
+
+  const _MicErrorBanner({required this.message, required this.onDismiss});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onDismiss,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: Colors.amber.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: Colors.amber.withValues(alpha: 0.40), width: 1),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.warning_amber_rounded,
+                size: 15, color: Colors.amber.shade400),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Microphone unavailable: $message',
+                style: AppTextStyles.sans(12,
+                    color: Colors.amber.shade300),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.close_rounded,
+                size: 14, color: Colors.amber.withValues(alpha: 0.60)),
+          ],
+        ),
       ),
     );
   }
@@ -448,7 +355,7 @@ class _PermissionBanner extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'Go to Settings → Harp Tuner → Microphone and turn it on.',
+            'Go to Settings → Tuner → Microphone and turn it on.',
             style: AppTextStyles.sans(12,
                 color: AppColors.sharp.withValues(alpha: 0.85)),
           ),

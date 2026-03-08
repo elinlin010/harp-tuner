@@ -2,74 +2,50 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../data/harp_presets.dart';
-import '../models/harp_string_model.dart';
-import '../models/harp_type.dart';
 import '../services/pitch_detection_service.dart';
 import '../utils/music_utils.dart';
 
-// ── Harp selection ──────────────────────────────────────────────────────────
-
-final selectedHarpProvider = StateProvider<HarpType?>((ref) => null);
-
-final harpStringsProvider = Provider<List<HarpStringModel>>((ref) {
-  final type = ref.watch(selectedHarpProvider);
-  if (type == null) return [];
-  return HarpPresets.stringsFor(type);
-});
-
-// ── Tuner mode ──────────────────────────────────────────────────────────────
-
-enum TunerMode { auto, manual }
-
-final tunerModeProvider = StateProvider<TunerMode>((ref) => TunerMode.auto);
-
-// ── Selected string (manual mode) ───────────────────────────────────────────
-
-final selectedStringIndexProvider = StateProvider<int?>((ref) => null);
-
-final selectedStringProvider = Provider<HarpStringModel?>((ref) {
-  final strings = ref.watch(harpStringsProvider);
-  final idx = ref.watch(selectedStringIndexProvider);
-  if (idx == null || idx >= strings.length) return null;
-  return strings[idx];
-});
-
-// ── Tuner state ──────────────────────────────────────────────────────────────
+// ── Tuner state ───────────────────────────────────────────────────────────────
 
 class TunerState {
   final bool isListening;
-  final bool isPlayingTone;
   final bool permissionDenied;
+  final bool preferFlats;
   final double? cents;
   final double? detectedHz;
-  final HarpStringModel? closestString;
+  final String? closestNoteName;
+  final String? micError;
 
   const TunerState({
     this.isListening = false,
-    this.isPlayingTone = false,
     this.permissionDenied = false,
+    this.preferFlats = false,
     this.cents,
     this.detectedHz,
-    this.closestString,
+    this.closestNoteName,
+    this.micError,
   });
 
   TunerState copyWith({
     bool? isListening,
-    bool? isPlayingTone,
     bool? permissionDenied,
+    bool? preferFlats,
     double? cents,
     double? detectedHz,
-    HarpStringModel? closestString,
+    String? closestNoteName,
+    String? micError,
     bool clearPitch = false,
+    bool clearMicError = false,
   }) {
     return TunerState(
       isListening: isListening ?? this.isListening,
-      isPlayingTone: isPlayingTone ?? this.isPlayingTone,
       permissionDenied: permissionDenied ?? this.permissionDenied,
+      preferFlats: preferFlats ?? this.preferFlats,
       cents: clearPitch ? null : (cents ?? this.cents),
       detectedHz: clearPitch ? null : (detectedHz ?? this.detectedHz),
-      closestString: clearPitch ? null : (closestString ?? this.closestString),
+      closestNoteName:
+          clearPitch ? null : (closestNoteName ?? this.closestNoteName),
+      micError: (clearPitch || clearMicError) ? null : (micError ?? this.micError),
     );
   }
 }
@@ -77,11 +53,10 @@ class TunerState {
 // ── Tuner notifier ────────────────────────────────────────────────────────────
 
 class TunerNotifier extends StateNotifier<TunerState> {
-  final Ref _ref;
   final PitchDetectionService _service = PitchDetectionService();
   StreamSubscription<PitchResult?>? _pitchSub;
 
-  TunerNotifier(this._ref) : super(const TunerState());
+  TunerNotifier() : super(const TunerState());
 
   // ── Listening ──────────────────────────────────────────────────────────────
 
@@ -102,7 +77,19 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
     _pitchSub = _service.start().listen(
       _onPitchResult,
-      onError: (_) => stopListening(),
+      onError: (e) async {
+        stopListening();
+        if (e is PitchServiceError && e.isPermissionError) {
+          state = state.copyWith(permissionDenied: true);
+        } else if (e is PitchServiceError) {
+          state = state.copyWith(micError: e.message);
+        } else {
+          final granted = await _service.checkPermission();
+          if (!granted) {
+            state = state.copyWith(permissionDenied: true);
+          }
+        }
+      },
       cancelOnError: false,
     );
   }
@@ -122,49 +109,41 @@ class TunerNotifier extends StateNotifier<TunerState> {
     }
   }
 
-  void _onPitchResult(PitchResult? result) {
-    if (result == null) {
-      // No clear pitch detected — keep last reading briefly, then clear
-      // (avoids flickering; handled by UI idle timeout if desired)
-      return;
+  void clearMicError() {
+    state = state.copyWith(clearMicError: true);
+  }
+
+  void togglePreferFlats() {
+    // When flats preference changes, re-render the current note name if present
+    final newPreferFlats = !state.preferFlats;
+    if (state.detectedHz != null) {
+      final info = MusicUtils.frequencyToNoteInfo(
+        state.detectedHz!,
+        preferFlats: newPreferFlats,
+      );
+      state = state.copyWith(
+        preferFlats: newPreferFlats,
+        closestNoteName: info.noteName,
+        cents: info.cents,
+      );
+    } else {
+      state = state.copyWith(preferFlats: newPreferFlats);
     }
+  }
 
-    final strings = _ref.read(harpStringsProvider);
-    final closest = MusicUtils.closestString(result.frequency, strings);
+  void _onPitchResult(PitchResult? result) {
+    if (result == null) return;
 
-    if (closest == null) return;
-
-    final cents = MusicUtils.centsFromTarget(result.frequency, closest.frequency);
+    final info = MusicUtils.frequencyToNoteInfo(
+      result.frequency,
+      preferFlats: state.preferFlats,
+    );
 
     state = state.copyWith(
-      cents: cents,
+      cents: info.cents,
       detectedHz: result.frequency,
-      closestString: closest,
+      closestNoteName: info.noteName,
     );
-  }
-
-  // ── Reference tone ─────────────────────────────────────────────────────────
-
-  void playTone(HarpStringModel string) {
-    // TODO: generate sine wave and play via audioplayers
-    state = state.copyWith(isPlayingTone: true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) state = state.copyWith(isPlayingTone: false);
-    });
-  }
-
-  void stopTone() {
-    state = state.copyWith(isPlayingTone: false);
-  }
-
-  // ── Demo / testing ─────────────────────────────────────────────────────────
-
-  void mockReading({
-    required double cents,
-    required double hz,
-    required HarpStringModel string,
-  }) {
-    state = state.copyWith(cents: cents, detectedHz: hz, closestString: string);
   }
 
   @override
@@ -176,5 +155,5 @@ class TunerNotifier extends StateNotifier<TunerState> {
 }
 
 final tunerProvider = StateNotifierProvider<TunerNotifier, TunerState>(
-  (ref) => TunerNotifier(ref),
+  (ref) => TunerNotifier(),
 );

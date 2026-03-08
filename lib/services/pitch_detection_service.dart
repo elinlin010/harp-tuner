@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart';
 import 'package:mic_stream/mic_stream.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pitch_detector_dart/pitch_detector.dart';
@@ -8,6 +10,15 @@ import 'package:pitch_detector_dart/pitch_detector.dart';
 class PitchResult {
   final double frequency; // Hz
   PitchResult(this.frequency);
+}
+
+class PitchServiceError {
+  final bool isPermissionError;
+  final String message;
+  const PitchServiceError({
+    required this.isPermissionError,
+    required this.message,
+  });
 }
 
 /// Streams detected fundamental frequencies from the device microphone.
@@ -22,6 +33,11 @@ class PitchResult {
 class PitchDetectionService {
   static const int _targetSampleRate = 44100;
 
+  // iOS: use AVAudioSession channel (AVCaptureDevice.requestAccessForMediaType
+  // is broken on iOS 26 simulator and silently kills the app).
+  static const _iosPermChannel =
+      MethodChannel('com.harptuner/mic_permission');
+
   // 8192 samples ≈ 186 ms — long enough to detect down to C1 (32.7 Hz)
   static const int _bufferSize = 8192;
 
@@ -35,12 +51,27 @@ class PitchDetectionService {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   Future<bool> requestPermission() async {
-    final status = await Permission.microphone.request();
-    // Only hard-block when the user has explicitly and permanently denied.
-    // isDenied can also mean "not yet asked" on some iOS versions — let mic
-    // stream attempt to open and surface a real error if access truly fails.
+    if (Platform.isIOS) {
+      // Use AVAudioSession.requestRecordPermission — works correctly on iOS 26.
+      // permission_handler_apple uses AVCaptureDevice which is broken there.
+      return await _iosPermChannel.invokeMethod<bool>('requestPermission') ??
+          false;
+    }
+    var status = await Permission.microphone.status;
+    if (status.isGranted) return true;
     if (status.isPermanentlyDenied) return false;
-    return true;
+    status = await Permission.microphone.request();
+    return status.isGranted;
+  }
+
+  /// Read-only permission check — no dialog shown.
+  Future<bool> checkPermission() async {
+    if (Platform.isIOS) {
+      return await _iosPermChannel.invokeMethod<bool>('checkPermission') ??
+          false;
+    }
+    final status = await Permission.microphone.status;
+    return status.isGranted;
   }
 
   /// Returns a broadcast stream of [PitchResult] (or null when no pitch found).
@@ -65,19 +96,27 @@ class PitchDetectionService {
 
   void _startMic() async {
     Stream<Uint8List>? rawStream;
+    // Disable mic_stream's internal Permission.microphone.request() call —
+    // it also uses AVCaptureDevice on iOS which crashes on iOS 26.
+    MicStream.shouldRequestPermission(false);
     try {
       rawStream = await MicStream.microphone(
         sampleRate: _targetSampleRate,
-        channelConfig: ChannelConfig.CHANNEL_IN_MONO,
         audioFormat: AudioFormat.ENCODING_PCM_16BIT,
       );
     } catch (e) {
-      _ctrl?.addError('Microphone error: $e');
+      _ctrl?.addError(PitchServiceError(
+        isPermissionError: false,
+        message: 'Microphone error: $e',
+      ));
       return;
     }
 
     if (rawStream == null) {
-      _ctrl?.addError('Could not open microphone stream');
+      _ctrl?.addError(const PitchServiceError(
+        isPermissionError: false,
+        message: 'Could not open microphone stream',
+      ));
       return;
     }
 
@@ -90,7 +129,9 @@ class PitchDetectionService {
 
     _micSub = rawStream.listen(
       (bytes) => _onAudioChunk(bytes),
-      onError: (e) => _ctrl?.addError(e),
+      onError: (e) => _ctrl?.addError(e is PitchServiceError
+          ? e
+          : PitchServiceError(isPermissionError: false, message: '$e')),
       cancelOnError: false,
     );
   }
