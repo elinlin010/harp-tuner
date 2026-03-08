@@ -4,6 +4,7 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
+import '../theme/theme_provider.dart';
 import '../widgets/tuner_gauge.dart';
 
 class TunerScreen extends ConsumerStatefulWidget {
@@ -35,9 +36,10 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   @override
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
+    final theme = ref.watch(tunerThemeProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.bg,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -50,33 +52,19 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               Center(
                 child: Text(
                   'TUNER',
-                  style: AppTextStyles.label(13, color: AppColors.gold),
+                  style: theme.label(13, color: theme.textDim),
                 ),
               ),
 
               const SizedBox(height: 20),
 
-              // ── Gauge card ────────────────────────────────────────────────
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 20, 16, 20),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceHi,
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: AppColors.surfaceRim, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.45),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TunerGauge(
-                  cents: tuner.cents,
-                  noteName: tuner.closestNoteName,
-                  detectedHz: tuner.detectedHz,
-                  isListening: tuner.isListening,
-                ),
+              // ── Gauge — bare, no card ──────────────────────────────────────
+              TunerGauge(
+                cents: tuner.cents,
+                noteName: tuner.closestNoteName,
+                detectedHz: tuner.detectedHz,
+                isListening: tuner.isListening,
+                theme: theme,
               ),
 
               const SizedBox(height: 28),
@@ -87,6 +75,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   preferFlats: tuner.preferFlats,
                   onToggle: () =>
                       ref.read(tunerProvider.notifier).togglePreferFlats(),
+                  theme: theme,
                 ),
               ),
 
@@ -99,13 +88,14 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   controller: _listenBtnCtrl,
                   onTap: () =>
                       ref.read(tunerProvider.notifier).toggleListening(),
+                  theme: theme,
                 ),
               ),
 
               // ── Permission denied banner ───────────────────────────────────
               if (tuner.permissionDenied) ...[
                 const SizedBox(height: 20),
-                _PermissionBanner(),
+                _PermissionBanner(theme: theme),
               ],
 
               // ── Mic hardware/API error banner ──────────────────────────────
@@ -115,6 +105,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   message: tuner.micError!,
                   onDismiss: () =>
                       ref.read(tunerProvider.notifier).clearMicError(),
+                  theme: theme,
                 ),
               ],
             ],
@@ -130,10 +121,12 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 class _FlatSharpToggle extends StatelessWidget {
   final bool preferFlats;
   final VoidCallback onToggle;
+  final TunerThemeData theme;
 
   const _FlatSharpToggle({
     required this.preferFlats,
     required this.onToggle,
+    required this.theme,
   });
 
   @override
@@ -143,22 +136,24 @@ class _FlatSharpToggle extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(3),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: theme.surface,
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: AppColors.surfaceRim, width: 0.5),
+          border: Border.all(color: theme.surfaceRim, width: 0.5),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _ToggleTab(
-              label: 'b  Flats',
+              label: '♭  Flats',
               active: preferFlats,
               onTap: onToggle,
+              theme: theme,
             ),
             _ToggleTab(
-              label: '#  Sharps',
+              label: '♯  Sharps',
               active: !preferFlats,
               onTap: onToggle,
+              theme: theme,
             ),
           ],
         ),
@@ -171,11 +166,13 @@ class _ToggleTab extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final TunerThemeData theme;
 
   const _ToggleTab({
     required this.label,
     required this.active,
     required this.onTap,
+    required this.theme,
   });
 
   @override
@@ -186,20 +183,17 @@ class _ToggleTab extends StatelessWidget {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
         decoration: BoxDecoration(
-          color: active
-              ? AppColors.gold.withValues(alpha: 0.18)
-              : Colors.transparent,
+          color: active ? theme.surface : Colors.transparent,
           borderRadius: BorderRadius.circular(19),
           border: active
-              ? Border.all(
-                  color: AppColors.gold.withValues(alpha: 0.45), width: 0.5)
+              ? Border.all(color: theme.surfaceRim, width: 1.0)
               : null,
         ),
         child: Text(
           label,
-          style: AppTextStyles.label(
+          style: theme.label(
             12,
-            color: active ? AppColors.goldBright : AppColors.textDim,
+            color: active ? theme.textPrimary : theme.textDim,
           ),
         ),
       ),
@@ -213,11 +207,13 @@ class _ListenButton extends StatelessWidget {
   final bool isListening;
   final AnimationController controller;
   final VoidCallback onTap;
+  final TunerThemeData theme;
 
   const _ListenButton({
     required this.isListening,
     required this.controller,
     required this.onTap,
+    required this.theme,
   });
 
   @override
@@ -233,20 +229,20 @@ class _ListenButton extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
               color: isListening
-                  ? AppColors.gold.withValues(alpha: 0.15)
-                  : AppColors.surface,
+                  ? theme.inTune.withValues(alpha: 0.12)
+                  : theme.surface,
               border: Border.all(
                 color: isListening
-                    ? AppColors.gold.withValues(
-                        alpha: 0.45 + controller.value * 0.25)
-                    : AppColors.surfaceRim,
+                    ? theme.inTune.withValues(
+                        alpha: 0.35 + controller.value * 0.20)
+                    : theme.surfaceRim,
                 width: 1,
               ),
               boxShadow: isListening
                   ? [
                       BoxShadow(
-                        color: AppColors.gold.withValues(
-                            alpha: 0.15 + controller.value * 0.15),
+                        color: theme.inTune.withValues(
+                            alpha: 0.10 + controller.value * 0.12),
                         blurRadius: 14,
                         spreadRadius: 1,
                       )
@@ -259,19 +255,15 @@ class _ListenButton extends StatelessWidget {
                 Icon(
                   isListening ? Icons.stop_rounded : Icons.mic_rounded,
                   size: 16,
-                  color: isListening
-                      ? AppColors.goldBright
-                      : AppColors.textSecondary,
+                  color: isListening ? theme.inTune : theme.textDim,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   isListening ? 'Stop' : 'Start Tuning',
-                  style: AppTextStyles.sans(
+                  style: theme.sans(
                     14,
                     weight: FontWeight.w600,
-                    color: isListening
-                        ? AppColors.goldBright
-                        : AppColors.textSecondary,
+                    color: isListening ? theme.inTune : theme.textDim,
                   ),
                 ),
               ],
@@ -288,8 +280,13 @@ class _ListenButton extends StatelessWidget {
 class _MicErrorBanner extends StatelessWidget {
   final String message;
   final VoidCallback onDismiss;
+  final TunerThemeData theme;
 
-  const _MicErrorBanner({required this.message, required this.onDismiss});
+  const _MicErrorBanner({
+    required this.message,
+    required this.onDismiss,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -312,8 +309,7 @@ class _MicErrorBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 'Microphone unavailable: $message',
-                style: AppTextStyles.sans(12,
-                    color: Colors.amber.shade300),
+                style: theme.sans(12, color: Colors.amber.shade300),
               ),
             ),
             const SizedBox(width: 8),
@@ -329,35 +325,37 @@ class _MicErrorBanner extends StatelessWidget {
 // ── Permission denied banner ──────────────────────────────────────────────────
 
 class _PermissionBanner extends StatelessWidget {
+  final TunerThemeData theme;
+
+  const _PermissionBanner({required this.theme});
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       decoration: BoxDecoration(
-        color: AppColors.sharp.withValues(alpha: 0.10),
+        color: theme.sharp.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
         border:
-            Border.all(color: AppColors.sharp.withValues(alpha: 0.35), width: 1),
+            Border.all(color: theme.sharp.withValues(alpha: 0.35), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.mic_off_rounded, size: 15, color: AppColors.sharp),
+              Icon(Icons.mic_off_rounded, size: 15, color: theme.sharp),
               const SizedBox(width: 8),
               Text(
                 'Microphone access denied',
-                style: AppTextStyles.sans(13,
-                    weight: FontWeight.w600, color: AppColors.sharp),
+                style: theme.sans(13, weight: FontWeight.w600, color: theme.sharp),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Text(
             'Go to Settings → Tuner → Microphone and turn it on.',
-            style: AppTextStyles.sans(12,
-                color: AppColors.sharp.withValues(alpha: 0.85)),
+            style: theme.sans(12, color: theme.sharp.withValues(alpha: 0.85)),
           ),
           const SizedBox(height: 10),
           GestureDetector(
@@ -366,16 +364,15 @@ class _PermissionBanner extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 9),
               decoration: BoxDecoration(
-                color: AppColors.sharp.withValues(alpha: 0.18),
+                color: theme.sharp.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: AppColors.sharp.withValues(alpha: 0.45), width: 1),
+                    color: theme.sharp.withValues(alpha: 0.45), width: 1),
               ),
               child: Text(
                 'Open Settings',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.sans(13,
-                    weight: FontWeight.w600, color: AppColors.sharp),
+                style: theme.sans(13, weight: FontWeight.w600, color: theme.sharp),
               ),
             ),
           ),

@@ -7,6 +7,7 @@ class TunerGauge extends StatefulWidget {
   final String? noteName;
   final double? detectedHz;
   final bool isListening;
+  final TunerThemeData theme;
 
   const TunerGauge({
     super.key,
@@ -14,6 +15,7 @@ class TunerGauge extends StatefulWidget {
     this.noteName,
     this.detectedHz,
     required this.isListening,
+    required this.theme,
   });
 
   @override
@@ -41,10 +43,10 @@ class _TunerGaugeState extends State<TunerGauge>
 
   Color get _stateColor {
     final c = widget.cents;
-    if (c == null) return AppColors.textDim;
-    if (c.abs() <= 5) return AppColors.inTune;
-    if (c > 0) return AppColors.sharp;
-    return AppColors.flat;
+    if (c == null) return widget.theme.textDim;
+    if (c.abs() <= 5) return widget.theme.inTune;
+    if (c > 0) return widget.theme.sharp;
+    return widget.theme.flat;
   }
 
   String get _tuneWord {
@@ -62,12 +64,10 @@ class _TunerGaugeState extends State<TunerGauge>
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // ── Arc with scale labels ───────────────────────────────────────────
         SizedBox(
           height: 148,
           child: Stack(
             children: [
-              // Canvas
               Positioned.fill(
                 child: AnimatedBuilder(
                   animation: _pulseCtrl,
@@ -77,34 +77,37 @@ class _TunerGaugeState extends State<TunerGauge>
                       stateColor: _stateColor,
                       isListening: widget.isListening,
                       pulse: _pulseCtrl.value,
+                      theme: widget.theme,
                     ),
                   ),
                 ),
               ),
-              // Scale labels
               Positioned(
                 bottom: 0,
                 left: 14,
-                child: _ScaleLabel('−50'),
+                child: _ScaleLabel('−50', theme: widget.theme),
               ),
               Positioned(
                 top: 4,
                 left: 0,
                 right: 0,
-                child: Center(child: _ScaleLabel('0')),
+                child: Center(child: _ScaleLabel('0', theme: widget.theme)),
               ),
               Positioned(
                 bottom: 0,
                 right: 14,
-                child: _ScaleLabel('+50'),
+                child: _ScaleLabel('+50', theme: widget.theme),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        // ── Readout ─────────────────────────────────────────────────────────
         if (!hasSignal)
-          _IdleReadout(isListening: widget.isListening, pulse: _pulseCtrl)
+          _IdleReadout(
+            isListening: widget.isListening,
+            pulse: _pulseCtrl,
+            theme: widget.theme,
+          )
         else
           _SignalReadout(
             cents: widget.cents!,
@@ -112,6 +115,7 @@ class _TunerGaugeState extends State<TunerGauge>
             detectedHz: widget.detectedHz,
             stateColor: _stateColor,
             tuneWord: _tuneWord,
+            theme: widget.theme,
           ),
       ],
     );
@@ -122,14 +126,15 @@ class _TunerGaugeState extends State<TunerGauge>
 
 class _ScaleLabel extends StatelessWidget {
   final String text;
-  const _ScaleLabel(this.text);
+  final TunerThemeData theme;
+
+  const _ScaleLabel(this.text, {required this.theme});
 
   @override
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: AppTextStyles.sans(10,
-          weight: FontWeight.w500, color: AppColors.textDim),
+      style: theme.mono(10, color: theme.textDim),
     );
   }
 }
@@ -141,12 +146,14 @@ class _ArcPainter extends CustomPainter {
   final Color stateColor;
   final bool isListening;
   final double pulse;
+  final TunerThemeData theme;
 
   _ArcPainter({
     required this.cents,
     required this.stateColor,
     required this.isListening,
     required this.pulse,
+    required this.theme,
   });
 
   static const _startAngle = pi;
@@ -162,7 +169,7 @@ class _ArcPainter extends CustomPainter {
     final r = size.height - 16;
     final arcRect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
 
-    // ── Track ─────────────────────────────────────────────────────────────
+    // ── Track ────────────────────────────────────────────────────────────────
     canvas.drawArc(
       arcRect,
       _startAngle,
@@ -170,11 +177,11 @@ class _ArcPainter extends CustomPainter {
       false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
-        ..color = AppColors.surfaceRim,
+        ..strokeWidth = 1.5
+        ..color = theme.surfaceRim,
     );
 
-    // ── In-tune zone ───────────────────────────────────────────────────────
+    // ── In-tune zone ─────────────────────────────────────────────────────────
     final zoneStart = _centsToAngle(-5);
     final zoneSweep = _sweep * (10 / 100);
     canvas.drawArc(
@@ -184,30 +191,28 @@ class _ArcPainter extends CustomPainter {
       false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 7
+        ..strokeWidth = 3
         ..strokeCap = StrokeCap.round
-        ..color = AppColors.inTune.withValues(alpha: 0.35),
+        ..color = theme.inTune.withValues(alpha: 0.30),
     );
 
-    // ── Ticks ──────────────────────────────────────────────────────────────
+    // ── Ticks ─────────────────────────────────────────────────────────────────
     for (int c = -50; c <= 50; c += 5) {
       final isMajor = c % 10 == 0;
       final angle = _centsToAngle(c.toDouble());
       final outer = r - 2;
-      final inner = r - (isMajor ? 18 : 10);
+      final inner = r - (isMajor ? 14.0 : 7.0);
       canvas.drawLine(
         Offset(cx + inner * cos(angle), cy + inner * sin(angle)),
         Offset(cx + outer * cos(angle), cy + outer * sin(angle)),
         Paint()
-          ..color = isMajor
-              ? AppColors.textDim
-              : AppColors.surfaceRim.withValues(alpha: 0.8)
+          ..color = isMajor ? theme.textSecondary : theme.textDim
           ..strokeWidth = isMajor ? 1.5 : 1.0
           ..style = PaintingStyle.stroke,
       );
     }
 
-    // ── Needle ─────────────────────────────────────────────────────────────
+    // ── Needle ───────────────────────────────────────────────────────────────
     final hasSignal = cents != null;
     final angle = hasSignal ? _centsToAngle(cents!) : _centsToAngle(0);
     final needleLen = r - 14;
@@ -215,12 +220,12 @@ class _ArcPainter extends CustomPainter {
     final tipY = cy + needleLen * sin(angle);
 
     if (hasSignal) {
-      // Glow
+      // Soft halo
       canvas.drawLine(
         Offset(cx, cy), Offset(tipX, tipY),
         Paint()
-          ..color = stateColor.withValues(alpha: 0.18 + pulse * 0.14)
-          ..strokeWidth = 18
+          ..color = stateColor.withValues(alpha: 0.12 + pulse * 0.08)
+          ..strokeWidth = 10
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,
       );
@@ -229,7 +234,7 @@ class _ArcPainter extends CustomPainter {
         Offset(cx, cy), Offset(tipX, tipY),
         Paint()
           ..color = stateColor
-          ..strokeWidth = 3.5
+          ..strokeWidth = 2.0
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke,
       );
@@ -238,21 +243,21 @@ class _ArcPainter extends CustomPainter {
     // Pivot dot
     canvas.drawCircle(
       Offset(cx, cy),
-      hasSignal ? 6 : 4,
+      hasSignal ? 3.5 : 3.0,
       Paint()
-        ..color = hasSignal ? stateColor : AppColors.textDim.withValues(alpha: 0.4)
+        ..color = hasSignal ? stateColor : theme.textDim.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill,
     );
 
-    // Idle pulse
+    // Idle pulse ring
     if (isListening && !hasSignal) {
       canvas.drawCircle(
         Offset(cx, cy),
         12 + pulse * 8,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..color = AppColors.gold.withValues(alpha: 0.10 + pulse * 0.20),
+          ..strokeWidth = 1.0
+          ..color = theme.textSecondary.withValues(alpha: 0.15 + pulse * 0.20),
       );
     }
   }
@@ -262,7 +267,8 @@ class _ArcPainter extends CustomPainter {
       old.cents != cents ||
       old.stateColor != stateColor ||
       old.isListening != isListening ||
-      old.pulse != pulse;
+      old.pulse != pulse ||
+      old.theme != theme;
 }
 
 // ── Idle readout ──────────────────────────────────────────────────────────────
@@ -270,21 +276,25 @@ class _ArcPainter extends CustomPainter {
 class _IdleReadout extends StatelessWidget {
   final bool isListening;
   final Animation<double> pulse;
+  final TunerThemeData theme;
 
-  const _IdleReadout({required this.isListening, required this.pulse});
+  const _IdleReadout({
+    required this.isListening,
+    required this.pulse,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: pulse,
       builder: (ctx, child) => Opacity(
-        opacity: isListening ? (0.6 + pulse.value * 0.4) : 1.0,
+        opacity: isListening ? (0.55 + pulse.value * 0.45) : 1.0,
         child: child,
       ),
       child: Text(
-        isListening ? 'Listening for a string…' : 'Play a string to tune',
-        style: AppTextStyles.sans(15,
-            weight: FontWeight.w500, color: AppColors.textSecondary),
+        isListening ? 'Listening for a note…' : 'Play a note to begin tuning',
+        style: theme.display(16, weight: FontWeight.w400, color: theme.textSecondary),
         textAlign: TextAlign.center,
       ),
     );
@@ -299,6 +309,7 @@ class _SignalReadout extends StatelessWidget {
   final double? detectedHz;
   final Color stateColor;
   final String tuneWord;
+  final TunerThemeData theme;
 
   const _SignalReadout({
     required this.cents,
@@ -306,6 +317,7 @@ class _SignalReadout extends StatelessWidget {
     required this.detectedHz,
     required this.stateColor,
     required this.tuneWord,
+    required this.theme,
   });
 
   @override
@@ -313,54 +325,41 @@ class _SignalReadout extends StatelessWidget {
     final centsStr =
         cents >= 0 ? '+${cents.toStringAsFixed(1)}' : cents.toStringAsFixed(1);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.baseline,
-      textBaseline: TextBaseline.alphabetic,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        // Note name
+        // Note name — Libre Baskerville, large, ink
         Text(
           noteName,
-          style: AppTextStyles.sans(52, weight: FontWeight.w800)
-              .copyWith(color: AppColors.textPrimary, height: 1),
+          style: theme.display(72, weight: FontWeight.w400)
+              .copyWith(height: 1),
+          textAlign: TextAlign.center,
         ),
-        const SizedBox(width: 14),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
-            // Cents — large, colored
+            // Cents — JetBrains Mono, state-colored
             Text(
               '$centsStr¢',
-              style: AppTextStyles.mono(24, weight: FontWeight.w700,
-                  color: stateColor),
+              style: theme.mono(22, weight: FontWeight.w500, color: stateColor),
             ),
-            // Hz + badge
-            Row(
-              children: [
-                if (detectedHz != null)
-                  Text(
-                    '${detectedHz!.toStringAsFixed(1)} Hz',
-                    style: AppTextStyles.sans(12,
-                        color: AppColors.textSecondary),
-                  ),
-                if (tuneWord.isNotEmpty) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: stateColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: Text(
-                      tuneWord,
-                      style: AppTextStyles.label(9, color: stateColor),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            if (tuneWord.isNotEmpty) ...[
+              const SizedBox(width: 10),
+              Text(
+                tuneWord,
+                style: theme.label(9, color: stateColor.withValues(alpha: 0.80)),
+              ),
+            ],
+            if (detectedHz != null) ...[
+              const SizedBox(width: 10),
+              Text(
+                '${detectedHz!.toStringAsFixed(1)} Hz',
+                style: theme.mono(11, color: theme.textSecondary),
+              ),
+            ],
           ],
         ),
       ],
