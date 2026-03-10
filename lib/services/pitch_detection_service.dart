@@ -95,12 +95,15 @@ class PitchDetectionService {
   // ── Internal ───────────────────────────────────────────────────────────────
 
   void _startMic() async {
-    Stream<Uint8List>? rawStream;
-    // Disable mic_stream's internal Permission.microphone.request() call —
-    // it also uses AVCaptureDevice on iOS which crashes on iOS 26.
-    MicStream.shouldRequestPermission(false);
+    if (Platform.isIOS) {
+      // Disable mic_stream's internal permission request on iOS —
+      // it uses AVCaptureDevice which crashes on iOS 26.
+      MicStream.shouldRequestPermission(false);
+    }
+    Stream<Uint8List> rawStream;
     try {
-      rawStream = await MicStream.microphone(
+      // mic_stream 0.7+: microphone() returns Stream<Uint8List> directly (not a Future)
+      rawStream = MicStream.microphone(
         sampleRate: _targetSampleRate,
         audioFormat: AudioFormat.ENCODING_PCM_16BIT,
       );
@@ -112,18 +115,11 @@ class PitchDetectionService {
       return;
     }
 
-    if (rawStream == null) {
-      _ctrl?.addError(const PitchServiceError(
-        isPermissionError: false,
-        message: 'Could not open microphone stream',
-      ));
-      return;
-    }
-
-    // Actual sample rate may differ from requested; re-create detector with it
-    final actualRate = (await MicStream.sampleRate) ?? _targetSampleRate;
+    // In 0.7+, the stream only starts when listened to, so subscribe first.
+    // Initialize detector with target rate; update it once the stream is running
+    // and the actual sample rate is known.
     _detector = PitchDetector(
-      audioSampleRate: actualRate.toDouble(),
+      audioSampleRate: _targetSampleRate.toDouble(),
       bufferSize: _bufferSize,
     );
 
@@ -134,6 +130,16 @@ class PitchDetectionService {
           : PitchServiceError(isPermissionError: false, message: '$e')),
       cancelOnError: false,
     );
+
+    // sampleRate completes once the stream has started; recreate detector if needed.
+    MicStream.sampleRate.then((actualRate) {
+      if (actualRate != _targetSampleRate) {
+        _detector = PitchDetector(
+          audioSampleRate: actualRate.toDouble(),
+          bufferSize: _bufferSize,
+        );
+      }
+    });
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {

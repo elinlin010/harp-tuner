@@ -61,15 +61,23 @@ class _TunerGaugeState extends State<TunerGauge>
   Widget build(BuildContext context) {
     final hasSignal = widget.cents != null;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Arc gauge — fills full available width
-        LayoutBuilder(
-          builder: (ctx, constraints) {
-            final gaugeHeight = constraints.maxWidth / 2 + 16;
-            return SizedBox(
-              height: gaugeHeight,
+    // LayoutBuilder gives us the full Expanded height AND width to work with.
+    return LayoutBuilder(
+      builder: (ctx, constraints) {
+        final maxH = constraints.maxHeight;
+        final maxW = constraints.maxWidth;
+
+        // Arc: prefer semicircle (width/2 + 16), but cap at 50% of height
+        // so the readout always has room below.
+        final arcH = min(maxW / 2 + 16, maxH * 0.50);
+
+        return Column(
+          mainAxisSize: MainAxisSize.max,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // ── Arc ─────────────────────────────────────────────────────────
+            SizedBox(
+              height: arcH,
               child: Stack(
                 children: [
                   Positioned.fill(
@@ -104,28 +112,34 @@ class _TunerGaugeState extends State<TunerGauge>
                   ),
                 ],
               ),
-            );
-          },
-        ),
+            ),
 
-        const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-        if (!hasSignal)
-          _IdleReadout(
-            isListening: widget.isListening,
-            pulse: _pulseCtrl,
-            theme: widget.theme,
-          )
-        else
-          _SignalReadout(
-            cents: widget.cents!,
-            noteName: widget.noteName ?? '—',
-            detectedHz: widget.detectedHz,
-            stateColor: _stateColor,
-            tuneWord: _tuneWord,
-            theme: widget.theme,
-          ),
-      ],
+            // ── Readout — Flexible so it never overflows the Column ──────────
+            Expanded(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.topCenter,
+                child: hasSignal
+                    ? _SignalReadout(
+                        cents: widget.cents!,
+                        noteName: widget.noteName ?? '—',
+                        detectedHz: widget.detectedHz,
+                        stateColor: _stateColor,
+                        tuneWord: _tuneWord,
+                        theme: widget.theme,
+                      )
+                    : _IdleReadout(
+                        isListening: widget.isListening,
+                        pulse: _pulseCtrl,
+                        theme: widget.theme,
+                      ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -310,7 +324,7 @@ class _IdleReadout extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            isListening ? 'Listening for a note…' : 'Tap the button below\nto start tuning',
+            isListening ? 'Listening for a note…' : 'Tap Start Tuning to begin',
             style: theme.sans(22, weight: FontWeight.w500, color: theme.textSecondary),
             textAlign: TextAlign.center,
           ),
