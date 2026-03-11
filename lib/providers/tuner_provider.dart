@@ -57,10 +57,10 @@ class TunerNotifier extends StateNotifier<TunerState> {
   final PitchDetectionService _service = PitchDetectionService();
   StreamSubscription<PitchResult?>? _pitchSub;
 
-  static const _historyLen   = 5;
-  static const _stableNeeded = 2;
-  static const _stableCents  = 150.0;
-  static const _holdFrames   = 4;
+  static const _historyLen   = 5;     // ring buffer size
+  static const _stableNeeded = 3;     // readings before showing display
+  static const _stableCents  = 80.0;  // max spread (cents) to count as stable
+  static const _holdFrames   = 4;     // consecutive nulls before clearing (~370 ms)
 
   final _freqHistory = <double>[];
   int _silenceCount  = 0;
