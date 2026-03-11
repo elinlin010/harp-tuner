@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'screens/harp_select_screen.dart';
+import 'screens/tuner_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -41,7 +41,7 @@ class HarpTunerApp extends StatelessWidget {
           child: child!,
         );
       },
-      home: const HarpSelectScreen(),
+      home: const TunerScreen(),
     );
   }
 }
