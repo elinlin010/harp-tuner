@@ -8,6 +8,7 @@
   "settingsOctaveNumberLabel": "Numero di ottava",
   "settingsShowOctaveToggle": "Mostra numero di ottava",
   "settingsShowOctaveHint": "es. A4 invece di A",
+  "settingsA4CalibLabel": "Riferimento A4",
   "settingsLanguageLabel": "Lingua",
   "tunerStartBtn": "Inizia accordatura",
   "tunerStopBtn": "Ferma",

@@ -6,7 +6,6 @@ import '../theme/app_theme.dart';
 class TunerGauge extends StatefulWidget {
   final double? cents;
   final String? noteName;
-  final double? detectedHz;
   final bool isListening;
   final TunerThemeData theme;
 
@@ -14,7 +13,6 @@ class TunerGauge extends StatefulWidget {
     super.key,
     this.cents,
     this.noteName,
-    this.detectedHz,
     required this.isListening,
     required this.theme,
   });
@@ -139,7 +137,6 @@ class _TunerGaugeState extends State<TunerGauge>
                         child: _SignalReadout(
                           cents: widget.cents ?? 0,
                           noteName: widget.noteName ?? '—',
-                          detectedHz: widget.detectedHz,
                           stateColor: _stateColor,
                           theme: widget.theme,
                         ),
@@ -352,14 +349,12 @@ class _IdleReadout extends StatelessWidget {
 class _SignalReadout extends StatelessWidget {
   final double cents;
   final String noteName;
-  final double? detectedHz;
   final Color stateColor;
   final TunerThemeData theme;
 
   const _SignalReadout({
     required this.cents,
     required this.noteName,
-    required this.detectedHz,
     required this.stateColor,
     required this.theme,
   });
@@ -378,16 +373,6 @@ class _SignalReadout extends StatelessWidget {
           style: theme.sans(100, weight: FontWeight.w400).copyWith(height: 1),
           textAlign: TextAlign.center,
         ),
-
-        const SizedBox(height: 8),
-
-        // Hz — prominent, its own line
-        if (detectedHz != null)
-          Text(
-            '${detectedHz!.toStringAsFixed(1)} Hz',
-            style: theme.sans(28, weight: FontWeight.w500, color: theme.textSecondary),
-            textAlign: TextAlign.center,
-          ),
 
         const SizedBox(height: 8),
 

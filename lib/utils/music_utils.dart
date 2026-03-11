@@ -13,9 +13,12 @@ class MusicUtils {
 
   /// Converts a frequency in Hz to the nearest note name (e.g. "A4") and the
   /// deviation in cents from that note (-50..+50).
+  ///
+  /// [a4Hz] is the reference pitch for A4 (default 440 Hz). Changing this
+  /// shifts all note targets proportionally — the standard tuner calibration.
   static ({String noteName, int octave, double cents}) frequencyToNoteInfo(
-      double hz, {bool preferFlats = false}) {
-    final midi = 69.0 + 12.0 * log(hz / 440.0) / ln2;
+      double hz, {bool preferFlats = false, double a4Hz = 440.0}) {
+    final midi = 69.0 + 12.0 * log(hz / a4Hz) / ln2;
     final roundedMidi = midi.round();
     final cents = (midi - roundedMidi) * 100.0;
     final noteIndex = ((roundedMidi % 12) + 12) % 12;

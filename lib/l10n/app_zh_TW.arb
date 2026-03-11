@@ -8,6 +8,7 @@
   "settingsOctaveNumberLabel": "八度音",
   "settingsShowOctaveToggle": "顯示八度音號碼",
   "settingsShowOctaveHint": "例：A4 而非 A",
+  "settingsA4CalibLabel": "A4 基準音",
   "settingsLanguageLabel": "語言",
   "tunerStartBtn": "開始調音",
   "tunerStopBtn": "停止",

@@ -8,6 +8,7 @@
   "settingsOctaveNumberLabel": "Oktavnummer",
   "settingsShowOctaveToggle": "Oktavnummer anzeigen",
   "settingsShowOctaveHint": "z.B. A4 statt A",
+  "settingsA4CalibLabel": "A4-Referenz",
   "settingsLanguageLabel": "Sprache",
   "tunerStartBtn": "Stimmen starten",
   "tunerStopBtn": "Stopp",

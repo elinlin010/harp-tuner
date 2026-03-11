@@ -44,6 +44,9 @@ class HarpStringModel {
   /// MIDI note number (C4 = 60)
   int get midiNote => 12 * (octave + 1) + note.semitoneOffset;
 
-  /// Frequency in Hz (A4 = 440 Hz)
+  /// Frequency in Hz using standard A4 = 440 Hz.
   double get frequency => 440.0 * pow(2.0, (midiNote - 69) / 12.0);
+
+  /// Frequency in Hz using a custom A4 reference (for calibrated tuning).
+  double frequencyAt(double a4Hz) => a4Hz * pow(2.0, (midiNote - 69) / 12.0);
 }

@@ -153,6 +153,12 @@ abstract class AppLocalizations {
   /// **'e.g. A4 instead of A'**
   String get settingsShowOctaveHint;
 
+  /// No description provided for @settingsA4CalibLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'A4 Reference'**
+  String get settingsA4CalibLabel;
+
   /// No description provided for @settingsLanguageLabel.
   ///
   /// In en, this message translates to:

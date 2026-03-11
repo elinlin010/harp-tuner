@@ -33,6 +33,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsShowOctaveHint => 'es. A4 invece di A';
 
   @override
+  String get settingsA4CalibLabel => 'Riferimento A4';
+
+  @override
   String get settingsLanguageLabel => 'Lingua';
 
   @override

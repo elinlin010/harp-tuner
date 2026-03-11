@@ -103,7 +103,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   child: TunerGauge(
                     cents: tuner.cents,
                     noteName: noteName,
-                    detectedHz: tuner.detectedHz,
                     isListening: tuner.isListening,
                     theme: theme,
                   ),
@@ -117,7 +116,20 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 isListening: tuner.isListening,
                 theme: theme,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // ── CALIB stepper ─────────────────────────────────────────────
+              Center(
+                child: _A4StepperRow(
+                  a4Hz: tuner.a4Hz,
+                  onDecrement: () =>
+                      ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
+                  onIncrement: () =>
+                      ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
+                  theme: theme,
+                ),
+              ),
+              const SizedBox(height: 16),
 
               // ── Listen button — full width, big ───────────────────────────
               _ListenButton(
@@ -529,6 +541,93 @@ class _PermissionBanner extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── A4 calibration stepper ────────────────────────────────────────────────────
+
+class _A4StepperRow extends StatelessWidget {
+  final int a4Hz;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+  final TunerThemeData theme;
+
+  const _A4StepperRow({
+    required this.a4Hz,
+    required this.onDecrement,
+    required this.onIncrement,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final atMin = a4Hz <= 430;
+    final atMax = a4Hz >= 450;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          l10n.settingsA4CalibLabel,
+          style: theme.label(11, color: theme.textDim),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _StepBtn(
+              icon: Icons.remove_rounded,
+              onTap: atMin ? null : onDecrement,
+              theme: theme,
+            ),
+            const SizedBox(width: 16),
+            Text(
+              '$a4Hz Hz',
+              style: theme.sans(22, weight: FontWeight.w600),
+            ),
+            const SizedBox(width: 16),
+            _StepBtn(
+              icon: Icons.add_rounded,
+              onTap: atMax ? null : onIncrement,
+              theme: theme,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _StepBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  final TunerThemeData theme;
+
+  const _StepBtn({required this.icon, required this.onTap, required this.theme});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: theme.surfaceHi,
+          border: Border.all(
+            color: theme.surfaceRim.withValues(alpha: enabled ? 0.8 : 0.3),
+            width: 1.5,
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 20,
+          color: enabled ? theme.textPrimary : theme.textDim,
+        ),
       ),
     );
   }
