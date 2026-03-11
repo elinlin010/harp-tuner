@@ -34,6 +34,15 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     super.dispose();
   }
 
+  void _showSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => const _SettingsSheet(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
@@ -50,18 +59,43 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
 
-              // ── App title ─────────────────────────────────────────────────
-              Center(
-                child: Text(
-                  'TUNER',
-                  style: theme.label(14, color: theme.textDim),
-                ),
+              // ── Title bar ─────────────────────────────────────────────────
+              Row(
+                children: [
+                  const SizedBox(width: 40), // balance the icon button
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'TUNER',
+                        style: theme.label(16, color: theme.textSecondary),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(24),
+                        onTap: () => _showSettings(context),
+                        child: Icon(
+                          Icons.tune_rounded,
+                          size: 28,
+                          color: theme.textSecondary,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
               // ── Gauge + readout, vertically centered ──────────────────────
               Expanded(
+                flex: 2,
                 child: Center(
                   child: TunerGauge(
                     cents: tuner.cents,
@@ -80,30 +114,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 isListening: tuner.isListening,
                 theme: theme,
               ),
-              const SizedBox(height: 20),
-
-              // ── Flat/Sharp toggle ─────────────────────────────────────────
-              Center(
-                child: _FlatSharpToggle(
-                  preferFlats: tuner.preferFlats,
-                  onToggle: () =>
-                      ref.read(tunerProvider.notifier).togglePreferFlats(),
-                  theme: theme,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // ── Octave toggle ─────────────────────────────────────────────
-              Center(
-                child: _OctaveSwitch(
-                  showOctave: tuner.showOctave,
-                  onToggle: () =>
-                      ref.read(tunerProvider.notifier).toggleShowOctave(),
-                  theme: theme,
-                ),
-              ),
-
               const SizedBox(height: 20),
 
               // ── Listen button — full width, big ───────────────────────────
@@ -132,7 +142,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ],
 
-              const SizedBox(height: 36),
+              const SizedBox(height: 24),
             ],
           ),
         ),
@@ -141,151 +151,165 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   }
 }
 
-// ── Flat/Sharp toggle ─────────────────────────────────────────────────────────
+// ── Settings bottom sheet ─────────────────────────────────────────────────────
 
-class _FlatSharpToggle extends StatelessWidget {
-  final bool preferFlats;
-  final VoidCallback onToggle;
-  final TunerThemeData theme;
-
-  const _FlatSharpToggle({
-    required this.preferFlats,
-    required this.onToggle,
-    required this.theme,
-  });
+class _SettingsSheet extends ConsumerWidget {
+  const _SettingsSheet();
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: theme.surfaceHi,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: theme.surfaceRim, width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ToggleTab(
-              label: '♭  Flats',
-              active: preferFlats,
-              onTap: onToggle,
-              theme: theme,
-            ),
-            _ToggleTab(
-              label: '♯  Sharps',
-              active: !preferFlats,
-              onTap: onToggle,
-              theme: theme,
-            ),
-          ],
-        ),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tuner = ref.watch(tunerProvider);
+    final theme = ref.watch(tunerThemeProvider);
+    final animDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
+    final mq = MediaQuery.of(context);
+    final bottomPad = mq.viewInsets.bottom + mq.padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: theme.surfaceRim, width: 1)),
       ),
-    );
-  }
-}
-
-class _ToggleTab extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  final TunerThemeData theme;
-
-  const _ToggleTab({
-    required this.label,
-    required this.active,
-    required this.onTap,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 160),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 11),
-        decoration: BoxDecoration(
-          color: active ? theme.surface : Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-          border: active
-              ? Border.all(color: theme.surfaceRim, width: 1.0)
-              : null,
-          boxShadow: active
-              ? [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 4)]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: theme.sans(
-            16,
-            weight: active ? FontWeight.w600 : FontWeight.w400,
-            color: active ? theme.textPrimary : theme.textDim,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Octave switch ─────────────────────────────────────────────────────────────
-
-class _OctaveSwitch extends StatelessWidget {
-  final bool showOctave;
-  final VoidCallback onToggle;
-  final TunerThemeData theme;
-
-  const _OctaveSwitch({
-    required this.showOctave,
-    required this.onToggle,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onToggle,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
+      padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottomPad),
+      child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'OCTAVE',
-            style: theme.label(11, color: showOctave ? theme.textSecondary : theme.textDim),
-          ),
-          const SizedBox(width: 10),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 40,
-            height: 22,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(11),
-              color: showOctave ? theme.inTune.withValues(alpha: 0.25) : theme.surfaceHi,
-              border: Border.all(
-                color: showOctave ? theme.inTune.withValues(alpha: 0.55) : theme.surfaceRim,
-                width: 1,
+          // drag handle
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.surfaceRim,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 200),
-              alignment: showOctave ? Alignment.centerRight : Alignment.centerLeft,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: showOctave ? theme.inTune : theme.textDim,
+          ),
+          const SizedBox(height: 20),
+
+          Text('Settings', style: theme.sans(22, weight: FontWeight.w600)),
+          const SizedBox(height: 24),
+
+          // ── Note display ──────────────────────────────────────────────────
+          Text('Note display',
+              style: theme.label(11, color: theme.textDim)),
+          const SizedBox(height: 12),
+          _SheetSwitchRow(
+            label: '♭  Always show flats',
+            subtitle: 'e.g. B♭ instead of A♯',
+            value: tuner.preferFlats,
+            onToggle: () => ref.read(tunerProvider.notifier).togglePreferFlats(),
+            theme: theme,
+            animDuration: animDuration,
+          ),
+
+          const SizedBox(height: 20),
+          Divider(color: theme.surfaceRim, height: 1),
+          const SizedBox(height: 20),
+
+          // ── Octave number ─────────────────────────────────────────────────
+          Text('Octave number',
+              style: theme.label(11, color: theme.textDim)),
+          const SizedBox(height: 12),
+          _SheetSwitchRow(
+            label: 'Show octave number',
+            subtitle: 'e.g. A4 instead of A',
+            value: tuner.showOctave,
+            onToggle: () => ref.read(tunerProvider.notifier).toggleShowOctave(),
+            theme: theme,
+            animDuration: animDuration,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// A row with a label + custom toggle switch on the right
+class _SheetSwitchRow extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final bool value;
+  final VoidCallback onToggle;
+  final TunerThemeData theme;
+  final Duration animDuration;
+
+  const _SheetSwitchRow({
+    required this.label,
+    required this.subtitle,
+    required this.value,
+    required this.onToggle,
+    required this.theme,
+    required this.animDuration,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      toggled: value,
+      child: GestureDetector(
+        onTap: onToggle,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: theme.sans(16,
+                            weight: FontWeight.w600,
+                            color: theme.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: theme.sans(13, color: theme.textSecondary)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              AnimatedContainer(
+                duration: animDuration,
+                width: 50,
+                height: 28,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                  color: value
+                      ? theme.inTune.withValues(alpha: 0.25)
+                      : theme.surfaceHi,
+                  border: Border.all(
+                    color: value
+                        ? theme.inTune.withValues(alpha: 0.55)
+                        : theme.surfaceRim,
+                    width: 1,
+                  ),
+                ),
+                child: AnimatedAlign(
+                  duration: animDuration,
+                  alignment:
+                      value ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    child: AnimatedContainer(
+                      duration: animDuration,
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: value ? theme.inTune : theme.textSecondary,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -406,7 +430,7 @@ class _MicErrorBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 'Microphone unavailable: $message',
-                style: theme.sans(15, color: Colors.amber.shade300),
+                style: theme.sans(16, color: Colors.amber.shade300),
               ),
             ),
             const SizedBox(width: 8),
@@ -452,7 +476,7 @@ class _PermissionBanner extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Go to Settings → Tuner → Microphone and turn it on.',
-            style: theme.sans(15, color: theme.sharp.withValues(alpha: 0.85)),
+            style: theme.sans(16, color: theme.sharp.withValues(alpha: 0.85)),
           ),
           const SizedBox(height: 12),
           GestureDetector(

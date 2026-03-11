@@ -41,26 +41,9 @@ class TunerThemeData {
     required this.flat,
   });
 
-  // Decorative — note names, screen titles (Libre Baskerville)
-  TextStyle display(double size, {FontWeight weight = FontWeight.w400, Color? color}) =>
-      GoogleFonts.libreBaskerville(
-        fontSize: size,
-        fontWeight: weight,
-        color: color ?? textPrimary,
-        letterSpacing: 0.5,
-      );
-
-  // Functional sans — labels, buttons (Outfit)
+  // Text style — used for all text in the app (Outfit)
   TextStyle sans(double size, {FontWeight weight = FontWeight.w400, Color? color}) =>
       GoogleFonts.outfit(
-        fontSize: size,
-        fontWeight: weight,
-        color: color ?? textPrimary,
-      );
-
-  // Monospaced — cent values, numeric readouts (JetBrains Mono)
-  TextStyle mono(double size, {FontWeight weight = FontWeight.w400, Color? color}) =>
-      GoogleFonts.jetBrainsMono(
         fontSize: size,
         fontWeight: weight,
         color: color ?? textPrimary,
@@ -201,14 +184,8 @@ class AppColors {
 class AppTextStyles {
   AppTextStyles._();
 
-  static TextStyle display(double size, {FontWeight weight = FontWeight.w400, Color? color}) =>
-      TunerThemes.linen.display(size, weight: weight, color: color);
-
   static TextStyle sans(double size, {FontWeight weight = FontWeight.w400, Color? color}) =>
       TunerThemes.linen.sans(size, weight: weight, color: color);
-
-  static TextStyle mono(double size, {FontWeight weight = FontWeight.w400, Color? color}) =>
-      TunerThemes.linen.mono(size, weight: weight, color: color);
 
   static TextStyle label(double size, {Color? color}) =>
       TunerThemes.linen.label(size, color: color);

@@ -70,7 +70,7 @@ class StringTile extends StatelessWidget {
                         ),
                         Text(
                           '${string.octave}',
-                          style: AppTextStyles.sans(14,
+                          style: AppTextStyles.sans(16,
                               weight: FontWeight.w500,
                               color: active
                                   ? AppColors.textSecondary
@@ -80,7 +80,7 @@ class StringTile extends StatelessWidget {
                         // Hz — small, secondary
                         Text(
                           '${string.frequency.toStringAsFixed(1)} Hz',
-                          style: AppTextStyles.sans(12,
+                          style: AppTextStyles.sans(14,
                               color: active
                                   ? AppColors.textSecondary
                                   : AppColors.textDim),
