@@ -1,0 +1,73 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for French (`fr`).
+class AppLocalizationsFr extends AppLocalizations {
+  AppLocalizationsFr([String locale = 'fr']) : super(locale);
+
+  @override
+  String get tunerTitle => 'ACCORDEUR';
+
+  @override
+  String get settingsTitle => 'Paramètres';
+
+  @override
+  String get settingsNoteDisplayLabel => 'Affichage des notes';
+
+  @override
+  String get settingsAlwaysShowFlatsToggle => '♭  Toujours en bémol';
+
+  @override
+  String get settingsAlwaysShowFlatsHint => 'ex. B♭ au lieu de A♯';
+
+  @override
+  String get settingsOctaveNumberLabel => 'Numéro d\'octave';
+
+  @override
+  String get settingsShowOctaveToggle => 'Afficher l\'octave';
+
+  @override
+  String get settingsShowOctaveHint => 'ex. A4 au lieu de A';
+
+  @override
+  String get settingsLanguageLabel => 'Langue';
+
+  @override
+  String get tunerStartBtn => 'Accorder';
+
+  @override
+  String get tunerStopBtn => 'Arrêter';
+
+  @override
+  String get gaugeListeningMsg => 'Écoute d\'une note…';
+
+  @override
+  String get gaugeTapToBeginMsg => 'Appuyez pour commencer';
+
+  @override
+  String get pitchLightFlatLabel => 'Trop bas';
+
+  @override
+  String get pitchLightInTuneLabel => 'Juste';
+
+  @override
+  String get pitchLightSharpLabel => 'Trop haut';
+
+  @override
+  String get errorMicDeniedTitle => 'Accès au microphone refusé';
+
+  @override
+  String get errorMicDeniedMsg =>
+      'Allez dans Réglages → Accordeur → Microphone et activez-le.';
+
+  @override
+  String get errorMicDeniedBtn => 'Ouvrir les réglages';
+
+  @override
+  String errorMicUnavailableMsg(String message) {
+    return 'Microphone indisponible : $message';
+  }
+}

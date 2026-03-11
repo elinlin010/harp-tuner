@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class TunerGauge extends StatefulWidget {
@@ -319,6 +320,7 @@ class _IdleReadout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AnimatedBuilder(
       animation: pulse,
       builder: (ctx, child) => Opacity(
@@ -335,7 +337,7 @@ class _IdleReadout extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            isListening ? 'Listening for a note…' : 'Tap Start Tuning to begin',
+            isListening ? l10n.gaugeListeningMsg : l10n.gaugeTapToBeginMsg,
             style: theme.sans(22, weight: FontWeight.w500, color: theme.textSecondary),
             textAlign: TextAlign.center,
           ),
