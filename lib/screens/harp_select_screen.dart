@@ -74,7 +74,7 @@ class _HarpSelectScreenState extends ConsumerState<HarpSelectScreen>
                 Center(
                   child: Text(
                     'SELECT YOUR INSTRUMENT',
-                    style: AppTextStyles.label(10, color: AppColors.textDim),
+                    style: AppTextStyles.label(13, color: AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -100,7 +100,7 @@ class _Header extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Tuner',
-          style: AppTextStyles.display(52, weight: FontWeight.w300),
+          style: AppTextStyles.sans(52, weight: FontWeight.w300),
         ),
         const SizedBox(height: 8),
         Container(height: 1, width: 60, color: AppColors.goldDeep),

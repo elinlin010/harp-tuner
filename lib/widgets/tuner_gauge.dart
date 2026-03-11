@@ -49,14 +49,6 @@ class _TunerGaugeState extends State<TunerGauge>
     return widget.theme.flat;
   }
 
-  String get _tuneWord {
-    final c = widget.cents;
-    if (c == null) return '';
-    if (c.abs() <= 5) return 'In Tune';
-    if (c > 0) return 'Sharp';
-    return 'Flat';
-  }
-
   @override
   Widget build(BuildContext context) {
     final hasSignal = widget.cents != null;
@@ -116,25 +108,44 @@ class _TunerGaugeState extends State<TunerGauge>
 
             const SizedBox(height: 16),
 
-            // ── Readout — Flexible so it never overflows the Column ──────────
+            // ── Readout — both states live here simultaneously; cross-fade
+            //    between them so the layout never shifts/bounces.
             Expanded(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.topCenter,
-                child: hasSignal
-                    ? _SignalReadout(
-                        cents: widget.cents!,
-                        noteName: widget.noteName ?? '—',
-                        detectedHz: widget.detectedHz,
-                        stateColor: _stateColor,
-                        tuneWord: _tuneWord,
-                        theme: widget.theme,
-                      )
-                    : _IdleReadout(
-                        isListening: widget.isListening,
-                        pulse: _pulseCtrl,
-                        theme: widget.theme,
+              child: Stack(
+                children: [
+                  // Idle state — fades out when a note is detected
+                  Positioned.fill(
+                    child: AnimatedOpacity(
+                      opacity: hasSignal ? 0.0 : 1.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Center(
+                        child: _IdleReadout(
+                          isListening: widget.isListening,
+                          pulse: _pulseCtrl,
+                          theme: widget.theme,
+                        ),
                       ),
+                    ),
+                  ),
+                  // Signal state — fades in when a note is detected
+                  Positioned.fill(
+                    child: AnimatedOpacity(
+                      opacity: hasSignal ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.center,
+                        child: _SignalReadout(
+                          cents: widget.cents ?? 0,
+                          noteName: widget.noteName ?? '—',
+                          detectedHz: widget.detectedHz,
+                          stateColor: _stateColor,
+                          theme: widget.theme,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -156,7 +167,7 @@ class _ScaleLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: theme.mono(13, color: theme.textDim),
+      style: theme.sans(13, color: theme.textDim),
     );
   }
 }
@@ -341,7 +352,6 @@ class _SignalReadout extends StatelessWidget {
   final String noteName;
   final double? detectedHz;
   final Color stateColor;
-  final String tuneWord;
   final TunerThemeData theme;
 
   const _SignalReadout({
@@ -349,7 +359,6 @@ class _SignalReadout extends StatelessWidget {
     required this.noteName,
     required this.detectedHz,
     required this.stateColor,
-    required this.tuneWord,
     required this.theme,
   });
 
@@ -364,42 +373,26 @@ class _SignalReadout extends StatelessWidget {
         // Note name — big serif
         Text(
           noteName,
-          style: theme.display(100, weight: FontWeight.w400).copyWith(height: 1),
+          style: theme.sans(100, weight: FontWeight.w400).copyWith(height: 1),
           textAlign: TextAlign.center,
         ),
 
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
 
         // Hz — prominent, its own line
         if (detectedHz != null)
           Text(
             '${detectedHz!.toStringAsFixed(1)} Hz',
-            style: theme.mono(28, weight: FontWeight.w500, color: theme.textSecondary),
+            style: theme.sans(28, weight: FontWeight.w500, color: theme.textSecondary),
             textAlign: TextAlign.center,
           ),
 
-        const SizedBox(height: 14),
+        const SizedBox(height: 8),
 
-        // Status pill — "In Tune" / "Sharp" / "Flat"
-        if (tuneWord.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 7),
-            decoration: BoxDecoration(
-              color: stateColor.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: Text(
-              tuneWord,
-              style: theme.sans(22, weight: FontWeight.w700, color: stateColor),
-            ),
-          ),
-
-        const SizedBox(height: 10),
-
-        // Cents — secondary
+        // Cents deviation — colored to match state
         Text(
           '$centsStr¢',
-          style: theme.mono(18, weight: FontWeight.w500,
+          style: theme.sans(18, weight: FontWeight.w500,
               color: stateColor.withValues(alpha: 0.75)),
           textAlign: TextAlign.center,
         ),

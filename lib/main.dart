@@ -27,6 +27,20 @@ class HarpTunerApp extends StatelessWidget {
       title: 'Harp Tuner',
       theme: AppTheme.dark,
       debugShowCheckedModeBanner: false,
+      // Clamp system font scale: respect user's accessibility setting up to
+      // 1.3× but prevent layout overflow at extreme scales.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(
+            textScaler: mq.textScaler.clamp(
+              minScaleFactor: 1.0,
+              maxScaleFactor: 1.3,
+            ),
+          ),
+          child: child!,
+        );
+      },
       home: const HarpSelectScreen(),
     );
   }

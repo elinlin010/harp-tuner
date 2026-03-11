@@ -19,36 +19,68 @@ class PitchLightIndicator extends StatelessWidget {
     final isInTune = cents != null && cents!.abs() <= 5;
     final isSharp  = cents != null && cents! > 5;
 
-    final opacity = (!isListening && cents == null) ? 0.35 : 1.0;
+    final animDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
 
-    return AnimatedOpacity(
-      opacity: opacity,
-      duration: const Duration(milliseconds: 200),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _Light(color: theme.flat,   active: isFlat,   label: '♭', theme: theme),
-          const SizedBox(width: 24),
-          _Light(color: theme.inTune, active: isInTune, label: '●', theme: theme),
-          const SizedBox(width: 24),
-          _Light(color: theme.sharp,  active: isSharp,  label: '♯', theme: theme),
-        ],
-      ),
+    // No surrounding panel — lights float directly on the page background.
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _Bulb(
+          label: 'Flat',
+          symbol: '♭',
+          active: isFlat,
+          color: theme.flat,
+          size: 40,
+          symbolSize: 18,
+          theme: theme,
+          animDuration: animDuration,
+        ),
+        _Bulb(
+          label: 'In Tune',
+          symbol: '✓',
+          active: isInTune,
+          color: theme.inTune,
+          size: 60,           // larger — most important state
+          symbolSize: 26,
+          theme: theme,
+          animDuration: animDuration,
+        ),
+        _Bulb(
+          label: 'Sharp',
+          symbol: '♯',
+          active: isSharp,
+          color: theme.sharp,
+          size: 40,
+          symbolSize: 18,
+          theme: theme,
+          animDuration: animDuration,
+        ),
+      ],
     );
   }
 }
 
-class _Light extends StatelessWidget {
-  final Color color;
-  final bool active;
+class _Bulb extends StatelessWidget {
   final String label;
+  final String symbol;
+  final bool active;
+  final Color color;
+  final double size;
+  final double symbolSize;
   final TunerThemeData theme;
+  final Duration animDuration;
 
-  const _Light({
-    required this.color,
-    required this.active,
+  const _Bulb({
     required this.label,
+    required this.symbol,
+    required this.active,
+    required this.color,
+    required this.size,
+    required this.symbolSize,
     required this.theme,
+    required this.animDuration,
   });
 
   @override
@@ -57,25 +89,70 @@ class _Light extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: 18,
-          height: 18,
+          duration: animDuration,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: active ? color : theme.surfaceHi,
+            // Unlit: subtle rim only — clearly an indicator, not a button
+            border: Border.all(
+              color: active
+                  ? color
+                  : theme.surfaceRim.withValues(alpha: 0.6),
+              width: active ? 0 : 1.5,
+            ),
             boxShadow: active
                 ? [
                     BoxShadow(
-                      color: color.withValues(alpha: 0.70),
-                      blurRadius: 12,
-                      spreadRadius: 2,
+                      color: color.withValues(alpha: 0.55),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.30),
+                      blurRadius: 20,
+                      spreadRadius: 6,
+                    ),
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.12),
+                      blurRadius: 40,
+                      spreadRadius: 12,
                     ),
                   ]
-                : null,
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 3,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+          ),
+          child: Center(
+            child: AnimatedDefaultTextStyle(
+              duration: animDuration,
+              style: theme.sans(
+                symbolSize,
+                weight: FontWeight.w700,
+                color: active
+                    ? Colors.white.withValues(alpha: 0.95)
+                    : theme.textDim,
+              ),
+              child: Text(symbol),
+            ),
           ),
         ),
-        const SizedBox(height: 5),
-        Text(label, style: theme.mono(11, color: theme.textDim)),
+        const SizedBox(height: 8),
+        AnimatedDefaultTextStyle(
+          duration: animDuration,
+          style: theme.sans(
+            13,
+            weight: active ? FontWeight.w700 : FontWeight.w400,
+            color: active ? color : theme.textSecondary,
+          ),
+          child: Text(label),
+        ),
       ],
     );
   }
