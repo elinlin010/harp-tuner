@@ -56,16 +56,14 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ),
 
-              // ── Gauge + readout, vertically centered ──────────────────────
+              // ── Gauge + readout — fills remaining space ────────────────────
               Expanded(
-                child: Center(
-                  child: TunerGauge(
-                    cents: tuner.cents,
-                    noteName: tuner.closestNoteName,
-                    detectedHz: tuner.detectedHz,
-                    isListening: tuner.isListening,
-                    theme: theme,
-                  ),
+                child: TunerGauge(
+                  cents: tuner.cents,
+                  noteName: tuner.closestNoteName,
+                  detectedHz: tuner.detectedHz,
+                  isListening: tuner.isListening,
+                  theme: theme,
                 ),
               ),
 

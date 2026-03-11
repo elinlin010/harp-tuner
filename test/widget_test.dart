@@ -4,7 +4,7 @@ import 'package:harp_tuner/main.dart';
 
 void main() {
   testWidgets('App launches smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const ProviderScope(child: HarpTunerApp()));
+    await tester.pumpWidget(const ProviderScope(child: TunerApp()));
     await tester.pumpAndSettle();
     expect(find.text('Tuner'), findsOneWidget);
   });

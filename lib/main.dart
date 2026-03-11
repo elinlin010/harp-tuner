@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'screens/harp_select_screen.dart';
+import 'screens/tuner_screen.dart';
 import 'theme/app_theme.dart';
 
 void main() {
@@ -15,19 +15,19 @@ void main() {
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
-  runApp(const ProviderScope(child: HarpTunerApp()));
+  runApp(const ProviderScope(child: TunerApp()));
 }
 
-class HarpTunerApp extends StatelessWidget {
-  const HarpTunerApp({super.key});
+class TunerApp extends StatelessWidget {
+  const TunerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Harp Tuner',
+      title: 'Tuner',
       theme: AppTheme.dark,
       debugShowCheckedModeBanner: false,
-      home: const HarpSelectScreen(),
+      home: const TunerScreen(),
     );
   }
 }
