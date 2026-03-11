@@ -1,0 +1,30 @@
+{
+  "@@locale": "de",
+  "tunerTitle": "STIMMGERÄT",
+  "settingsTitle": "Einstellungen",
+  "settingsNoteDisplayLabel": "Notenname",
+  "settingsAlwaysShowFlatsToggle": "♭  Immer b-Vorzeichen",
+  "settingsAlwaysShowFlatsHint": "z.B. B♭ statt A♯",
+  "settingsOctaveNumberLabel": "Oktavnummer",
+  "settingsShowOctaveToggle": "Oktavnummer anzeigen",
+  "settingsShowOctaveHint": "z.B. A4 statt A",
+  "settingsLanguageLabel": "Sprache",
+  "tunerStartBtn": "Stimmen starten",
+  "tunerStopBtn": "Stopp",
+  "gaugeListeningMsg": "Auf Ton hören…",
+  "gaugeTapToBeginMsg": "Antippen zum Starten",
+  "pitchLightFlatLabel": "Zu tief",
+  "pitchLightInTuneLabel": "Gestimmt",
+  "pitchLightSharpLabel": "Zu hoch",
+  "errorMicDeniedTitle": "Mikrofonzugriff verweigert",
+  "errorMicDeniedMsg": "Einstellungen → Stimmgerät → Mikrofon öffnen und aktivieren.",
+  "errorMicDeniedBtn": "Einstellungen öffnen",
+  "errorMicUnavailableMsg": "Mikrofon nicht verfügbar: {message}",
+  "@errorMicUnavailableMsg": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
+}

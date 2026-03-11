@@ -1,0 +1,30 @@
+{
+  "@@locale": "en",
+  "tunerTitle": "TUNER",
+  "settingsTitle": "Settings",
+  "settingsNoteDisplayLabel": "Note display",
+  "settingsAlwaysShowFlatsToggle": "♭  Always show flats",
+  "settingsAlwaysShowFlatsHint": "e.g. B♭ instead of A♯",
+  "settingsOctaveNumberLabel": "Octave number",
+  "settingsShowOctaveToggle": "Show octave number",
+  "settingsShowOctaveHint": "e.g. A4 instead of A",
+  "settingsLanguageLabel": "Language",
+  "tunerStartBtn": "Start Tuning",
+  "tunerStopBtn": "Stop",
+  "gaugeListeningMsg": "Listening for a note…",
+  "gaugeTapToBeginMsg": "Tap Start Tuning to begin",
+  "pitchLightFlatLabel": "Flat",
+  "pitchLightInTuneLabel": "In Tune",
+  "pitchLightSharpLabel": "Sharp",
+  "errorMicDeniedTitle": "Microphone access denied",
+  "errorMicDeniedMsg": "Go to Settings → Tuner → Microphone and turn it on.",
+  "errorMicDeniedBtn": "Open Settings",
+  "errorMicUnavailableMsg": "Microphone unavailable: {message}",
+  "@errorMicUnavailableMsg": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
+}

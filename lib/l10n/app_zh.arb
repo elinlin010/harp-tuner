@@ -1,0 +1,30 @@
+{
+  "@@locale": "zh",
+  "tunerTitle": "調音器",
+  "settingsTitle": "設定",
+  "settingsNoteDisplayLabel": "音符顯示",
+  "settingsAlwaysShowFlatsToggle": "♭  一律顯示降號",
+  "settingsAlwaysShowFlatsHint": "例：B♭ 而非 A♯",
+  "settingsOctaveNumberLabel": "八度音",
+  "settingsShowOctaveToggle": "顯示八度音號碼",
+  "settingsShowOctaveHint": "例：A4 而非 A",
+  "settingsLanguageLabel": "語言",
+  "tunerStartBtn": "開始調音",
+  "tunerStopBtn": "停止",
+  "gaugeListeningMsg": "正在聆聽音符…",
+  "gaugeTapToBeginMsg": "點擊以開始調音",
+  "pitchLightFlatLabel": "偏低",
+  "pitchLightInTuneLabel": "準確",
+  "pitchLightSharpLabel": "偏高",
+  "errorMicDeniedTitle": "麥克風存取被拒",
+  "errorMicDeniedMsg": "請前往「設定」→「調音器」→「麥克風」並開啟權限。",
+  "errorMicDeniedBtn": "開啟設定",
+  "errorMicUnavailableMsg": "麥克風無法使用：{message}",
+  "@errorMicUnavailableMsg": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
+}

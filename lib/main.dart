@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'l10n/app_localizations.dart';
+import 'providers/locale_provider.dart';
 import 'screens/tuner_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -18,15 +20,19 @@ void main() {
   runApp(const ProviderScope(child: HarpTunerApp()));
 }
 
-class HarpTunerApp extends StatelessWidget {
+class HarpTunerApp extends ConsumerWidget {
   const HarpTunerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final locale = ref.watch(localeProvider);
     return MaterialApp(
       title: 'Harp Tuner',
       theme: AppTheme.dark,
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: locale,
       // Clamp system font scale: respect user's accessibility setting up to
       // 1.3× but prevent layout overflow at extreme scales.
       builder: (context, child) {

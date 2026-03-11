@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../l10n/app_localizations.dart';
+import '../providers/locale_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
@@ -45,6 +47,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
     final noteName = tuner.showOctave
@@ -68,7 +71,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   Expanded(
                     child: Center(
                       child: Text(
-                        'TUNER',
+                        l10n.tunerTitle,
                         style: theme.label(16, color: theme.textSecondary),
                       ),
                     ),
@@ -158,8 +161,10 @@ class _SettingsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
+    final currentLocale = ref.watch(localeProvider);
     final animDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 200);
@@ -190,16 +195,16 @@ class _SettingsSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          Text('Settings', style: theme.sans(22, weight: FontWeight.w600)),
+          Text(l10n.settingsTitle, style: theme.sans(22, weight: FontWeight.w600)),
           const SizedBox(height: 24),
 
           // ── Note display ──────────────────────────────────────────────────
-          Text('Note display',
+          Text(l10n.settingsNoteDisplayLabel,
               style: theme.label(11, color: theme.textDim)),
           const SizedBox(height: 12),
           _SheetSwitchRow(
-            label: '♭  Always show flats',
-            subtitle: 'e.g. B♭ instead of A♯',
+            label: l10n.settingsAlwaysShowFlatsToggle,
+            subtitle: l10n.settingsAlwaysShowFlatsHint,
             value: tuner.preferFlats,
             onToggle: () => ref.read(tunerProvider.notifier).togglePreferFlats(),
             theme: theme,
@@ -211,17 +216,37 @@ class _SettingsSheet extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // ── Octave number ─────────────────────────────────────────────────
-          Text('Octave number',
+          Text(l10n.settingsOctaveNumberLabel,
               style: theme.label(11, color: theme.textDim)),
           const SizedBox(height: 12),
           _SheetSwitchRow(
-            label: 'Show octave number',
-            subtitle: 'e.g. A4 instead of A',
+            label: l10n.settingsShowOctaveToggle,
+            subtitle: l10n.settingsShowOctaveHint,
             value: tuner.showOctave,
             onToggle: () => ref.read(tunerProvider.notifier).toggleShowOctave(),
             theme: theme,
             animDuration: animDuration,
           ),
+
+          const SizedBox(height: 20),
+          Divider(color: theme.surfaceRim, height: 1),
+          const SizedBox(height: 20),
+
+          // ── Language ──────────────────────────────────────────────────────
+          Text(l10n.settingsLanguageLabel,
+              style: theme.label(11, color: theme.textDim)),
+          const SizedBox(height: 4),
+          for (final lang in _languages)
+            _LanguageRow(
+              nativeName: lang.value,
+              locale: lang.key,
+              selected: currentLocale.languageCode == lang.key.languageCode &&
+                  (currentLocale.countryCode ?? '') ==
+                      (lang.key.countryCode ?? ''),
+              onTap: () =>
+                  ref.read(localeProvider.notifier).setLocale(lang.key),
+              theme: theme,
+            ),
         ],
       ),
     );
@@ -332,6 +357,7 @@ class _ListenButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedBuilder(
@@ -379,12 +405,15 @@ class _ListenButton extends StatelessWidget {
                   color: isListening ? theme.inTune : theme.textSecondary,
                 ),
                 const SizedBox(width: 12),
-                Text(
-                  isListening ? 'Stop' : 'Start Tuning',
-                  style: theme.sans(
-                    20,
-                    weight: FontWeight.w700,
-                    color: isListening ? theme.inTune : theme.textSecondary,
+                Flexible(
+                  child: Text(
+                    isListening ? l10n.tunerStopBtn : l10n.tunerStartBtn,
+                    style: theme.sans(
+                      20,
+                      weight: FontWeight.w700,
+                      color: isListening ? theme.inTune : theme.textSecondary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -411,6 +440,7 @@ class _MicErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: onDismiss,
       child: Container(
@@ -429,7 +459,7 @@ class _MicErrorBanner extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Microphone unavailable: $message',
+                l10n.errorMicUnavailableMsg(message),
                 style: theme.sans(16, color: Colors.amber.shade300),
               ),
             ),
@@ -452,6 +482,7 @@ class _PermissionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
@@ -468,14 +499,14 @@ class _PermissionBanner extends StatelessWidget {
               Icon(Icons.mic_off_rounded, size: 20, color: theme.sharp),
               const SizedBox(width: 10),
               Text(
-                'Microphone access denied',
+                l10n.errorMicDeniedTitle,
                 style: theme.sans(16, weight: FontWeight.w700, color: theme.sharp),
               ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
-            'Go to Settings → Tuner → Microphone and turn it on.',
+            l10n.errorMicDeniedMsg,
             style: theme.sans(16, color: theme.sharp.withValues(alpha: 0.85)),
           ),
           const SizedBox(height: 12),
@@ -491,13 +522,67 @@ class _PermissionBanner extends StatelessWidget {
                     color: theme.sharp.withValues(alpha: 0.45), width: 1),
               ),
               child: Text(
-                'Open Settings',
+                l10n.errorMicDeniedBtn,
                 textAlign: TextAlign.center,
                 style: theme.sans(16, weight: FontWeight.w700, color: theme.sharp),
               ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Language data ─────────────────────────────────────────────────────────────
+
+const _languages = [
+  MapEntry(Locale('en'), 'English'),
+  MapEntry(Locale('zh', 'TW'), '繁體中文'),
+  MapEntry(Locale('de'), 'Deutsch'),
+  MapEntry(Locale('fr'), 'Français'),
+  MapEntry(Locale('it'), 'Italiano'),
+];
+
+// ── Language row ──────────────────────────────────────────────────────────────
+
+class _LanguageRow extends StatelessWidget {
+  final String nativeName;
+  final Locale locale;
+  final bool selected;
+  final VoidCallback onTap;
+  final TunerThemeData theme;
+
+  const _LanguageRow({
+    required this.nativeName,
+    required this.locale,
+    required this.selected,
+    required this.onTap,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Row(
+          children: [
+            Text(
+              nativeName,
+              style: theme.sans(
+                16,
+                weight: selected ? FontWeight.w600 : FontWeight.w400,
+                color: selected ? theme.textPrimary : theme.textSecondary,
+              ),
+            ),
+            const Spacer(),
+            if (selected)
+              Icon(Icons.check_rounded, size: 20, color: theme.inTune),
+          ],
+        ),
       ),
     );
   }

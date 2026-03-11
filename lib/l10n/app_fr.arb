@@ -1,0 +1,30 @@
+{
+  "@@locale": "fr",
+  "tunerTitle": "ACCORDEUR",
+  "settingsTitle": "Paramètres",
+  "settingsNoteDisplayLabel": "Affichage des notes",
+  "settingsAlwaysShowFlatsToggle": "♭  Toujours en bémol",
+  "settingsAlwaysShowFlatsHint": "ex. B♭ au lieu de A♯",
+  "settingsOctaveNumberLabel": "Numéro d'octave",
+  "settingsShowOctaveToggle": "Afficher l'octave",
+  "settingsShowOctaveHint": "ex. A4 au lieu de A",
+  "settingsLanguageLabel": "Langue",
+  "tunerStartBtn": "Accorder",
+  "tunerStopBtn": "Arrêter",
+  "gaugeListeningMsg": "Écoute d'une note…",
+  "gaugeTapToBeginMsg": "Appuyez pour commencer",
+  "pitchLightFlatLabel": "Trop bas",
+  "pitchLightInTuneLabel": "Juste",
+  "pitchLightSharpLabel": "Trop haut",
+  "errorMicDeniedTitle": "Accès au microphone refusé",
+  "errorMicDeniedMsg": "Allez dans Réglages → Accordeur → Microphone et activez-le.",
+  "errorMicDeniedBtn": "Ouvrir les réglages",
+  "errorMicUnavailableMsg": "Microphone indisponible : {message}",
+  "@errorMicUnavailableMsg": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
+}

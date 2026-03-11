@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class PitchLightIndicator extends StatelessWidget {
@@ -23,12 +24,14 @@ class PitchLightIndicator extends StatelessWidget {
         ? Duration.zero
         : const Duration(milliseconds: 200);
 
+    final l10n = AppLocalizations.of(context)!;
+
     // No surrounding panel — lights float directly on the page background.
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _Bulb(
-          label: 'Flat',
+          label: l10n.pitchLightFlatLabel,
           symbol: '♭',
           active: isFlat,
           color: theme.flat,
@@ -38,7 +41,7 @@ class PitchLightIndicator extends StatelessWidget {
           animDuration: animDuration,
         ),
         _Bulb(
-          label: 'In Tune',
+          label: l10n.pitchLightInTuneLabel,
           symbol: '✓',
           active: isInTune,
           color: theme.inTune,
@@ -48,7 +51,7 @@ class PitchLightIndicator extends StatelessWidget {
           animDuration: animDuration,
         ),
         _Bulb(
-          label: 'Sharp',
+          label: l10n.pitchLightSharpLabel,
           symbol: '♯',
           active: isSharp,
           color: theme.sharp,
