@@ -6,6 +6,7 @@ import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/tuner_gauge.dart';
+import '../widgets/pitch_light_indicator.dart';
 
 class TunerScreen extends ConsumerStatefulWidget {
   const TunerScreen({super.key});
@@ -37,6 +38,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
+    final noteName = tuner.showOctave
+        ? tuner.closestNoteName
+        : tuner.closestNoteName?.replaceAll(RegExp(r'\d+$'), '');
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -61,7 +65,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 child: Center(
                   child: TunerGauge(
                     cents: tuner.cents,
-                    noteName: tuner.closestNoteName,
+                    noteName: noteName,
                     detectedHz: tuner.detectedHz,
                     isListening: tuner.isListening,
                     theme: theme,
@@ -69,12 +73,33 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ),
 
+              // ── Pitch light indicator ────────────────────────────────────
+              const SizedBox(height: 12),
+              PitchLightIndicator(
+                cents: tuner.cents,
+                isListening: tuner.isListening,
+                theme: theme,
+              ),
+              const SizedBox(height: 20),
+
               // ── Flat/Sharp toggle ─────────────────────────────────────────
               Center(
                 child: _FlatSharpToggle(
                   preferFlats: tuner.preferFlats,
                   onToggle: () =>
                       ref.read(tunerProvider.notifier).togglePreferFlats(),
+                  theme: theme,
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ── Octave toggle ─────────────────────────────────────────────
+              Center(
+                child: _OctaveSwitch(
+                  showOctave: tuner.showOctave,
+                  onToggle: () =>
+                      ref.read(tunerProvider.notifier).toggleShowOctave(),
                   theme: theme,
                 ),
               ),
@@ -200,6 +225,67 @@ class _ToggleTab extends StatelessWidget {
             color: active ? theme.textPrimary : theme.textDim,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Octave switch ─────────────────────────────────────────────────────────────
+
+class _OctaveSwitch extends StatelessWidget {
+  final bool showOctave;
+  final VoidCallback onToggle;
+  final TunerThemeData theme;
+
+  const _OctaveSwitch({
+    required this.showOctave,
+    required this.onToggle,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onToggle,
+      behavior: HitTestBehavior.opaque,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'OCTAVE',
+            style: theme.label(11, color: showOctave ? theme.textSecondary : theme.textDim),
+          ),
+          const SizedBox(width: 10),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 40,
+            height: 22,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(11),
+              color: showOctave ? theme.inTune.withValues(alpha: 0.25) : theme.surfaceHi,
+              border: Border.all(
+                color: showOctave ? theme.inTune.withValues(alpha: 0.55) : theme.surfaceRim,
+                width: 1,
+              ),
+            ),
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 200),
+              alignment: showOctave ? Alignment.centerRight : Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 16,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: showOctave ? theme.inTune : theme.textDim,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

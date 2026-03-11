@@ -3,8 +3,15 @@ import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/harp_type.dart';
 import '../services/pitch_detection_service.dart';
 import '../utils/music_utils.dart';
+
+// ── Enums / simple providers ───────────────────────────────────────────────────
+
+enum TunerMode { auto, manual }
+
+final selectedHarpProvider = StateProvider<HarpType>((ref) => HarpType.lapHarp);
 
 // ── Tuner state ───────────────────────────────────────────────────────────────
 
@@ -12,6 +19,7 @@ class TunerState {
   final bool isListening;
   final bool permissionDenied;
   final bool preferFlats;
+  final bool showOctave;
   final double? cents;
   final double? detectedHz;
   final String? closestNoteName;
@@ -21,6 +29,7 @@ class TunerState {
     this.isListening = false,
     this.permissionDenied = false,
     this.preferFlats = false,
+    this.showOctave = false,
     this.cents,
     this.detectedHz,
     this.closestNoteName,
@@ -31,6 +40,7 @@ class TunerState {
     bool? isListening,
     bool? permissionDenied,
     bool? preferFlats,
+    bool? showOctave,
     double? cents,
     double? detectedHz,
     String? closestNoteName,
@@ -42,6 +52,7 @@ class TunerState {
       isListening: isListening ?? this.isListening,
       permissionDenied: permissionDenied ?? this.permissionDenied,
       preferFlats: preferFlats ?? this.preferFlats,
+      showOctave: showOctave ?? this.showOctave,
       cents: clearPitch ? null : (cents ?? this.cents),
       detectedHz: clearPitch ? null : (detectedHz ?? this.detectedHz),
       closestNoteName:
@@ -122,6 +133,10 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
   void clearMicError() {
     state = state.copyWith(clearMicError: true);
+  }
+
+  void toggleShowOctave() {
+    state = state.copyWith(showOctave: !state.showOctave);
   }
 
   void togglePreferFlats() {
