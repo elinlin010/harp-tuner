@@ -38,8 +38,9 @@ class PitchDetectionService {
   static const _iosPermChannel =
       MethodChannel('com.harptuner/mic_permission');
 
-  // 8192 samples ≈ 186 ms — long enough to detect down to C1 (32.7 Hz)
-  static const int _bufferSize = 8192;
+  // 4096 samples ≈ 93 ms — covers down to ~21 Hz (below all harp strings).
+  // Halved from 8192: YIN is O(n²), so 2048²=4M ops vs 4096²=16M ops per frame.
+  static const int _bufferSize = 4096;
 
   StreamSubscription<Uint8List>? _micSub;
   StreamController<PitchResult?>? _ctrl;
@@ -143,26 +144,32 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
-    // mic_stream delivers 16-bit signed PCM, little-endian
-    final data = bytes.buffer.asByteData();
+    // mic_stream delivers 16-bit signed PCM, little-endian.
+    // Pass offsetInBytes so we read the correct slice of the underlying buffer
+    // (bytes may be a sub-view with a non-zero offset into its ByteBuffer).
+    final data = bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes);
     for (int i = 0; i + 1 < bytes.length; i += 2) {
       final raw = data.getInt16(i, Endian.little);
       _accumulator.add(raw / 32768.0); // normalise to -1.0..1.0
     }
 
-    // Process in _bufferSize chunks with 50% overlap for smooth updates
-    while (_accumulator.length >= _bufferSize) {
-      final chunk = _accumulator.sublist(0, _bufferSize);
-      // Advance by half the buffer to maintain 50% overlap
-      _accumulator.removeRange(0, _bufferSize ~/ 2);
+    // Discard stale audio to stay real-time: if the accumulator has grown
+    // beyond two buffers (YIN lagging in debug mode), skip ahead.
+    if (_accumulator.length > _bufferSize * 2) {
+      _accumulator.removeRange(0, _accumulator.length - _bufferSize);
+    }
 
-      final result = await _detector!.getPitchFromFloatBuffer(chunk);
+    if (_accumulator.length < _bufferSize) return;
 
-      if (result.pitched && result.pitch > 20.0 && result.pitch < 5000.0) {
-        _ctrl?.add(PitchResult(result.pitch));
-      } else {
-        _ctrl?.add(null);
-      }
+    final chunk = _accumulator.sublist(0, _bufferSize);
+    _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
+
+    final result = await _detector!.getPitchFromFloatBuffer(chunk);
+
+    if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
+      _ctrl?.add(PitchResult(result.pitch));
+    } else {
+      _ctrl?.add(null);
     }
   }
 }

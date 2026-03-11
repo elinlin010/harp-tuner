@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -56,6 +57,14 @@ class TunerNotifier extends StateNotifier<TunerState> {
   final PitchDetectionService _service = PitchDetectionService();
   StreamSubscription<PitchResult?>? _pitchSub;
 
+  static const _historyLen   = 5;
+  static const _stableNeeded = 2;
+  static const _stableCents  = 150.0;
+  static const _holdFrames   = 4;
+
+  final _freqHistory = <double>[];
+  int _silenceCount  = 0;
+
   TunerNotifier() : super(const TunerState());
 
   // ── Listening ──────────────────────────────────────────────────────────────
@@ -98,6 +107,8 @@ class TunerNotifier extends StateNotifier<TunerState> {
     _pitchSub?.cancel();
     _pitchSub = null;
     _service.stop();
+    _freqHistory.clear();
+    _silenceCount = 0;
     state = state.copyWith(isListening: false, clearPitch: true);
   }
 
@@ -132,18 +143,69 @@ class TunerNotifier extends StateNotifier<TunerState> {
   }
 
   void _onPitchResult(PitchResult? result) {
-    if (result == null) return;
+    if (result == null) {
+      _silenceCount++;
+      if (_silenceCount >= _holdFrames) {
+        _freqHistory.clear();
+        state = state.copyWith(clearPitch: true);
+      }
+      return;
+    }
+    _silenceCount = 0;
+    final hz = result.frequency;
 
-    final info = MusicUtils.frequencyToNoteInfo(
-      result.frequency,
-      preferFlats: state.preferFlats,
-    );
+    // Octave correction + outlier rejection
+    if (_freqHistory.isNotEmpty) {
+      final med = _median(_freqHistory);
+      final centsDiff = 1200 * log(hz / med) / ln2;
+      if (centsDiff.abs() > 150) {
+        final corrected = _octaveCorrect(hz, med);
+        if (corrected == null) return; // genuine outlier — discard
+        _addToHistory(corrected);
+      } else {
+        _addToHistory(hz);
+      }
+    } else {
+      _addToHistory(hz);
+    }
 
+    // Stability gate
+    if (_freqHistory.length < _stableNeeded) return;
+    if (_centSpread(_freqHistory) > _stableCents) return;
+
+    final stableHz = _median(_freqHistory);
+    final info = MusicUtils.frequencyToNoteInfo(stableHz, preferFlats: state.preferFlats);
     state = state.copyWith(
-      cents: info.cents,
-      detectedHz: result.frequency,
+      detectedHz: stableHz,
       closestNoteName: info.noteName,
+      cents: info.cents,
     );
+  }
+
+  void _addToHistory(double hz) {
+    _freqHistory.add(hz);
+    if (_freqHistory.length > _historyLen) _freqHistory.removeAt(0);
+  }
+
+  double _median(List<double> list) {
+    final s = List<double>.from(list)..sort();
+    final m = s.length ~/ 2;
+    return s.length.isOdd ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+
+  double _centSpread(List<double> list) {
+    final s = List<double>.from(list)..sort();
+    return 1200 * log(s.last / s.first) / ln2;
+  }
+
+  // Returns hz folded to same octave as reference if they differ by ~1 octave, else null.
+  double? _octaveCorrect(double hz, double reference) {
+    for (final factor in [2.0, 0.5]) {
+      final candidate = hz * factor;
+      final cents = 1200 * log(candidate / reference) / ln2;
+      if (cents.abs() < 80) return candidate;
+    }
+    return null;
   }
 
   @override
