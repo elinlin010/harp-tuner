@@ -33,6 +33,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsShowOctaveHint => '例：A4 而非 A';
 
   @override
+  String get settingsA4CalibLabel => 'A4 Reference';
+
+  @override
   String get settingsLanguageLabel => '語言';
 
   @override
@@ -98,6 +101,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsShowOctaveHint => '例：A4 而非 A';
+
+  @override
+  String get settingsA4CalibLabel => 'A4 基準音';
 
   @override
   String get settingsLanguageLabel => '語言';

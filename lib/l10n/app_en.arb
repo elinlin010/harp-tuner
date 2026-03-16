@@ -8,6 +8,7 @@
   "settingsOctaveNumberLabel": "Octave number",
   "settingsShowOctaveToggle": "Show octave number",
   "settingsShowOctaveHint": "e.g. A4 instead of A",
+  "settingsA4CalibLabel": "A4 Reference",
   "settingsLanguageLabel": "Language",
   "tunerStartBtn": "Start Tuning",
   "tunerStopBtn": "Stop",
