@@ -31,6 +31,18 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final disable = MediaQuery.disableAnimationsOf(context);
+    if (disable) {
+      _listenBtnCtrl.stop();
+      _listenBtnCtrl.value = 0.5;
+    } else if (!_listenBtnCtrl.isAnimating) {
+      _listenBtnCtrl.repeat(reverse: true);
+    }
+  }
+
+  @override
   void dispose() {
     _listenBtnCtrl.dispose();
     super.dispose();
@@ -47,7 +59,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
     final noteName = tuner.showOctave
@@ -62,21 +73,13 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 12),
-
-              // ── Title bar ─────────────────────────────────────────────────
-              Row(
-                children: [
-                  const SizedBox(width: 40), // balance the icon button
-                  Expanded(
-                    child: Center(
-                      child: Text(
-                        l10n.tunerTitle,
-                        style: theme.label(16, color: theme.textSecondary),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
+              // ── Top-right settings icon ────────────────────────────────────
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: Tooltip(
+                  message: 'Settings',
+                  child: SizedBox(
                     width: 48,
                     height: 48,
                     child: Material(
@@ -93,24 +96,21 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                       ),
                     ),
                   ),
-                ],
-              ),
-
-              // ── Gauge + readout, vertically centered ──────────────────────
-              Expanded(
-                flex: 2,
-                child: Center(
-                  child: TunerGauge(
-                    cents: tuner.cents,
-                    noteName: noteName,
-                    isListening: tuner.isListening,
-                    theme: theme,
-                  ),
                 ),
               ),
 
-              // ── Pitch light indicator ────────────────────────────────────
-              const SizedBox(height: 12),
+              // ── Gauge + readout ────────────────────────────────────────────
+              Expanded(
+                child: TunerGauge(
+                  cents: tuner.cents,
+                  noteName: noteName,
+                  isListening: tuner.isListening,
+                  theme: theme,
+                ),
+              ),
+
+              // ── Pitch light indicator ──────────────────────────────────────
+              const SizedBox(height: 20),
               PitchLightIndicator(
                 cents: tuner.cents,
                 isListening: tuner.isListening,
@@ -118,7 +118,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ),
               const SizedBox(height: 16),
 
-              // ── CALIB stepper ─────────────────────────────────────────────
+              // ── CALIB stepper ──────────────────────────────────────────────
               Center(
                 child: _A4StepperRow(
                   a4Hz: tuner.a4Hz,
@@ -131,7 +131,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ),
               const SizedBox(height: 16),
 
-              // ── Listen button — full width, big ───────────────────────────
+              // ── Listen button ──────────────────────────────────────────────
               _ListenButton(
                 isListening: tuner.isListening,
                 controller: _listenBtnCtrl,
@@ -142,13 +142,13 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
               // ── Permission denied banner ───────────────────────────────────
               if (tuner.permissionDenied) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _PermissionBanner(theme: theme),
               ],
 
               // ── Mic hardware/API error banner ──────────────────────────────
               if (tuner.micError != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _MicErrorBanner(
                   message: tuner.micError!,
                   onDismiss: () =>
@@ -157,7 +157,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ],
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
             ],
           ),
         ),
@@ -212,7 +212,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Note display ──────────────────────────────────────────────────
           Text(l10n.settingsNoteDisplayLabel,
-              style: theme.label(11, color: theme.textDim)),
+              style: theme.label(13, color: theme.textSecondary)),
           const SizedBox(height: 12),
           _SheetSwitchRow(
             label: l10n.settingsAlwaysShowFlatsToggle,
@@ -229,7 +229,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Octave number ─────────────────────────────────────────────────
           Text(l10n.settingsOctaveNumberLabel,
-              style: theme.label(11, color: theme.textDim)),
+              style: theme.label(13, color: theme.textSecondary)),
           const SizedBox(height: 12),
           _SheetSwitchRow(
             label: l10n.settingsShowOctaveToggle,
@@ -246,7 +246,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Language ──────────────────────────────────────────────────────
           Text(l10n.settingsLanguageLabel,
-              style: theme.label(11, color: theme.textDim)),
+              style: theme.label(13, color: theme.textSecondary)),
           const SizedBox(height: 4),
           for (final lang in _languages)
             _LanguageRow(
@@ -305,7 +305,7 @@ class _SheetSwitchRow extends StatelessWidget {
                             color: theme.textPrimary)),
                     const SizedBox(height: 2),
                     Text(subtitle,
-                        style: theme.sans(13, color: theme.textSecondary)),
+                        style: theme.sans(15, color: theme.textSecondary)),
                   ],
                 ),
               ),
@@ -437,6 +437,8 @@ class _ListenButton extends StatelessWidget {
   }
 }
 
+
+
 // ── Mic hardware/API error banner ─────────────────────────────────────────────
 
 class _MicErrorBanner extends StatelessWidget {
@@ -452,7 +454,6 @@ class _MicErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     return GestureDetector(
       onTap: onDismiss,
       child: Container(
@@ -463,21 +464,30 @@ class _MicErrorBanner extends StatelessWidget {
           border: Border.all(
               color: Colors.amber.withValues(alpha: 0.40), width: 1),
         ),
-        child: Row(
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.warning_amber_rounded,
-                size: 20, color: Colors.amber.shade400),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                l10n.errorMicUnavailableMsg(message),
-                style: theme.sans(16, color: Colors.amber.shade300),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.warning_amber_rounded,
+                    size: 20, color: Colors.amber.shade400),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'The microphone could not be accessed. Please restart the app or check your device settings.',
+                    style: theme.sans(16, color: Colors.amber.shade700),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.close_rounded,
-                size: 18, color: Colors.amber.withValues(alpha: 0.60)),
+            const SizedBox(height: 8),
+            Text(
+              'Tap here to dismiss',
+              style: theme.sans(13,
+                  weight: FontWeight.w600,
+                  color: Colors.amber.shade600),
+            ),
           ],
         ),
       ),
@@ -526,7 +536,7 @@ class _PermissionBanner extends StatelessWidget {
             onTap: () => openAppSettings(),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
                 color: theme.sharp.withValues(alpha: 0.18),
                 borderRadius: BorderRadius.circular(10),
@@ -563,22 +573,21 @@ class _A4StepperRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final atMin = a4Hz <= 430;
     final atMax = a4Hz >= 450;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          l10n.settingsA4CalibLabel,
-          style: theme.label(11, color: theme.textDim),
+          'CALIB',
+          style: theme.label(13, color: theme.textSecondary),
         ),
         const SizedBox(height: 8),
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _StepBtn(
-              icon: Icons.remove_rounded,
+              pointRight: false,
               onTap: atMin ? null : onDecrement,
               theme: theme,
             ),
@@ -589,7 +598,7 @@ class _A4StepperRow extends StatelessWidget {
             ),
             const SizedBox(width: 16),
             _StepBtn(
-              icon: Icons.add_rounded,
+              pointRight: true,
               onTap: atMax ? null : onIncrement,
               theme: theme,
             ),
@@ -601,37 +610,63 @@ class _A4StepperRow extends StatelessWidget {
 }
 
 class _StepBtn extends StatelessWidget {
-  final IconData icon;
+  final bool pointRight;
   final VoidCallback? onTap;
   final TunerThemeData theme;
 
-  const _StepBtn({required this.icon, required this.onTap, required this.theme});
+  const _StepBtn({required this.pointRight, required this.onTap, required this.theme});
 
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: theme.surfaceHi,
-          border: Border.all(
-            color: theme.surfaceRim.withValues(alpha: enabled ? 0.8 : 0.3),
-            width: 1.5,
+      child: SizedBox(
+        width: 48,
+        height: 48,
+        child: CustomPaint(
+          painter: _TrianglePainter(
+            pointRight: pointRight,
+            color: enabled ? theme.textPrimary : theme.textDim,
           ),
-        ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: enabled ? theme.textPrimary : theme.textDim,
         ),
       ),
     );
   }
 }
+
+class _TrianglePainter extends CustomPainter {
+  final bool pointRight;
+  final Color color;
+
+  _TrianglePainter({required this.pointRight, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    const h = 14.0; // triangle height
+    const w = 12.0; // triangle half-width
+
+    final path = Path();
+    if (pointRight) {
+      path.moveTo(cx + h / 2, cy);
+      path.lineTo(cx - h / 2, cy - w);
+      path.lineTo(cx - h / 2, cy + w);
+    } else {
+      path.moveTo(cx - h / 2, cy);
+      path.lineTo(cx + h / 2, cy - w);
+      path.lineTo(cx + h / 2, cy + w);
+    }
+    path.close();
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_TrianglePainter old) =>
+      old.pointRight != pointRight || old.color != color;
+}
+
 
 // ── Language data ─────────────────────────────────────────────────────────────
 

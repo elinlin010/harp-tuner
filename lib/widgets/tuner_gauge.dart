@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
@@ -22,8 +23,15 @@ class TunerGauge extends StatefulWidget {
 }
 
 class _TunerGaugeState extends State<TunerGauge>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late AnimationController _pulseCtrl;
+  late AnimationController _needleCtrl;
+
+  static const _spring = SpringDescription(
+    mass: 1.0,
+    stiffness: 180.0,
+    damping: 14.0,
+  );
 
   @override
   void initState() {
@@ -32,17 +40,70 @@ class _TunerGaugeState extends State<TunerGauge>
       vsync: this,
       duration: const Duration(milliseconds: 1600),
     )..repeat(reverse: true);
+
+    // Wide bounds to allow spring overshoot beyond ±50 cents
+    _needleCtrl = AnimationController(
+      vsync: this,
+      lowerBound: -100.0,
+      upperBound: 100.0,
+      value: 0.0,
+    );
+    _needleCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final disable = MediaQuery.disableAnimationsOf(context);
+    if (disable) {
+      _pulseCtrl.stop();
+      _pulseCtrl.value = 0.5;
+      _needleCtrl.stop();
+      if (widget.cents != null) {
+        _needleCtrl.value = widget.cents!.clamp(-50.0, 50.0);
+      }
+    } else if (!_pulseCtrl.isAnimating) {
+      _pulseCtrl.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void didUpdateWidget(TunerGauge old) {
+    super.didUpdateWidget(old);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      if (widget.cents != null) {
+        _needleCtrl.value = widget.cents!.clamp(-50.0, 50.0);
+      } else {
+        _needleCtrl.value = 0.0;
+      }
+      return;
+    }
+
+    if (widget.cents != old.cents) {
+      if (widget.cents != null) {
+        final target = widget.cents!.clamp(-50.0, 50.0);
+        _needleCtrl.animateWith(
+          SpringSimulation(_spring, _needleCtrl.value, target, 0.0),
+        );
+      } else {
+        // clearPitch fired (stop button) — spring needle back to center
+        _needleCtrl.animateWith(
+          SpringSimulation(_spring, _needleCtrl.value, 0.0, 0.0),
+        );
+      }
+    }
   }
 
   @override
   void dispose() {
     _pulseCtrl.dispose();
+    _needleCtrl.dispose();
     super.dispose();
   }
 
   Color get _stateColor {
-    final c = widget.cents;
-    if (c == null) return widget.theme.textDim;
+    if (widget.cents == null) return widget.theme.textDim;
+    final c = _needleCtrl.value;
     if (c.abs() <= 5) return widget.theme.inTune;
     if (c > 0) return widget.theme.sharp;
     return widget.theme.flat;
@@ -51,102 +112,104 @@ class _TunerGaugeState extends State<TunerGauge>
   @override
   Widget build(BuildContext context) {
     final hasSignal = widget.cents != null;
+    final needlePos = _needleCtrl.value;
+    // Show needle whenever signal present OR it's still animating back
+    final showNeedle = hasSignal || needlePos.abs() > 1.0;
 
-    // LayoutBuilder gives us the full Expanded height AND width to work with.
     return LayoutBuilder(
       builder: (ctx, constraints) {
         final maxH = constraints.maxHeight;
         final maxW = constraints.maxWidth;
-
-        // Arc: prefer semicircle (width/2 + 16), but cap at 50% of height
-        // so the readout always has room below.
         final arcH = min(maxW / 2 + 16, maxH * 0.50);
 
         return Column(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // ── Arc ─────────────────────────────────────────────────────────
-            SizedBox(
-              height: arcH,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: AnimatedBuilder(
-                      animation: _pulseCtrl,
-                      builder: (ctx, child) => CustomPaint(
-                        painter: _ArcPainter(
-                          cents: widget.cents,
-                          stateColor: _stateColor,
-                          isListening: widget.isListening,
-                          pulse: _pulseCtrl.value,
-                          theme: widget.theme,
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // ── Readout ─────────────────────────────────────────────────
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: AnimatedOpacity(
+                        opacity: hasSignal ? 0.0 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: _IdleReadout(
+                            isListening: widget.isListening,
+                            pulse: _pulseCtrl,
+                            theme: widget.theme,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    left: 14,
-                    child: _ScaleLabel('−50', theme: widget.theme),
-                  ),
-                  Positioned(
-                    top: 6,
-                    left: 0,
-                    right: 0,
-                    child: Center(child: _ScaleLabel('0', theme: widget.theme)),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 14,
-                    child: _ScaleLabel('+50', theme: widget.theme),
-                  ),
-                ],
+                    Positioned.fill(
+                      child: AnimatedOpacity(
+                        opacity: hasSignal ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: _SignalReadout(
+                              cents: needlePos,
+                              noteName: widget.noteName ?? '—',
+                              stateColor: _stateColor,
+                              theme: widget.theme,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-            // ── Readout — both states live here simultaneously; cross-fade
-            //    between them so the layout never shifts/bounces.
-            Expanded(
-              child: Stack(
-                children: [
-                  // Idle state — fades out when a note is detected
-                  Positioned.fill(
-                    child: AnimatedOpacity(
-                      opacity: hasSignal ? 0.0 : 1.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Center(
-                        child: _IdleReadout(
-                          isListening: widget.isListening,
-                          pulse: _pulseCtrl,
-                          theme: widget.theme,
+              // ── Arc ─────────────────────────────────────────────────────
+              SizedBox(
+                height: arcH,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge([_pulseCtrl, _needleCtrl]),
+                        builder: (ctx, child) => CustomPaint(
+                          painter: _ArcPainter(
+                            needlePos: needlePos,
+                            showNeedle: showNeedle,
+                            stateColor: _stateColor,
+                            isListening: widget.isListening,
+                            hasSignal: hasSignal,
+                            pulse: _pulseCtrl.value,
+                            theme: widget.theme,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  // Signal state — fades in when a note is detected
-                  Positioned.fill(
-                    child: AnimatedOpacity(
-                      opacity: hasSignal ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 200),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.center,
-                        child: _SignalReadout(
-                          cents: widget.cents ?? 0,
-                          noteName: widget.noteName ?? '—',
-                          stateColor: _stateColor,
-                          theme: widget.theme,
-                        ),
-                      ),
+                    Positioned(
+                      bottom: 0,
+                      left: 14,
+                      child: _ScaleLabel('−50', theme: widget.theme),
                     ),
-                  ),
-                ],
+                    Positioned(
+                      top: 6,
+                      left: 0,
+                      right: 0,
+                      child:
+                          Center(child: _ScaleLabel('0', theme: widget.theme)),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 14,
+                      child: _ScaleLabel('+50', theme: widget.theme),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
         );
       },
     );
@@ -173,16 +236,20 @@ class _ScaleLabel extends StatelessWidget {
 // ── Arc painter ───────────────────────────────────────────────────────────────
 
 class _ArcPainter extends CustomPainter {
-  final double? cents;
+  final double needlePos;
+  final bool showNeedle;
   final Color stateColor;
   final bool isListening;
+  final bool hasSignal;
   final double pulse;
   final TunerThemeData theme;
 
   _ArcPainter({
-    required this.cents,
+    required this.needlePos,
+    required this.showNeedle,
     required this.stateColor,
     required this.isListening,
+    required this.hasSignal,
     required this.pulse,
     required this.theme,
   });
@@ -196,11 +263,11 @@ class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final cy = size.height;
-    final r = size.height - 16;
+    final cy = size.height - 10;
+    final r = size.height - 26;
     final arcRect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
 
-    // ── Track ────────────────────────────────────────────────────────────────
+    // ── Track ─────────────────────────────────────────────────────────────
     canvas.drawArc(
       arcRect,
       _startAngle,
@@ -212,7 +279,7 @@ class _ArcPainter extends CustomPainter {
         ..color = theme.surfaceRim,
     );
 
-    // ── In-tune zone ─────────────────────────────────────────────────────────
+    // ── In-tune zone ──────────────────────────────────────────────────────
     final zoneStart = _centsToAngle(-5);
     final zoneSweep = _sweep * (10 / 100);
     canvas.drawArc(
@@ -227,7 +294,7 @@ class _ArcPainter extends CustomPainter {
         ..color = theme.inTune.withValues(alpha: 0.35),
     );
 
-    // ── Ticks ─────────────────────────────────────────────────────────────────
+    // ── Ticks ─────────────────────────────────────────────────────────────
     for (int c = -50; c <= 50; c += 5) {
       final isMajor = c % 10 == 0;
       final angle = _centsToAngle(c.toDouble());
@@ -243,17 +310,17 @@ class _ArcPainter extends CustomPainter {
       );
     }
 
-    // ── Needle ───────────────────────────────────────────────────────────────
-    final hasSignal = cents != null;
-    final angle = hasSignal ? _centsToAngle(cents!) : _centsToAngle(0);
+    // ── Needle ────────────────────────────────────────────────────────────
+    final angle = _centsToAngle(needlePos.clamp(-50.0, 50.0));
     final needleLen = r - 18;
     final tipX = cx + needleLen * cos(angle);
     final tipY = cy + needleLen * sin(angle);
 
-    if (hasSignal) {
+    if (showNeedle) {
       // Soft halo
       canvas.drawLine(
-        Offset(cx, cy), Offset(tipX, tipY),
+        Offset(cx, cy),
+        Offset(tipX, tipY),
         Paint()
           ..color = stateColor.withValues(alpha: 0.15 + pulse * 0.10)
           ..strokeWidth = 18
@@ -262,7 +329,8 @@ class _ArcPainter extends CustomPainter {
       );
       // Core
       canvas.drawLine(
-        Offset(cx, cy), Offset(tipX, tipY),
+        Offset(cx, cy),
+        Offset(tipX, tipY),
         Paint()
           ..color = stateColor
           ..strokeWidth = 3.5
@@ -274,9 +342,10 @@ class _ArcPainter extends CustomPainter {
     // Pivot dot
     canvas.drawCircle(
       Offset(cx, cy),
-      hasSignal ? 6.0 : 4.0,
+      showNeedle ? 6.0 : 4.0,
       Paint()
-        ..color = hasSignal ? stateColor : theme.textDim.withValues(alpha: 0.5)
+        ..color =
+            showNeedle ? stateColor : theme.textDim.withValues(alpha: 0.5)
         ..style = PaintingStyle.fill,
     );
 
@@ -288,16 +357,19 @@ class _ArcPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5
-          ..color = theme.textSecondary.withValues(alpha: 0.15 + pulse * 0.20),
+          ..color =
+              theme.textSecondary.withValues(alpha: 0.15 + pulse * 0.20),
       );
     }
   }
 
   @override
   bool shouldRepaint(_ArcPainter old) =>
-      old.cents != cents ||
+      old.needlePos != needlePos ||
+      old.showNeedle != showNeedle ||
       old.stateColor != stateColor ||
       old.isListening != isListening ||
+      old.hasSignal != hasSignal ||
       old.pulse != pulse ||
       old.theme != theme;
 }
@@ -335,7 +407,8 @@ class _IdleReadout extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             isListening ? l10n.gaugeListeningMsg : l10n.gaugeTapToBeginMsg,
-            style: theme.sans(22, weight: FontWeight.w500, color: theme.textSecondary),
+            style: theme.sans(22,
+                weight: FontWeight.w500, color: theme.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
@@ -367,20 +440,15 @@ class _SignalReadout extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Note name — big serif
         Text(
           noteName,
           style: theme.sans(100, weight: FontWeight.w400).copyWith(height: 1),
           textAlign: TextAlign.center,
         ),
-
         const SizedBox(height: 8),
-
-        // Cents deviation — colored to match state
         Text(
           '$centsStr¢',
-          style: theme.sans(18, weight: FontWeight.w500,
-              color: stateColor.withValues(alpha: 0.75)),
+          style: theme.sans(18, weight: FontWeight.w500, color: stateColor),
           textAlign: TextAlign.center,
         ),
       ],

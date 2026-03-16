@@ -63,7 +63,8 @@ class TunerState {
       detectedHz: clearPitch ? null : (detectedHz ?? this.detectedHz),
       closestNoteName:
           clearPitch ? null : (closestNoteName ?? this.closestNoteName),
-      micError: (clearPitch || clearMicError) ? null : (micError ?? this.micError),
+      micError:
+          (clearPitch || clearMicError) ? null : (micError ?? this.micError),
     );
   }
 }
@@ -75,17 +76,23 @@ class TunerNotifier extends StateNotifier<TunerState> {
   StreamSubscription<PitchResult?>? _pitchSub;
   SharedPreferences? _prefs;
 
-  static const _historyLen   = 5;     // ring buffer size
-  static const _stableNeeded = 3;     // readings before showing display
-  static const _stableCents  = 80.0;  // max spread (cents) to count as stable
-  static const _holdFrames   = 4;     // consecutive nulls before clearing (~370 ms)
+  static const _historyLen      = 8;    // ring buffer size
+  static const _stableNeeded   = 5;    // readings before showing display
+  static const _stableCents    = 25.0; // max spread (cents) to count as stable
+  static const _challengeNeeded = 4;   // consecutive same new-note reads to accept switch
 
-  static const _kA4HzKey  = 'tuner_a4_hz';
-  static const _kA4HzMin  = 430;
-  static const _kA4HzMax  = 450;
+  static const _kA4HzKey = 'tuner_a4_hz';
+  static const _kA4HzMin = 430;
+  static const _kA4HzMax = 450;
 
   final _freqHistory = <double>[];
-  int _silenceCount  = 0;
+  // True only when silence follows a confirmed note — triggers history flush
+  // on the next real pitch. NOT re-set during mid-accumulation nulls.
+  bool _pendingHistoryFlush = false;
+
+  String? _confirmedNote;
+  String? _challengeNote;
+  int _challengeCount = 0;
 
   TunerNotifier() : super(const TunerState()) {
     _loadPrefs();
@@ -95,7 +102,9 @@ class TunerNotifier extends StateNotifier<TunerState> {
     try {
       _prefs = await SharedPreferences.getInstance();
       final savedA4 = _prefs!.getInt(_kA4HzKey);
-      if (savedA4 != null) state = state.copyWith(a4Hz: savedA4.clamp(_kA4HzMin, _kA4HzMax));
+      if (savedA4 != null) {
+        state = state.copyWith(a4Hz: savedA4.clamp(_kA4HzMin, _kA4HzMax));
+      }
     } catch (e) {
       debugPrint('TunerNotifier: failed to load prefs: $e');
     }
@@ -142,7 +151,10 @@ class TunerNotifier extends StateNotifier<TunerState> {
     _pitchSub = null;
     _service.stop();
     _freqHistory.clear();
-    _silenceCount = 0;
+    _pendingHistoryFlush = false;
+    _confirmedNote = null;
+    _challengeNote = null;
+    _challengeCount = 0;
     state = state.copyWith(isListening: false, clearPitch: true);
   }
 
@@ -163,7 +175,6 @@ class TunerNotifier extends StateNotifier<TunerState> {
   }
 
   void togglePreferFlats() {
-    // When flats preference changes, re-render the current note name if present
     final newPreferFlats = !state.preferFlats;
     if (state.detectedHz != null) {
       final info = MusicUtils.frequencyToNoteInfo(
@@ -183,7 +194,6 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
   Future<void> setA4Hz(int hz) async {
     final clamped = hz.clamp(_kA4HzMin, _kA4HzMax);
-    // Re-compute displayed note/cents with new reference immediately
     if (state.detectedHz != null) {
       final info = MusicUtils.frequencyToNoteInfo(
         state.detectedHz!,
@@ -208,14 +218,23 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
   void _onPitchResult(PitchResult? result) {
     if (result == null) {
-      _silenceCount++;
-      if (_silenceCount >= _holdFrames) {
-        _freqHistory.clear();
-        state = state.copyWith(clearPitch: true);
+      // Only act on the transition confirmed-note → silence.
+      // Nulls during accumulation (_confirmedNote == null) are ignored so
+      // partial history isn't wiped by mic dropouts mid-detection.
+      if (_confirmedNote != null) {
+        _pendingHistoryFlush = true;
+        _confirmedNote = null;
+        _challengeNote = null;
+        _challengeCount = 0;
       }
       return;
     }
-    _silenceCount = 0;
+    // Flush stale history exactly once — on the first pitch after a confirmed
+    // note went silent. Ensures old frequencies don't corrupt spread calc.
+    if (_pendingHistoryFlush) {
+      _freqHistory.clear();
+      _pendingHistoryFlush = false;
+    }
     final hz = result.frequency;
 
     // Octave correction + outlier rejection
@@ -224,7 +243,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
       final centsDiff = 1200 * log(hz / med) / ln2;
       if (centsDiff.abs() > 150) {
         final corrected = _octaveCorrect(hz, med);
-        if (corrected == null) return; // genuine outlier — discard
+        if (corrected == null) return;
         _addToHistory(corrected);
       } else {
         _addToHistory(hz);
@@ -243,11 +262,36 @@ class TunerNotifier extends StateNotifier<TunerState> {
       preferFlats: state.preferFlats,
       a4Hz: state.a4Hz.toDouble(),
     );
-    state = state.copyWith(
-      detectedHz: stableHz,
-      closestNoteName: info.noteName,
-      cents: info.cents,
-    );
+
+    // Hysteresis: prevent rapid note switching
+    if (_confirmedNote == null || _confirmedNote == info.noteName) {
+      _confirmedNote = info.noteName;
+      _challengeNote = null;
+      _challengeCount = 0;
+      state = state.copyWith(
+        detectedHz: stableHz,
+        closestNoteName: info.noteName,
+        cents: info.cents,
+      );
+    } else {
+      // Different note — require _challengeNeeded consecutive reads before switching
+      if (_challengeNote == info.noteName) {
+        _challengeCount++;
+      } else {
+        _challengeNote = info.noteName;
+        _challengeCount = 1;
+      }
+      if (_challengeCount >= _challengeNeeded) {
+        _confirmedNote = info.noteName;
+        _challengeNote = null;
+        _challengeCount = 0;
+        state = state.copyWith(
+          detectedHz: stableHz,
+          closestNoteName: info.noteName,
+          cents: info.cents,
+        );
+      }
+    }
   }
 
   void _addToHistory(double hz) {

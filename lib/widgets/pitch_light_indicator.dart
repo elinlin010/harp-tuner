@@ -150,7 +150,7 @@ class _Bulb extends StatelessWidget {
         AnimatedDefaultTextStyle(
           duration: animDuration,
           style: theme.sans(
-            13,
+            16,
             weight: active ? FontWeight.w700 : FontWeight.w400,
             color: active ? color : theme.textSecondary,
           ),
