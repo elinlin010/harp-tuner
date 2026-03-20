@@ -30,9 +30,13 @@ class MusicUtils {
     final octave = (roundedMidi ~/ 12) - 1;
     final names = pedalHarp ? _noteNamesPedalHarp
         : (preferFlats ? _noteNamesFlats : _noteNamesSharps);
+    // C♭ (index 11) is enharmonic to B♮ but belongs to the octave above in
+    // harp notation — the C string in octave N flat sounds like B(N-1), so
+    // the displayed octave must be incremented by 1 to match string labels.
+    final displayOctave = (pedalHarp && noteIndex == 11) ? octave + 1 : octave;
     return (
-      noteName: '${names[noteIndex]}$octave',
-      octave: octave,
+      noteName: '${names[noteIndex]}$displayOctave',
+      octave: displayOctave,
       cents: cents.clamp(-50.0, 50.0),
     );
   }
