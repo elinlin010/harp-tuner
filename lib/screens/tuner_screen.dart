@@ -56,9 +56,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
   HarpStringModel? _closestString(
       List<HarpStringModel> strings, double? hz, int a4Hz) {
-    if (hz == null) return null;
+    if (hz == null || strings.isEmpty) return null;
     HarpStringModel? best;
-    double bestCents = 50.0;
+    double bestCents = double.infinity;
     for (final s in strings) {
       final diff =
           (1200 * log(hz / s.frequencyAt(a4Hz.toDouble())) / ln2).abs();
@@ -138,6 +138,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   cents: tuner.cents,
                   noteName: noteName,
                   isListening: tuner.isListening,
+                  isStale: tuner.isStale,
                   theme: theme,
                 ),
               ),
@@ -147,6 +148,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               PitchLightIndicator(
                 cents: tuner.cents,
                 isListening: tuner.isListening,
+                isStale: tuner.isStale,
                 theme: theme,
               ),
               const SizedBox(height: 16),

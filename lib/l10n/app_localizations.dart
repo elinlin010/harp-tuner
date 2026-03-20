@@ -198,7 +198,7 @@ abstract class AppLocalizations {
   /// No description provided for @harpTypeLeverHarpSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'34 strings · A1–F6'**
+  /// **'34 strings · A♭1–F6 · E♭ maj'**
   String get harpTypeLeverHarpSubtitle;
 
   /// No description provided for @harpTypePedalHarp.
@@ -210,7 +210,7 @@ abstract class AppLocalizations {
   /// No description provided for @harpTypePedalHarpSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'47 strings · C1–G7'**
+  /// **'47 strings · C♭1–G♭7 · flat pos.'**
   String get harpTypePedalHarpSubtitle;
 
   /// No description provided for @settingsDarkModeToggle.

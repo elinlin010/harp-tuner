@@ -8,6 +8,7 @@ class TunerGauge extends StatefulWidget {
   final double? cents;
   final String? noteName;
   final bool isListening;
+  final bool isStale;
   final TunerThemeData theme;
 
   const TunerGauge({
@@ -15,6 +16,7 @@ class TunerGauge extends StatefulWidget {
     this.cents,
     this.noteName,
     required this.isListening,
+    this.isStale = false,
     required this.theme,
   });
 
@@ -30,8 +32,17 @@ class _TunerGaugeState extends State<TunerGauge>
   static const _spring = SpringDescription(
     mass: 1.0,
     stiffness: 180.0,
-    damping: 14.0,
+    damping: 20.0,  // ratio ≈ 0.74 — near-critically damped, minimal overshoot
   );
+
+  // EMA smoothing for the spring target — reduces micro-wobble from noisy pitch
+  static const _kSmoothAlpha = 0.3; // 0 = frozen, 1 = no smoothing
+  double? _smoothedTarget;
+
+  // Velocity tracking for smooth spring hand-offs (no abrupt momentum reset)
+  double _needleVelocity = 0.0;
+  double _prevNeedleValue = 0.0;
+  double _prevListenTime  = 0.0;
 
   @override
   void initState() {
@@ -48,7 +59,16 @@ class _TunerGaugeState extends State<TunerGauge>
       upperBound: 100.0,
       value: 0.0,
     );
-    _needleCtrl.addListener(() => setState(() {}));
+    _needleCtrl.addListener(() {
+      final now = DateTime.now().microsecondsSinceEpoch / 1e6;
+      final dt  = now - _prevListenTime;
+      if (dt > 0.001 && dt < 0.2) {
+        _needleVelocity = (_needleCtrl.value - _prevNeedleValue) / dt;
+      }
+      _prevNeedleValue = _needleCtrl.value;
+      _prevListenTime  = now;
+      setState(() {});
+    });
   }
 
   @override
@@ -81,14 +101,19 @@ class _TunerGaugeState extends State<TunerGauge>
 
     if (widget.cents != old.cents) {
       if (widget.cents != null) {
-        final target = widget.cents!.clamp(-50.0, 50.0);
+        final raw = widget.cents!.clamp(-50.0, 50.0);
+        // EMA smoothing: dampens micro-wobble from noisy pitch input
+        _smoothedTarget = (_smoothedTarget == null)
+            ? raw
+            : _kSmoothAlpha * raw + (1 - _kSmoothAlpha) * _smoothedTarget!;
         _needleCtrl.animateWith(
-          SpringSimulation(_spring, _needleCtrl.value, target, 0.0),
+          SpringSimulation(_spring, _needleCtrl.value, _smoothedTarget!, _needleVelocity),
         );
       } else {
         // clearPitch fired (stop button) — spring needle back to center
+        _smoothedTarget = null;
         _needleCtrl.animateWith(
-          SpringSimulation(_spring, _needleCtrl.value, 0.0, 0.0),
+          SpringSimulation(_spring, _needleCtrl.value, 0.0, _needleVelocity),
         );
       }
     }
@@ -116,7 +141,14 @@ class _TunerGaugeState extends State<TunerGauge>
     // Show needle whenever signal present OR it's still animating back
     final showNeedle = hasSignal || needlePos.abs() > 1.0;
 
-    return LayoutBuilder(
+    final animDur = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
+
+    return AnimatedOpacity(
+      opacity: widget.isStale ? 0.40 : 1.0,
+      duration: animDur,
+      child: LayoutBuilder(
       builder: (ctx, constraints) {
         final maxH = constraints.maxHeight;
         final maxW = constraints.maxWidth;
@@ -212,7 +244,8 @@ class _TunerGaugeState extends State<TunerGauge>
             ],
         );
       },
-    );
+    ),  // LayoutBuilder
+    );  // AnimatedOpacity
   }
 }
 
@@ -437,13 +470,43 @@ class _SignalReadout extends StatelessWidget {
     final centsStr =
         cents >= 0 ? '+${cents.toStringAsFixed(1)}' : cents.toStringAsFixed(1);
 
+    // Parse e.g. "B♭4" → letter "B", accidental "♭", octave "4"
+    final match = RegExp(r'^([A-G])(♭|♯)?(\d+)?$').firstMatch(noteName);
+    final noteLetter = match?.group(1) ?? noteName;
+    final noteAcc    = match?.group(2) ?? '';
+    final noteOctave = match?.group(3) ?? '';
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          noteName,
-          style: theme.sans(100, weight: FontWeight.w400).copyWith(height: 1),
-          textAlign: TextAlign.center,
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              noteLetter,
+              style: theme.sans(100, weight: FontWeight.w400).copyWith(height: 1),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (noteAcc.isNotEmpty)
+                    Text(
+                      noteAcc,
+                      style: theme.sans(42, weight: FontWeight.w400).copyWith(height: 1),
+                    ),
+                  if (noteOctave.isNotEmpty)
+                    Text(
+                      noteOctave,
+                      style: theme.sans(30, weight: FontWeight.w300, color: theme.textSecondary).copyWith(height: 1),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
