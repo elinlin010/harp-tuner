@@ -314,7 +314,16 @@ class _SettingsSheet extends ConsumerWidget {
           Divider(color: theme.surfaceRim, height: 1),
           const SizedBox(height: 20),
 
-          // ── Theme picker ──────────────────────────────────────────────────
+          // ── Dark mode + theme picker ──────────────────────────────────────
+          _SheetSwitchRow(
+            label: l10n.settingsDarkModeToggle,
+            value: theme.brightness == Brightness.dark,
+            onToggle: () =>
+                ref.read(tunerThemeProvider.notifier).toggleDarkMode(),
+            theme: theme,
+            animDuration: animDuration,
+          ),
+          const SizedBox(height: 12),
           Text(l10n.settingsThemeLabel,
               style: theme.label(13, color: theme.textSecondary)),
           const SizedBox(height: 16),
@@ -875,9 +884,12 @@ class _ThemePickerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final filtered = TunerThemes.all
+        .where((t) => t.brightness == currentTheme.brightness)
+        .toList();
     return Row(
       children: [
-        for (final t in TunerThemes.all)
+        for (final t in filtered)
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: _ThemeSwatch(

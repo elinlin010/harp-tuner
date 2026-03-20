@@ -28,9 +28,8 @@ class PitchLightIndicator extends StatelessWidget {
 
     // No surrounding panel — lights float directly on the page background.
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _Bulb(
+        Expanded(child: _Bulb(
           label: l10n.pitchLightFlatLabel,
           symbol: '♭',
           active: isFlat,
@@ -39,8 +38,8 @@ class PitchLightIndicator extends StatelessWidget {
           symbolSize: 18,
           theme: theme,
           animDuration: animDuration,
-        ),
-        _Bulb(
+        )),
+        Expanded(child: _Bulb(
           label: l10n.pitchLightInTuneLabel,
           symbol: '✓',
           active: isInTune,
@@ -49,8 +48,8 @@ class PitchLightIndicator extends StatelessWidget {
           symbolSize: 26,
           theme: theme,
           animDuration: animDuration,
-        ),
-        _Bulb(
+        )),
+        Expanded(child: _Bulb(
           label: l10n.pitchLightSharpLabel,
           symbol: '♯',
           active: isSharp,
@@ -59,7 +58,7 @@ class PitchLightIndicator extends StatelessWidget {
           symbolSize: 18,
           theme: theme,
           animDuration: animDuration,
-        ),
+        )),
       ],
     );
   }

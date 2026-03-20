@@ -38,4 +38,18 @@ class ThemeNotifier extends StateNotifier<TunerThemeData> {
       debugPrint('ThemeNotifier: failed to save theme: $e');
     }
   }
+
+  /// Toggles between light and dark, keeping the same theme if possible.
+  /// Falls back to linen (light) or blueprint (dark) if no match.
+  Future<void> toggleDarkMode() async {
+    final goingDark = state.brightness != Brightness.dark;
+    final targetBrightness =
+        goingDark ? Brightness.dark : Brightness.light;
+    // Try to keep a same-brightness equivalent; otherwise pick the default.
+    final next = TunerThemes.all.firstWhere(
+      (t) => t.brightness == targetBrightness,
+      orElse: () => goingDark ? TunerThemes.blueprint : TunerThemes.linen,
+    );
+    await setTheme(next);
+  }
 }

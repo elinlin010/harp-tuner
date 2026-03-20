@@ -53,16 +53,11 @@ class _StringVisualizerState extends State<StringVisualizer> {
     super.dispose();
   }
 
-  static Color _stringColor(NoteName note) {
-    switch (note) {
-      case NoteName.c:
-        return const Color(0xFFC0280A); // deep red — traditional C-string colour, 5.27:1 on linen
-      case NoteName.f:
-        return const Color(0xFF1C1C1C); // near-black — traditional F-string colour, 15:1 on linen
-      default:
-        return const Color(0xFF8B6014); // warm amber — natural gut string, 4.93:1 on linen
-    }
-  }
+  Color _stringColor(NoteName note) => switch (note) {
+    NoteName.c => widget.theme.stringC,
+    NoteName.f => widget.theme.stringF,
+    _ => widget.theme.stringNatural,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +65,7 @@ class _StringVisualizerState extends State<StringVisualizer> {
       height: 88,
       child: ListView.builder(
         controller: _scrollCtrl,
+        clipBehavior: Clip.none,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
         itemCount: widget.strings.length,
@@ -151,7 +147,7 @@ class _StringCell extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isActive
                       ? stringColor
-                      : stringColor.withValues(alpha: 0.50),
+                      : stringColor.withValues(alpha: 0.65),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),

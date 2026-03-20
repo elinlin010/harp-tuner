@@ -63,6 +63,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get harpTypePedalHarpSubtitle => '47 strings · C1–G7';
 
   @override
+  String get settingsDarkModeToggle => 'Dark mode';
+
+  @override
   String get settingsThemeLabel => 'Theme';
 
   @override
