@@ -171,6 +171,48 @@ abstract class AppLocalizations {
   /// **'A4 Reference'**
   String get settingsA4CalibLabel;
 
+  /// No description provided for @settingsA4CalibStandard.
+  ///
+  /// In en, this message translates to:
+  /// **'Standard = 440 Hz'**
+  String get settingsA4CalibStandard;
+
+  /// No description provided for @harpTypeLapHarp.
+  ///
+  /// In en, this message translates to:
+  /// **'Lap Harp'**
+  String get harpTypeLapHarp;
+
+  /// No description provided for @harpTypeLapHarpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'15 strings · C4–C6'**
+  String get harpTypeLapHarpSubtitle;
+
+  /// No description provided for @harpTypeLeverHarp.
+  ///
+  /// In en, this message translates to:
+  /// **'Lever Harp'**
+  String get harpTypeLeverHarp;
+
+  /// No description provided for @harpTypeLeverHarpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'34 strings · A1–F6'**
+  String get harpTypeLeverHarpSubtitle;
+
+  /// No description provided for @harpTypePedalHarp.
+  ///
+  /// In en, this message translates to:
+  /// **'Pedal Harp'**
+  String get harpTypePedalHarp;
+
+  /// No description provided for @harpTypePedalHarpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'47 strings · C1–G7'**
+  String get harpTypePedalHarpSubtitle;
+
   /// No description provided for @settingsLanguageLabel.
   ///
   /// In en, this message translates to:
@@ -236,6 +278,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Open Settings'**
   String get errorMicDeniedBtn;
+
+  /// No description provided for @tapToDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to dismiss'**
+  String get tapToDismiss;
 
   /// No description provided for @errorMicUnavailableMsg.
   ///

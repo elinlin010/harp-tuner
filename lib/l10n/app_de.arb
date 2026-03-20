@@ -11,6 +11,13 @@
   "settingsShowOctaveToggle": "Oktavnummer anzeigen",
   "settingsShowOctaveHint": "z.B. A4 statt A",
   "settingsA4CalibLabel": "A4-Referenz",
+  "settingsA4CalibStandard": "Standard = 440 Hz",
+  "harpTypeLapHarp": "Schoßharfe",
+  "harpTypeLapHarpSubtitle": "15 Saiten · C4–C6",
+  "harpTypeLeverHarp": "Hakenharfe",
+  "harpTypeLeverHarpSubtitle": "34 Saiten · A1–F6",
+  "harpTypePedalHarp": "Pedalharfe",
+  "harpTypePedalHarpSubtitle": "47 Saiten · C1–G7",
   "settingsLanguageLabel": "Sprache",
   "tunerStartBtn": "Stimmen starten",
   "tunerStopBtn": "Stopp",
@@ -22,6 +29,7 @@
   "errorMicDeniedTitle": "Mikrofonzugriff verweigert",
   "errorMicDeniedMsg": "Einstellungen → Stimmgerät → Mikrofon öffnen und aktivieren.",
   "errorMicDeniedBtn": "Einstellungen öffnen",
+  "tapToDismiss": "Tippen zum Schließen",
   "errorMicUnavailableMsg": "Mikrofon nicht verfügbar: {message}",
   "@errorMicUnavailableMsg": {
     "placeholders": {

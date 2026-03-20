@@ -83,9 +83,8 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
-    final noteName = tuner.showOctave
-        ? tuner.closestNoteName
-        : tuner.closestNoteName?.replaceAll(RegExp(r'\d+$'), '');
+    // Always show octave number (e.g. "A4" not "A")
+    final noteName = tuner.closestNoteName;
 
     final harpStrings = tuner.selectedHarp != null
         ? HarpPresets.stringsFor(tuner.selectedHarp!)
@@ -105,22 +104,28 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
-                child: Tooltip(
-                  message: 'Settings',
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: Material(
-                      color: theme.surfaceHi,
-                      borderRadius: BorderRadius.circular(24),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(24),
-                        onTap: () => _showSettings(context),
-                        child: Icon(
-                          Icons.tune_rounded,
-                          size: 26,
-                          color: theme.textSecondary,
-                        ),
+                child: Material(
+                  color: theme.surfaceHi,
+                  borderRadius: BorderRadius.circular(20),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(20),
+                    onTap: () => _showSettings(context),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 14),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.tune_rounded,
+                              size: 18, color: theme.textSecondary),
+                          const SizedBox(width: 6),
+                          Text(
+                            AppLocalizations.of(context)!.settingsTitle,
+                            style: theme.sans(14,
+                                weight: FontWeight.w600,
+                                color: theme.textSecondary),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -157,19 +162,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 const SizedBox(height: 4),
               ],
 
-              // ── CALIB stepper ──────────────────────────────────────────────
-              Center(
-                child: _A4StepperRow(
-                  a4Hz: tuner.a4Hz,
-                  onDecrement: () =>
-                      ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
-                  onIncrement: () =>
-                      ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
-                  theme: theme,
-                ),
-              ),
-              const SizedBox(height: 16),
-
               // ── Listen button ──────────────────────────────────────────────
               _ListenButton(
                 isListening: tuner.isListening,
@@ -202,6 +194,24 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         ),
       ),
     );
+  }
+}
+
+// ── Harp type localization helpers ────────────────────────────────────────────
+
+String _harpName(HarpType type, AppLocalizations l10n) {
+  switch (type) {
+    case HarpType.lapHarp:   return l10n.harpTypeLapHarp;
+    case HarpType.leverHarp: return l10n.harpTypeLeverHarp;
+    case HarpType.pedalHarp: return l10n.harpTypePedalHarp;
+  }
+}
+
+String _harpSubtitle(HarpType type, AppLocalizations l10n) {
+  switch (type) {
+    case HarpType.lapHarp:   return l10n.harpTypeLapHarpSubtitle;
+    case HarpType.leverHarp: return l10n.harpTypeLeverHarpSubtitle;
+    case HarpType.pedalHarp: return l10n.harpTypePedalHarpSubtitle;
   }
 }
 
@@ -267,8 +277,8 @@ class _SettingsSheet extends ConsumerWidget {
           ),
           for (final type in HarpType.values)
             _InstrumentRow(
-              label: type.displayName,
-              subtitle: type.subtitle,
+              label: _harpName(type, l10n),
+              subtitle: _harpSubtitle(type, l10n),
               selected: tuner.selectedHarp == type,
               onTap: () =>
                   ref.read(tunerProvider.notifier).setSelectedHarp(type),
@@ -279,7 +289,7 @@ class _SettingsSheet extends ConsumerWidget {
           Divider(color: theme.surfaceRim, height: 1),
           const SizedBox(height: 20),
 
-          // ── Note display ──────────────────────────────────────────────────
+          // ── Note display + A4 calibration ────────────────────────────────
           Text(l10n.settingsNoteDisplayLabel,
               style: theme.label(13, color: theme.textSecondary)),
           const SizedBox(height: 12),
@@ -291,22 +301,13 @@ class _SettingsSheet extends ConsumerWidget {
             theme: theme,
             animDuration: animDuration,
           ),
-
-          const SizedBox(height: 20),
-          Divider(color: theme.surfaceRim, height: 1),
-          const SizedBox(height: 20),
-
-          // ── Octave number ─────────────────────────────────────────────────
-          Text(l10n.settingsOctaveNumberLabel,
-              style: theme.label(13, color: theme.textSecondary)),
-          const SizedBox(height: 12),
-          _SheetSwitchRow(
-            label: l10n.settingsShowOctaveToggle,
-            subtitle: l10n.settingsShowOctaveHint,
-            value: tuner.showOctave,
-            onToggle: () => ref.read(tunerProvider.notifier).toggleShowOctave(),
+          _A4StepperRow(
+            a4Hz: tuner.a4Hz,
+            onDecrement: () =>
+                ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
+            onIncrement: () =>
+                ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
             theme: theme,
-            animDuration: animDuration,
           ),
 
           const SizedBox(height: 20),
@@ -363,7 +364,7 @@ class _SheetSwitchRow extends StatelessWidget {
         onTap: onToggle,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 13),
           child: Row(
             children: [
               Expanded(
@@ -535,32 +536,35 @@ class _MicErrorBanner extends StatelessWidget {
           border: Border.all(
               color: Colors.amber.withValues(alpha: 0.40), width: 1),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.warning_amber_rounded,
-                    size: 20, color: Colors.amber.shade800),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'The microphone could not be accessed. Please restart the app or check your device settings.',
-                    style: theme.sans(16, color: theme.textPrimary),
+        child: Builder(builder: (ctx) {
+          final l10n = AppLocalizations.of(ctx)!;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 20, color: Colors.amber.shade800),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      l10n.errorMicUnavailableMsg(message),
+                      style: theme.sans(16, color: theme.textPrimary),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap here to dismiss',
-              style: theme.sans(16,
-                  weight: FontWeight.w600,
-                  color: theme.textSecondary),
-            ),
-          ],
-        ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.tapToDismiss,
+                style: theme.sans(16,
+                    weight: FontWeight.w600,
+                    color: theme.textSecondary),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -647,36 +651,53 @@ class _A4StepperRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final atMin = a4Hz <= 430;
     final atMax = a4Hz >= 450;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          l10n.settingsA4CalibLabel,
-          style: theme.label(13, color: theme.textSecondary),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _StepBtn(
-              pointRight: false,
-              onTap: atMin ? null : onDecrement,
-              theme: theme,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.settingsA4CalibLabel,
+                  style: theme.sans(16,
+                      weight: FontWeight.w600, color: theme.textPrimary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  l10n.settingsA4CalibStandard,
+                  style: theme.sans(16, color: theme.textSecondary),
+                ),
+              ],
             ),
-            const SizedBox(width: 16),
-            Text(
-              '$a4Hz Hz',
-              style: theme.sans(22, weight: FontWeight.w600),
-            ),
-            const SizedBox(width: 16),
-            _StepBtn(
-              pointRight: true,
-              onTap: atMax ? null : onIncrement,
-              theme: theme,
-            ),
-          ],
-        ),
-      ],
+          ),
+          const SizedBox(width: 16),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _StepBtn(
+                pointRight: false,
+                onTap: atMin ? null : onDecrement,
+                theme: theme,
+              ),
+              SizedBox(
+                width: 72,
+                child: Text(
+                  '$a4Hz Hz',
+                  textAlign: TextAlign.center,
+                  style: theme.sans(16, weight: FontWeight.w600),
+                ),
+              ),
+              _StepBtn(
+                pointRight: true,
+                onTap: atMax ? null : onIncrement,
+                theme: theme,
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -767,7 +788,7 @@ class _InstrumentRow extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          padding: const EdgeInsets.symmetric(vertical: 13),
           child: Row(
             children: [
               AnimatedContainer(

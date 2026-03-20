@@ -42,6 +42,27 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsA4CalibLabel => 'A4-Referenz';
 
   @override
+  String get settingsA4CalibStandard => 'Standard = 440 Hz';
+
+  @override
+  String get harpTypeLapHarp => 'Schoßharfe';
+
+  @override
+  String get harpTypeLapHarpSubtitle => '15 Saiten · C4–C6';
+
+  @override
+  String get harpTypeLeverHarp => 'Hakenharfe';
+
+  @override
+  String get harpTypeLeverHarpSubtitle => '34 Saiten · A1–F6';
+
+  @override
+  String get harpTypePedalHarp => 'Pedalharfe';
+
+  @override
+  String get harpTypePedalHarpSubtitle => '47 Saiten · C1–G7';
+
+  @override
   String get settingsLanguageLabel => 'Sprache';
 
   @override
@@ -74,6 +95,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get errorMicDeniedBtn => 'Einstellungen öffnen';
+
+  @override
+  String get tapToDismiss => 'Tippen zum Schließen';
 
   @override
   String errorMicUnavailableMsg(String message) {

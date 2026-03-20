@@ -56,11 +56,11 @@ class _StringVisualizerState extends State<StringVisualizer> {
   static Color _stringColor(NoteName note) {
     switch (note) {
       case NoteName.c:
-        return const Color(0xFFD32F2F); // red
+        return const Color(0xFFC0280A); // deep red — traditional C-string colour, 5.27:1 on linen
       case NoteName.f:
-        return const Color(0xFF1C1C1C); // near-black
+        return const Color(0xFF1C1C1C); // near-black — traditional F-string colour, 15:1 on linen
       default:
-        return const Color(0xFFF0EAD6); // natural cream
+        return const Color(0xFF8B6014); // warm amber — natural gut string, 4.93:1 on linen
     }
   }
 
@@ -163,9 +163,9 @@ class _StringCell extends StatelessWidget {
         AnimatedDefaultTextStyle(
           duration: animDuration,
           style: theme.sans(
-            isActive ? 13 : 11,
+            isActive ? 13 : 12,
             weight: isActive ? FontWeight.w700 : FontWeight.w400,
-            color: isActive ? stringColor : theme.textDim,
+            color: isActive ? stringColor : theme.textSecondary,
           ),
           child: Text(string.label, textAlign: TextAlign.center),
         ),

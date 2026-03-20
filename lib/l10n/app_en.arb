@@ -11,6 +11,13 @@
   "settingsShowOctaveToggle": "Show octave number",
   "settingsShowOctaveHint": "e.g. A4 instead of A",
   "settingsA4CalibLabel": "A4 Reference",
+  "settingsA4CalibStandard": "Standard = 440 Hz",
+  "harpTypeLapHarp": "Lap Harp",
+  "harpTypeLapHarpSubtitle": "15 strings · C4–C6",
+  "harpTypeLeverHarp": "Lever Harp",
+  "harpTypeLeverHarpSubtitle": "34 strings · A1–F6",
+  "harpTypePedalHarp": "Pedal Harp",
+  "harpTypePedalHarpSubtitle": "47 strings · C1–G7",
   "settingsLanguageLabel": "Language",
   "tunerStartBtn": "Start Tuning",
   "tunerStopBtn": "Stop",
@@ -22,6 +29,7 @@
   "errorMicDeniedTitle": "Microphone access denied",
   "errorMicDeniedMsg": "Go to Settings → Tuner → Microphone and turn it on.",
   "errorMicDeniedBtn": "Open Settings",
+  "tapToDismiss": "Tap to dismiss",
   "errorMicUnavailableMsg": "Microphone unavailable: {message}",
   "@errorMicUnavailableMsg": {
     "placeholders": {

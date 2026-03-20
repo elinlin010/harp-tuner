@@ -10,6 +10,14 @@
   "settingsOctaveNumberLabel": "八度音",
   "settingsShowOctaveToggle": "顯示八度音號碼",
   "settingsShowOctaveHint": "例：A4 而非 A",
+  "settingsA4CalibLabel": "A4 基準音",
+  "settingsA4CalibStandard": "標準 = 440 Hz",
+  "harpTypeLapHarp": "膝琴",
+  "harpTypeLapHarpSubtitle": "15 弦 · C4–C6",
+  "harpTypeLeverHarp": "槓桿豎琴",
+  "harpTypeLeverHarpSubtitle": "34 弦 · A1–F6",
+  "harpTypePedalHarp": "踏板豎琴",
+  "harpTypePedalHarpSubtitle": "47 弦 · C1–G7",
   "settingsLanguageLabel": "語言",
   "tunerStartBtn": "開始調音",
   "tunerStopBtn": "停止",
@@ -21,6 +29,7 @@
   "errorMicDeniedTitle": "麥克風存取被拒",
   "errorMicDeniedMsg": "請前往「設定」→「調音器」→「麥克風」並開啟權限。",
   "errorMicDeniedBtn": "開啟設定",
+  "tapToDismiss": "點擊關閉",
   "errorMicUnavailableMsg": "麥克風無法使用：{message}",
   "@errorMicUnavailableMsg": {
     "placeholders": {

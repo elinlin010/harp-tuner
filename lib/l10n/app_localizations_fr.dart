@@ -42,6 +42,27 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsA4CalibLabel => 'Référence A4';
 
   @override
+  String get settingsA4CalibStandard => 'Standard = 440 Hz';
+
+  @override
+  String get harpTypeLapHarp => 'Harpe de voyage';
+
+  @override
+  String get harpTypeLapHarpSubtitle => '15 cordes · C4–C6';
+
+  @override
+  String get harpTypeLeverHarp => 'Harpe celtique';
+
+  @override
+  String get harpTypeLeverHarpSubtitle => '34 cordes · A1–F6';
+
+  @override
+  String get harpTypePedalHarp => 'Harpe à pédales';
+
+  @override
+  String get harpTypePedalHarpSubtitle => '47 cordes · C1–G7';
+
+  @override
   String get settingsLanguageLabel => 'Langue';
 
   @override
@@ -74,6 +95,9 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get errorMicDeniedBtn => 'Ouvrir les réglages';
+
+  @override
+  String get tapToDismiss => 'Appuyez pour fermer';
 
   @override
   String errorMicUnavailableMsg(String message) {

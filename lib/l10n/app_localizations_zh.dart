@@ -39,7 +39,28 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsShowOctaveHint => '例：A4 而非 A';
 
   @override
-  String get settingsA4CalibLabel => 'A4 Reference';
+  String get settingsA4CalibLabel => 'A4 基準音';
+
+  @override
+  String get settingsA4CalibStandard => '標準 = 440 Hz';
+
+  @override
+  String get harpTypeLapHarp => '膝琴';
+
+  @override
+  String get harpTypeLapHarpSubtitle => '15 弦 · C4–C6';
+
+  @override
+  String get harpTypeLeverHarp => '槓桿豎琴';
+
+  @override
+  String get harpTypeLeverHarpSubtitle => '34 弦 · A1–F6';
+
+  @override
+  String get harpTypePedalHarp => '踏板豎琴';
+
+  @override
+  String get harpTypePedalHarpSubtitle => '47 弦 · C1–G7';
 
   @override
   String get settingsLanguageLabel => '語言';
@@ -73,6 +94,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get errorMicDeniedBtn => '開啟設定';
+
+  @override
+  String get tapToDismiss => '點擊關閉';
 
   @override
   String errorMicUnavailableMsg(String message) {
@@ -118,6 +142,27 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsA4CalibLabel => 'A4 基準音';
 
   @override
+  String get settingsA4CalibStandard => '標準 = 440 Hz';
+
+  @override
+  String get harpTypeLapHarp => '膝琴';
+
+  @override
+  String get harpTypeLapHarpSubtitle => '15 弦 · C4–C6';
+
+  @override
+  String get harpTypeLeverHarp => '槓桿豎琴';
+
+  @override
+  String get harpTypeLeverHarpSubtitle => '34 弦 · A1–F6';
+
+  @override
+  String get harpTypePedalHarp => '踏板豎琴';
+
+  @override
+  String get harpTypePedalHarpSubtitle => '47 弦 · C1–G7';
+
+  @override
   String get settingsLanguageLabel => '語言';
 
   @override
@@ -149,6 +194,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get errorMicDeniedBtn => '開啟設定';
+
+  @override
+  String get tapToDismiss => '點擊關閉';
 
   @override
   String errorMicUnavailableMsg(String message) {
