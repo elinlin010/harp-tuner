@@ -18,6 +18,8 @@
   "harpTypeLeverHarpSubtitle": "34 Saiten · A1–F6",
   "harpTypePedalHarp": "Pedalharfe",
   "harpTypePedalHarpSubtitle": "47 Saiten · C1–G7",
+  "settingsDarkModeToggle": "Dunkelmodus",
+  "settingsThemeLabel": "Design",
   "settingsLanguageLabel": "Sprache",
   "tunerStartBtn": "Stimmen starten",
   "tunerStopBtn": "Stopp",

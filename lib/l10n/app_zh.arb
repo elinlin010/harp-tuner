@@ -18,6 +18,8 @@
   "harpTypeLeverHarpSubtitle": "34 弦 · A1–F6",
   "harpTypePedalHarp": "踏板豎琴",
   "harpTypePedalHarpSubtitle": "47 弦 · C1–G7",
+  "settingsDarkModeToggle": "深色模式",
+  "settingsThemeLabel": "主題",
   "settingsLanguageLabel": "語言",
   "tunerStartBtn": "開始調音",
   "tunerStopBtn": "停止",

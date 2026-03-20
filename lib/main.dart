@@ -6,6 +6,7 @@ import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'screens/tuner_screen.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_provider.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,6 +27,12 @@ class HarpTunerApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localeProvider);
+    final tunerTheme = ref.watch(tunerThemeProvider);
+    final isDark = tunerTheme.brightness == Brightness.dark;
+    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+    ));
     return MaterialApp(
       title: 'Harp Tuner',
       theme: AppTheme.dark,
