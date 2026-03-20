@@ -20,11 +20,15 @@ class MusicUtils {
   ///
   /// [a4Hz] is the reference pitch for A4 (default 440 Hz). Changing this
   /// shifts all note targets proportionally — the standard tuner calibration.
-  /// [pedalHarp] uses C♭-major enharmonics (E♮→F♭, B♮→C♭).
+  /// [pedalHarp] snaps to the nearest C♭-major scale degree so only flat note
+  /// names (D♭, E♭, F♭, G♭, A♭, B♭, C♭) ever appear — natural notes are
+  /// never shown in pedal harp mode.
   static ({String noteName, int octave, double cents}) frequencyToNoteInfo(
       double hz, {bool preferFlats = false, bool pedalHarp = false, double a4Hz = 440.0}) {
     final midi = 69.0 + 12.0 * log(hz / a4Hz) / ln2;
-    final roundedMidi = midi.round();
+    // Pedal harp: snap to the nearest C♭-major note (diatonic snap) so that
+    // only flat note names appear. For all other modes, snap chromatically.
+    final roundedMidi = pedalHarp ? _snapToCbMajor(midi) : midi.round();
     final cents = (midi - roundedMidi) * 100.0;
     final noteIndex = ((roundedMidi % 12) + 12) % 12;
     final octave = (roundedMidi ~/ 12) - 1;
@@ -39,6 +43,29 @@ class MusicUtils {
       octave: displayOctave,
       cents: cents.clamp(-50.0, 50.0),
     );
+  }
+
+  /// Snaps [midi] to the nearest note in the C♭ major scale
+  /// (D♭, E♭, F♭, G♭, A♭, B♭, C♭ — semitone offsets 1,3,4,6,8,10,11).
+  /// On a tie (pitch exactly between two scale notes), the lower note wins so
+  /// the display reads "sharp of the lower string" rather than "flat of the
+  /// upper string".
+  static int _snapToCbMajor(double midi) {
+    const scaleDegrees = [1, 3, 4, 6, 8, 10, 11];
+    final approxOct = midi ~/ 12;
+    double bestDist = double.infinity;
+    double bestNote = midi;
+    for (final deg in scaleDegrees) {
+      for (final oct in [approxOct - 1, approxOct, approxOct + 1]) {
+        final candidate = oct * 12.0 + deg;
+        final dist = (midi - candidate).abs();
+        if (dist < bestDist || (dist == bestDist && candidate < bestNote)) {
+          bestDist = dist;
+          bestNote = candidate;
+        }
+      }
+    }
+    return bestNote.round();
   }
 
   /// Finds the closest harp string to the given frequency (in octave distance).
