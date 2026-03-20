@@ -117,6 +117,18 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settingsTitle;
 
+  /// No description provided for @settingsInstrumentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Instrument'**
+  String get settingsInstrumentLabel;
+
+  /// No description provided for @settingsInstrumentNone.
+  ///
+  /// In en, this message translates to:
+  /// **'None'**
+  String get settingsInstrumentNone;
+
   /// No description provided for @settingsNoteDisplayLabel.
   ///
   /// In en, this message translates to:

@@ -57,7 +57,7 @@ class _TunerGaugeState extends State<TunerGauge>
     final disable = MediaQuery.disableAnimationsOf(context);
     if (disable) {
       _pulseCtrl.stop();
-      _pulseCtrl.value = 0.5;
+      _pulseCtrl.value = 1.0; // full opacity when reduced motion
       _needleCtrl.stop();
       if (widget.cents != null) {
         _needleCtrl.value = widget.cents!.clamp(-50.0, 50.0);
@@ -228,7 +228,7 @@ class _ScaleLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: theme.sans(13, color: theme.textDim),
+      style: theme.sans(14, color: theme.textSecondary),
     );
   }
 }
@@ -393,7 +393,7 @@ class _IdleReadout extends StatelessWidget {
     return AnimatedBuilder(
       animation: pulse,
       builder: (ctx, child) => Opacity(
-        opacity: isListening ? (0.55 + pulse.value * 0.45) : 1.0,
+        opacity: isListening ? (0.80 + pulse.value * 0.20) : 1.0,
         child: child,
       ),
       child: Column(

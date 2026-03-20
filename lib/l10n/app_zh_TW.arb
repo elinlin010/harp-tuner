@@ -2,6 +2,8 @@
   "@@locale": "zh_TW",
   "tunerTitle": "調音器",
   "settingsTitle": "設定",
+  "settingsInstrumentLabel": "樂器",
+  "settingsInstrumentNone": "無",
   "settingsNoteDisplayLabel": "音符顯示",
   "settingsAlwaysShowFlatsToggle": "♭  一律顯示降號",
   "settingsAlwaysShowFlatsHint": "例：B♭ 而非 A♯",

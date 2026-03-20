@@ -2,6 +2,8 @@
   "@@locale": "fr",
   "tunerTitle": "ACCORDEUR",
   "settingsTitle": "Paramètres",
+  "settingsInstrumentLabel": "Instrument",
+  "settingsInstrumentNone": "Aucun",
   "settingsNoteDisplayLabel": "Affichage des notes",
   "settingsAlwaysShowFlatsToggle": "♭  Toujours en bémol",
   "settingsAlwaysShowFlatsHint": "ex. B♭ au lieu de A♯",

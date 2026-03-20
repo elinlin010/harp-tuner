@@ -2,6 +2,8 @@
   "@@locale": "de",
   "tunerTitle": "STIMMGERÄT",
   "settingsTitle": "Einstellungen",
+  "settingsInstrumentLabel": "Instrument",
+  "settingsInstrumentNone": "Keines",
   "settingsNoteDisplayLabel": "Notenname",
   "settingsAlwaysShowFlatsToggle": "♭  Immer b-Vorzeichen",
   "settingsAlwaysShowFlatsHint": "z.B. B♭ statt A♯",

@@ -35,7 +35,7 @@ class _HarpSelectScreenState extends ConsumerState<HarpSelectScreen>
   }
 
   void _select(HarpType type) {
-    ref.read(selectedHarpProvider.notifier).state = type;
+    ref.read(tunerProvider.notifier).setSelectedHarp(type);
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (ctx, a1, a2) => const TunerScreen(),

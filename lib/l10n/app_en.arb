@@ -2,6 +2,8 @@
   "@@locale": "en",
   "tunerTitle": "TUNER",
   "settingsTitle": "Settings",
+  "settingsInstrumentLabel": "Instrument",
+  "settingsInstrumentNone": "None",
   "settingsNoteDisplayLabel": "Note display",
   "settingsAlwaysShowFlatsToggle": "♭  Always show flats",
   "settingsAlwaysShowFlatsHint": "e.g. B♭ instead of A♯",
