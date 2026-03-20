@@ -63,6 +63,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get harpTypePedalHarpSubtitle => '47 弦 · C1–G7';
 
   @override
+  String get settingsThemeLabel => '主題';
+
+  @override
   String get settingsLanguageLabel => '語言';
 
   @override
@@ -161,6 +164,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get harpTypePedalHarpSubtitle => '47 弦 · C1–G7';
+
+  @override
+  String get settingsThemeLabel => '主題';
 
   @override
   String get settingsLanguageLabel => '語言';

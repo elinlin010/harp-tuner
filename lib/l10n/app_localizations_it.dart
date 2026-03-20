@@ -63,6 +63,9 @@ class AppLocalizationsIt extends AppLocalizations {
   String get harpTypePedalHarpSubtitle => '47 corde · C1–G7';
 
   @override
+  String get settingsThemeLabel => 'Tema';
+
+  @override
   String get settingsLanguageLabel => 'Lingua';
 
   @override

@@ -133,7 +133,24 @@ class TunerThemes {
     flat:   Color(0xFF40FFFF),
   );
 
-  static const all = [linen, blueprint, milk, phosphor];
+  // Void — pure OLED black, maximum battery savings, neon state colours
+  static const void_ = TunerThemeData(
+    id: 'void',
+    displayName: 'Void',
+    brightness: Brightness.dark,
+    bg:           Color(0xFF000000),
+    surface:      Color(0xFF0E0E0E),
+    surfaceHi:    Color(0xFF1A1A1A),
+    surfaceRim:   Color(0xFF2C2C2C),
+    textPrimary:   Color(0xFFEFEFEF),
+    textSecondary: Color(0xFF888888),
+    textDim:       Color(0xFF444444),
+    inTune: Color(0xFF00E676),
+    sharp:  Color(0xFFFF6D00),
+    flat:   Color(0xFF40C4FF),
+  );
+
+  static const all = [linen, milk, blueprint, void_];
 }
 
 // ── Backward-compat facades ───────────────────────────────────────────────────

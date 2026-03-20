@@ -213,6 +213,12 @@ abstract class AppLocalizations {
   /// **'47 strings · C1–G7'**
   String get harpTypePedalHarpSubtitle;
 
+  /// No description provided for @settingsThemeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get settingsThemeLabel;
+
   /// No description provided for @settingsLanguageLabel.
   ///
   /// In en, this message translates to:

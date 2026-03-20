@@ -314,6 +314,20 @@ class _SettingsSheet extends ConsumerWidget {
           Divider(color: theme.surfaceRim, height: 1),
           const SizedBox(height: 20),
 
+          // ── Theme picker ──────────────────────────────────────────────────
+          Text(l10n.settingsThemeLabel,
+              style: theme.label(13, color: theme.textSecondary)),
+          const SizedBox(height: 16),
+          _ThemePickerRow(
+            currentTheme: theme,
+            onSelect: (t) =>
+                ref.read(tunerThemeProvider.notifier).setTheme(t),
+          ),
+
+          const SizedBox(height: 20),
+          Divider(color: theme.surfaceRim, height: 1),
+          const SizedBox(height: 20),
+
           // ── Language ──────────────────────────────────────────────────────
           Text(l10n.settingsLanguageLabel,
               style: theme.label(13, color: theme.textSecondary)),
@@ -340,7 +354,7 @@ class _SettingsSheet extends ConsumerWidget {
 // A row with a label + custom toggle switch on the right
 class _SheetSwitchRow extends StatelessWidget {
   final String label;
-  final String subtitle;
+  final String? subtitle;
   final bool value;
   final VoidCallback onToggle;
   final TunerThemeData theme;
@@ -348,7 +362,7 @@ class _SheetSwitchRow extends StatelessWidget {
 
   const _SheetSwitchRow({
     required this.label,
-    required this.subtitle,
+    this.subtitle,
     required this.value,
     required this.onToggle,
     required this.theme,
@@ -375,9 +389,11 @@ class _SheetSwitchRow extends StatelessWidget {
                         style: theme.sans(16,
                             weight: FontWeight.w600,
                             color: theme.textPrimary)),
-                    const SizedBox(height: 2),
-                    Text(subtitle,
-                        style: theme.sans(16, color: theme.textSecondary)),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(subtitle!,
+                          style: theme.sans(16, color: theme.textSecondary)),
+                    ],
                   ],
                 ),
               ),
@@ -843,6 +859,120 @@ class _InstrumentRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Theme picker ──────────────────────────────────────────────────────────────
+
+class _ThemePickerRow extends StatelessWidget {
+  final TunerThemeData currentTheme;
+  final void Function(TunerThemeData) onSelect;
+
+  const _ThemePickerRow({required this.currentTheme, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        for (final t in TunerThemes.all)
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: _ThemeSwatch(
+              swatch: t,
+              selected: t.id == currentTheme.id,
+              accentColor: currentTheme.inTune,
+              labelStyle: currentTheme.sans(11),
+              onTap: () => onSelect(t),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ThemeSwatch extends StatelessWidget {
+  final TunerThemeData swatch;
+  final bool selected;
+  final Color accentColor;
+  final TextStyle labelStyle;
+  final VoidCallback onTap;
+
+  const _ThemeSwatch({
+    required this.swatch,
+    required this.selected,
+    required this.accentColor,
+    required this.labelStyle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final animDuration = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
+
+    return Semantics(
+      label: swatch.displayName,
+      selected: selected,
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            AnimatedContainer(
+              duration: animDuration,
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: swatch.bg,
+                border: Border.all(
+                  color: selected
+                      ? accentColor
+                      : swatch.surfaceRim.withValues(alpha: 0.6),
+                  width: selected ? 2.5 : 1.5,
+                ),
+                boxShadow: selected
+                    ? [
+                        BoxShadow(
+                          color: accentColor.withValues(alpha: 0.35),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        )
+                      ]
+                    : null,
+              ),
+              child: selected
+                  ? Center(
+                      child: Icon(Icons.check_rounded,
+                          size: 22, color: accentColor),
+                    )
+                  : Center(
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: swatch.inTune,
+                        ),
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              swatch.displayName,
+              style: labelStyle.copyWith(
+                color: selected
+                    ? accentColor
+                    : labelStyle.color?.withValues(alpha: 0.6),
+                fontWeight:
+                    selected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ),
     );

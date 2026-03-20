@@ -18,6 +18,7 @@
   "harpTypeLeverHarpSubtitle": "34 strings · A1–F6",
   "harpTypePedalHarp": "Pedal Harp",
   "harpTypePedalHarpSubtitle": "47 strings · C1–G7",
+  "settingsThemeLabel": "Theme",
   "settingsLanguageLabel": "Language",
   "tunerStartBtn": "Start Tuning",
   "tunerStopBtn": "Stop",
