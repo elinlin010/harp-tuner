@@ -15,6 +15,12 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsTitle => 'Paramètres';
 
   @override
+  String get settingsInstrumentLabel => 'Instrument';
+
+  @override
+  String get settingsInstrumentNone => 'Aucun';
+
+  @override
   String get settingsNoteDisplayLabel => 'Affichage des notes';
 
   @override

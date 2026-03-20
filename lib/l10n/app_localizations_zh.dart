@@ -15,6 +15,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsTitle => '設定';
 
   @override
+  String get settingsInstrumentLabel => '樂器';
+
+  @override
+  String get settingsInstrumentNone => '無';
+
+  @override
   String get settingsNoteDisplayLabel => '音符顯示';
 
   @override
@@ -83,6 +89,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsTitle => '設定';
+
+  @override
+  String get settingsInstrumentLabel => '樂器';
+
+  @override
+  String get settingsInstrumentNone => '無';
 
   @override
   String get settingsNoteDisplayLabel => '音符顯示';

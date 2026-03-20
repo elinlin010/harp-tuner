@@ -2,6 +2,8 @@
   "@@locale": "it",
   "tunerTitle": "ACCORDATORE",
   "settingsTitle": "Impostazioni",
+  "settingsInstrumentLabel": "Strumento",
+  "settingsInstrumentNone": "Nessuno",
   "settingsNoteDisplayLabel": "Visualizzazione note",
   "settingsAlwaysShowFlatsToggle": "♭  Mostra sempre i bemolle",
   "settingsAlwaysShowFlatsHint": "es. B♭ invece di A♯",

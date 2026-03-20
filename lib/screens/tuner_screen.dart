@@ -1,14 +1,20 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../data/harp_presets.dart';
 import '../l10n/app_localizations.dart';
+import '../models/harp_string_model.dart';
+import '../models/harp_type.dart';
 import '../providers/locale_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
-import '../widgets/tuner_gauge.dart';
 import '../widgets/pitch_light_indicator.dart';
+import '../widgets/string_visualizer.dart';
+import '../widgets/tuner_gauge.dart';
 
 class TunerScreen extends ConsumerStatefulWidget {
   const TunerScreen({super.key});
@@ -48,6 +54,22 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     super.dispose();
   }
 
+  HarpStringModel? _closestString(
+      List<HarpStringModel> strings, double? hz, int a4Hz) {
+    if (hz == null) return null;
+    HarpStringModel? best;
+    double bestCents = 50.0;
+    for (final s in strings) {
+      final diff =
+          (1200 * log(hz / s.frequencyAt(a4Hz.toDouble())) / ln2).abs();
+      if (diff < bestCents) {
+        bestCents = diff;
+        best = s;
+      }
+    }
+    return best;
+  }
+
   void _showSettings(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -64,6 +86,12 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     final noteName = tuner.showOctave
         ? tuner.closestNoteName
         : tuner.closestNoteName?.replaceAll(RegExp(r'\d+$'), '');
+
+    final harpStrings = tuner.selectedHarp != null
+        ? HarpPresets.stringsFor(tuner.selectedHarp!)
+        : <HarpStringModel>[];
+    final activeString =
+        _closestString(harpStrings, tuner.detectedHz, tuner.a4Hz);
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -83,14 +111,14 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                     width: 48,
                     height: 48,
                     child: Material(
-                      color: Colors.transparent,
+                      color: theme.surfaceHi,
                       borderRadius: BorderRadius.circular(24),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(24),
                         onTap: () => _showSettings(context),
                         child: Icon(
                           Icons.tune_rounded,
-                          size: 28,
+                          size: 26,
                           color: theme.textSecondary,
                         ),
                       ),
@@ -117,6 +145,17 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 theme: theme,
               ),
               const SizedBox(height: 16),
+
+              // ── String visualizer ─────────────────────────────────────────
+              if (tuner.selectedHarp != null) ...[
+                const SizedBox(height: 4),
+                StringVisualizer(
+                  strings: harpStrings,
+                  activeString: activeString,
+                  theme: theme,
+                ),
+                const SizedBox(height: 4),
+              ],
 
               // ── CALIB stepper ──────────────────────────────────────────────
               Center(
@@ -190,10 +229,15 @@ class _SettingsSheet extends ConsumerWidget {
         border: Border(top: BorderSide(color: theme.surfaceRim, width: 1)),
       ),
       padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottomPad),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
           // drag handle
           Center(
             child: Container(
@@ -209,6 +253,31 @@ class _SettingsSheet extends ConsumerWidget {
 
           Text(l10n.settingsTitle, style: theme.sans(22, weight: FontWeight.w600)),
           const SizedBox(height: 24),
+
+          // ── Instrument ────────────────────────────────────────────────────
+          Text(l10n.settingsInstrumentLabel,
+              style: theme.label(13, color: theme.textSecondary)),
+          const SizedBox(height: 4),
+          _InstrumentRow(
+            label: l10n.settingsInstrumentNone,
+            selected: tuner.selectedHarp == null,
+            onTap: () =>
+                ref.read(tunerProvider.notifier).setSelectedHarp(null),
+            theme: theme,
+          ),
+          for (final type in HarpType.values)
+            _InstrumentRow(
+              label: type.displayName,
+              subtitle: type.subtitle,
+              selected: tuner.selectedHarp == type,
+              onTap: () =>
+                  ref.read(tunerProvider.notifier).setSelectedHarp(type),
+              theme: theme,
+            ),
+
+          const SizedBox(height: 20),
+          Divider(color: theme.surfaceRim, height: 1),
+          const SizedBox(height: 20),
 
           // ── Note display ──────────────────────────────────────────────────
           Text(l10n.settingsNoteDisplayLabel,
@@ -259,7 +328,9 @@ class _SettingsSheet extends ConsumerWidget {
                   ref.read(localeProvider.notifier).setLocale(lang.key),
               theme: theme,
             ),
-        ],
+          ],
+        ),
+      ),
       ),
     );
   }
@@ -292,7 +363,7 @@ class _SheetSwitchRow extends StatelessWidget {
         onTap: onToggle,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 6),
+          padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             children: [
               Expanded(
@@ -305,7 +376,7 @@ class _SheetSwitchRow extends StatelessWidget {
                             color: theme.textPrimary)),
                     const SizedBox(height: 2),
                     Text(subtitle,
-                        style: theme.sans(15, color: theme.textSecondary)),
+                        style: theme.sans(16, color: theme.textSecondary)),
                   ],
                 ),
               ),
@@ -471,12 +542,12 @@ class _MicErrorBanner extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(Icons.warning_amber_rounded,
-                    size: 20, color: Colors.amber.shade400),
+                    size: 20, color: Colors.amber.shade800),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'The microphone could not be accessed. Please restart the app or check your device settings.',
-                    style: theme.sans(16, color: Colors.amber.shade700),
+                    style: theme.sans(16, color: theme.textPrimary),
                   ),
                 ),
               ],
@@ -484,9 +555,9 @@ class _MicErrorBanner extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'Tap here to dismiss',
-              style: theme.sans(13,
+              style: theme.sans(16,
                   weight: FontWeight.w600,
-                  color: Colors.amber.shade600),
+                  color: theme.textSecondary),
             ),
           ],
         ),
@@ -573,13 +644,14 @@ class _A4StepperRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final atMin = a4Hz <= 430;
     final atMax = a4Hz >= 450;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          'CALIB',
+          l10n.settingsA4CalibLabel,
           style: theme.label(13, color: theme.textSecondary),
         ),
         const SizedBox(height: 8),
@@ -668,6 +740,94 @@ class _TrianglePainter extends CustomPainter {
 }
 
 
+// ── Instrument row ────────────────────────────────────────────────────────────
+
+class _InstrumentRow extends StatelessWidget {
+  final String label;
+  final String? subtitle;
+  final bool selected;
+  final VoidCallback onTap;
+  final TunerThemeData theme;
+
+  const _InstrumentRow({
+    required this.label,
+    this.subtitle,
+    required this.selected,
+    required this.onTap,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: label,
+      selected: selected,
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: selected
+                      ? theme.inTune.withValues(alpha: 0.20)
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: selected ? theme.inTune : theme.surfaceRim,
+                    width: 2,
+                  ),
+                ),
+                child: selected
+                    ? Center(
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: theme.inTune,
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.sans(
+                        16,
+                        weight: selected ? FontWeight.w600 : FontWeight.w400,
+                        color: selected ? theme.textPrimary : theme.textSecondary,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle!,
+                        style: theme.sans(14, color: theme.textSecondary),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Language data ─────────────────────────────────────────────────────────────
 
 const _languages = [
@@ -701,7 +861,7 @@ class _LanguageRow extends StatelessWidget {
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
             Text(

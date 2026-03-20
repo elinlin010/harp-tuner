@@ -9,11 +9,9 @@ import '../models/harp_type.dart';
 import '../services/pitch_detection_service.dart';
 import '../utils/music_utils.dart';
 
-// ── Enums / simple providers ───────────────────────────────────────────────────
+// ── Enums ─────────────────────────────────────────────────────────────────────
 
 enum TunerMode { auto, manual }
-
-final selectedHarpProvider = StateProvider<HarpType>((ref) => HarpType.lapHarp);
 
 // ── Tuner state ───────────────────────────────────────────────────────────────
 
@@ -23,6 +21,7 @@ class TunerState {
   final bool preferFlats;
   final bool showOctave;
   final int a4Hz;
+  final HarpType? selectedHarp;
   final double? cents;
   final double? detectedHz;
   final String? closestNoteName;
@@ -34,6 +33,7 @@ class TunerState {
     this.preferFlats = false,
     this.showOctave = false,
     this.a4Hz = 440,
+    this.selectedHarp,
     this.cents,
     this.detectedHz,
     this.closestNoteName,
@@ -46,6 +46,8 @@ class TunerState {
     bool? preferFlats,
     bool? showOctave,
     int? a4Hz,
+    HarpType? selectedHarp,
+    bool clearSelectedHarp = false,
     double? cents,
     double? detectedHz,
     String? closestNoteName,
@@ -59,6 +61,7 @@ class TunerState {
       preferFlats: preferFlats ?? this.preferFlats,
       showOctave: showOctave ?? this.showOctave,
       a4Hz: a4Hz ?? this.a4Hz,
+      selectedHarp: clearSelectedHarp ? null : (selectedHarp ?? this.selectedHarp),
       cents: clearPitch ? null : (cents ?? this.cents),
       detectedHz: clearPitch ? null : (detectedHz ?? this.detectedHz),
       closestNoteName:
@@ -76,20 +79,20 @@ class TunerNotifier extends StateNotifier<TunerState> {
   StreamSubscription<PitchResult?>? _pitchSub;
   SharedPreferences? _prefs;
 
-  static const _historyLen      = 8;    // ring buffer size
-  static const _stableNeeded   = 5;    // readings before showing display
-  static const _stableCents    = 25.0; // max spread (cents) to count as stable
-  static const _challengeNeeded = 4;   // consecutive same new-note reads to accept switch
+  static const _historyLen      = 8;
+  static const _stableNeeded    = 5;
+  static const _stableCents     = 25.0;
+  static const _challengeNeeded = 4;
 
-  static const _kA4HzKey = 'tuner_a4_hz';
+  static const _kA4HzKey       = 'tuner_a4_hz';
+  static const _kPreferFlatsKey = 'tuner_prefer_flats';
+  static const _kShowOctaveKey  = 'tuner_show_octave';
+  static const _kHarpTypeKey    = 'tuner_harp_type';
   static const _kA4HzMin = 430;
   static const _kA4HzMax = 450;
 
   final _freqHistory = <double>[];
-  // True only when silence follows a confirmed note — triggers history flush
-  // on the next real pitch. NOT re-set during mid-accumulation nulls.
   bool _pendingHistoryFlush = false;
-
   String? _confirmedNote;
   String? _challengeNote;
   int _challengeCount = 0;
@@ -101,10 +104,24 @@ class TunerNotifier extends StateNotifier<TunerState> {
   Future<void> _loadPrefs() async {
     try {
       _prefs = await SharedPreferences.getInstance();
-      final savedA4 = _prefs!.getInt(_kA4HzKey);
-      if (savedA4 != null) {
-        state = state.copyWith(a4Hz: savedA4.clamp(_kA4HzMin, _kA4HzMax));
+      final savedA4         = _prefs!.getInt(_kA4HzKey);
+      final savedFlats      = _prefs!.getBool(_kPreferFlatsKey);
+      final savedOctave     = _prefs!.getBool(_kShowOctaveKey);
+      final savedHarpType   = _prefs!.getString(_kHarpTypeKey);
+
+      HarpType? harpType;
+      if (savedHarpType != null) {
+        try {
+          harpType = HarpType.values.firstWhere((e) => e.name == savedHarpType);
+        } catch (_) {}
       }
+
+      state = state.copyWith(
+        a4Hz: savedA4 != null ? savedA4.clamp(_kA4HzMin, _kA4HzMax) : state.a4Hz,
+        preferFlats: savedFlats ?? state.preferFlats,
+        showOctave: savedOctave ?? state.showOctave,
+        selectedHarp: harpType,
+      );
     } catch (e) {
       debugPrint('TunerNotifier: failed to load prefs: $e');
     }
@@ -170,11 +187,18 @@ class TunerNotifier extends StateNotifier<TunerState> {
     state = state.copyWith(clearMicError: true);
   }
 
-  void toggleShowOctave() {
-    state = state.copyWith(showOctave: !state.showOctave);
+  Future<void> toggleShowOctave() async {
+    final newVal = !state.showOctave;
+    state = state.copyWith(showOctave: newVal);
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      await _prefs!.setBool(_kShowOctaveKey, newVal);
+    } catch (e) {
+      debugPrint('TunerNotifier: failed to save showOctave: $e');
+    }
   }
 
-  void togglePreferFlats() {
+  Future<void> togglePreferFlats() async {
     final newPreferFlats = !state.preferFlats;
     if (state.detectedHz != null) {
       final info = MusicUtils.frequencyToNoteInfo(
@@ -189,6 +213,12 @@ class TunerNotifier extends StateNotifier<TunerState> {
       );
     } else {
       state = state.copyWith(preferFlats: newPreferFlats);
+    }
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      await _prefs!.setBool(_kPreferFlatsKey, newPreferFlats);
+    } catch (e) {
+      debugPrint('TunerNotifier: failed to save preferFlats: $e');
     }
   }
 
@@ -216,11 +246,30 @@ class TunerNotifier extends StateNotifier<TunerState> {
     }
   }
 
+  Future<void> setSelectedHarp(HarpType? harp) async {
+    if (harp == null) {
+      state = state.copyWith(clearSelectedHarp: true);
+    } else {
+      // Harp selected — always enable preferFlats (B♭ convention)
+      state = state.copyWith(selectedHarp: harp, preferFlats: true);
+    }
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      if (harp == null) {
+        await _prefs!.remove(_kHarpTypeKey);
+      } else {
+        await _prefs!.setString(_kHarpTypeKey, harp.name);
+        await _prefs!.setBool(_kPreferFlatsKey, true);
+      }
+    } catch (e) {
+      debugPrint('TunerNotifier: failed to save harpType: $e');
+    }
+  }
+
+  // ── Pitch processing ───────────────────────────────────────────────────────
+
   void _onPitchResult(PitchResult? result) {
     if (result == null) {
-      // Only act on the transition confirmed-note → silence.
-      // Nulls during accumulation (_confirmedNote == null) are ignored so
-      // partial history isn't wiped by mic dropouts mid-detection.
       if (_confirmedNote != null) {
         _pendingHistoryFlush = true;
         _confirmedNote = null;
@@ -229,8 +278,6 @@ class TunerNotifier extends StateNotifier<TunerState> {
       }
       return;
     }
-    // Flush stale history exactly once — on the first pitch after a confirmed
-    // note went silent. Ensures old frequencies don't corrupt spread calc.
     if (_pendingHistoryFlush) {
       _freqHistory.clear();
       _pendingHistoryFlush = false;
@@ -274,7 +321,6 @@ class TunerNotifier extends StateNotifier<TunerState> {
         cents: info.cents,
       );
     } else {
-      // Different note — require _challengeNeeded consecutive reads before switching
       if (_challengeNote == info.noteName) {
         _challengeCount++;
       } else {
@@ -310,7 +356,6 @@ class TunerNotifier extends StateNotifier<TunerState> {
     return 1200 * log(s.last / s.first) / ln2;
   }
 
-  // Returns hz folded to same octave as reference if they differ by ~1 octave, else null.
   double? _octaveCorrect(double hz, double reference) {
     for (final factor in [2.0, 0.5]) {
       final candidate = hz * factor;

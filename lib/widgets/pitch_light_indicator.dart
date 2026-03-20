@@ -140,7 +140,7 @@ class _Bulb extends StatelessWidget {
                 weight: FontWeight.w700,
                 color: active
                     ? Colors.white.withValues(alpha: 0.95)
-                    : theme.textDim,
+                    : theme.textSecondary,
               ),
               child: Text(symbol),
             ),

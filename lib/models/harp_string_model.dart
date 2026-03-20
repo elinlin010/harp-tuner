@@ -49,4 +49,11 @@ class HarpStringModel {
 
   /// Frequency in Hz using a custom A4 reference (for calibrated tuning).
   double frequencyAt(double a4Hz) => a4Hz * pow(2.0, (midiNote - 69) / 12.0);
+
+  @override
+  bool operator ==(Object other) =>
+      other is HarpStringModel && other.note == note && other.octave == octave;
+
+  @override
+  int get hashCode => Object.hash(note, octave);
 }
