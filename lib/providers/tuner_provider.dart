@@ -26,6 +26,7 @@ class TunerState {
   final double? detectedHz;
   final String? closestNoteName;
   final String? micError;
+  final bool isStale;
 
   const TunerState({
     this.isListening = false,
@@ -38,6 +39,7 @@ class TunerState {
     this.detectedHz,
     this.closestNoteName,
     this.micError,
+    this.isStale = false,
   });
 
   TunerState copyWith({
@@ -52,6 +54,7 @@ class TunerState {
     double? detectedHz,
     String? closestNoteName,
     String? micError,
+    bool? isStale,
     bool clearPitch = false,
     bool clearMicError = false,
   }) {
@@ -68,6 +71,7 @@ class TunerState {
           clearPitch ? null : (closestNoteName ?? this.closestNoteName),
       micError:
           (clearPitch || clearMicError) ? null : (micError ?? this.micError),
+      isStale: clearPitch ? false : (isStale ?? this.isStale),
     );
   }
 }
@@ -80,9 +84,11 @@ class TunerNotifier extends StateNotifier<TunerState> {
   SharedPreferences? _prefs;
 
   static const _historyLen      = 8;
-  static const _stableNeeded    = 5;
+  static const _stableNeeded    = 3;   // 3 stable frames (~280ms) to confirm a note
   static const _stableCents     = 25.0;
-  static const _challengeNeeded = 4;
+  static const _challengeNeeded = 3;   // 3 challenge frames before switching note
+  static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
+  static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
   static const _kA4HzKey       = 'tuner_a4_hz';
   static const _kPreferFlatsKey = 'tuner_prefer_flats';
@@ -92,7 +98,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
   static const _kA4HzMax = 450;
 
   final _freqHistory = <double>[];
-  bool _pendingHistoryFlush = false;
+  int _silenceCount = 0;
   String? _confirmedNote;
   String? _challengeNote;
   int _challengeCount = 0;
@@ -168,7 +174,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
     _pitchSub = null;
     _service.stop();
     _freqHistory.clear();
-    _pendingHistoryFlush = false;
+    _silenceCount = 0;
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
@@ -204,6 +210,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
       final info = MusicUtils.frequencyToNoteInfo(
         state.detectedHz!,
         preferFlats: newPreferFlats,
+        pedalHarp: state.selectedHarp == HarpType.pedalHarp,
         a4Hz: state.a4Hz.toDouble(),
       );
       state = state.copyWith(
@@ -228,6 +235,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
       final info = MusicUtils.frequencyToNoteInfo(
         state.detectedHz!,
         preferFlats: state.preferFlats,
+        pedalHarp: state.selectedHarp == HarpType.pedalHarp,
         a4Hz: clamped.toDouble(),
       );
       state = state.copyWith(
@@ -270,18 +278,29 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
   void _onPitchResult(PitchResult? result) {
     if (result == null) {
-      if (_confirmedNote != null) {
-        _pendingHistoryFlush = true;
+      _silenceCount++;
+      if (_silenceCount == 1) {
+        // First silence frame: reset detection state immediately so the next
+        // note has a clean history and no hysteresis blocking. Display stays
+        // fully bright until _kStaleFrames to avoid flicker between notes.
+        _freqHistory.clear();
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
+      } else if (_silenceCount == _kStaleFrames && !state.isStale) {
+        // Sustained silence: dim the display to signal stale reading
+        if (state.cents != null) state = state.copyWith(isStale: true);
+      } else if (_silenceCount >= _kHoldFrames) {
+        // Long silence: wipe the display too
+        _silenceCount = 0;
+        state = state.copyWith(clearPitch: true); // also resets isStale
       }
       return;
     }
-    if (_pendingHistoryFlush) {
-      _freqHistory.clear();
-      _pendingHistoryFlush = false;
-    }
+
+    // Signal returned — reset silence tracking
+    _silenceCount = 0;
+
     final hz = result.frequency;
 
     // Octave correction + outlier rejection
@@ -307,6 +326,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
     final info = MusicUtils.frequencyToNoteInfo(
       stableHz,
       preferFlats: state.preferFlats,
+      pedalHarp: state.selectedHarp == HarpType.pedalHarp,
       a4Hz: state.a4Hz.toDouble(),
     );
 
@@ -316,6 +336,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
       _challengeNote = null;
       _challengeCount = 0;
       state = state.copyWith(
+        isStale: false,
         detectedHz: stableHz,
         closestNoteName: info.noteName,
         cents: info.cents,
@@ -332,6 +353,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
         _challengeNote = null;
         _challengeCount = 0;
         state = state.copyWith(
+          isStale: false,
           detectedHz: stableHz,
           closestNoteName: info.noteName,
           cents: info.cents,

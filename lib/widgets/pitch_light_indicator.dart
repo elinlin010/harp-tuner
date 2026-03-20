@@ -5,12 +5,14 @@ import '../theme/app_theme.dart';
 class PitchLightIndicator extends StatelessWidget {
   final double? cents;
   final bool isListening;
+  final bool isStale;
   final TunerThemeData theme;
 
   const PitchLightIndicator({
     super.key,
     required this.cents,
     required this.isListening,
+    this.isStale = false,
     required this.theme,
   });
 
@@ -26,8 +28,15 @@ class PitchLightIndicator extends StatelessWidget {
 
     final l10n = AppLocalizations.of(context)!;
 
+    final staleDur = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
+
     // No surrounding panel — lights float directly on the page background.
-    return Row(
+    return AnimatedOpacity(
+      opacity: isStale ? 0.35 : 1.0,
+      duration: staleDur,
+      child: Row(
       children: [
         Expanded(child: _Bulb(
           label: l10n.pitchLightFlatLabel,
@@ -60,7 +69,8 @@ class PitchLightIndicator extends StatelessWidget {
           animDuration: animDuration,
         )),
       ],
-    );
+      ), // Row
+    ); // AnimatedOpacity
   }
 }
 

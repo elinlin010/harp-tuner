@@ -49,6 +49,9 @@ class PitchDetectionService {
   // Running accumulator of normalised float samples
   final List<double> _accumulator = [];
 
+  // Guard: skip incoming chunk if previous detection is still running
+  bool _processing = false;
+
   // ── Public API ─────────────────────────────────────────────────────────────
 
   Future<bool> requestPermission() async {
@@ -91,6 +94,7 @@ class PitchDetectionService {
     _ctrl?.close();
     _ctrl = null;
     _accumulator.clear();
+    _processing = false;
   }
 
   // ── Internal ───────────────────────────────────────────────────────────────
@@ -144,6 +148,9 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
+    if (_processing) return; // drop frame — detector still running
+    _processing = true;
+    try {
     // mic_stream delivers 16-bit signed PCM, little-endian.
     // Pass offsetInBytes so we read the correct slice of the underlying buffer
     // (bytes may be a sub-view with a non-zero offset into its ByteBuffer).
@@ -167,9 +174,12 @@ class PitchDetectionService {
     final result = await _detector!.getPitchFromFloatBuffer(chunk);
 
     if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
-      _ctrl?.add(PitchResult(result.pitch));
-    } else {
-      _ctrl?.add(null);
+        _ctrl?.add(PitchResult(result.pitch));
+      } else {
+        _ctrl?.add(null);
+      }
+    } finally {
+      _processing = false;
     }
   }
 }

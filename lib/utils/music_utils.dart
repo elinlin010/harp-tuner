@@ -5,10 +5,14 @@ class MusicUtils {
   MusicUtils._();
 
   static const _noteNamesSharps = [
-    'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'
+    'C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'
   ];
   static const _noteNamesFlats = [
-    'C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'
+    'C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'
+  ];
+  // Pedal harp (all-flat / C♭ major): E♮→F♭, B♮→C♭; all others same as flats.
+  static const _noteNamesPedalHarp = [
+    'C', 'D♭', 'D', 'E♭', 'F♭', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'C♭'
   ];
 
   /// Converts a frequency in Hz to the nearest note name (e.g. "A4") and the
@@ -16,17 +20,23 @@ class MusicUtils {
   ///
   /// [a4Hz] is the reference pitch for A4 (default 440 Hz). Changing this
   /// shifts all note targets proportionally — the standard tuner calibration.
+  /// [pedalHarp] uses C♭-major enharmonics (E♮→F♭, B♮→C♭).
   static ({String noteName, int octave, double cents}) frequencyToNoteInfo(
-      double hz, {bool preferFlats = false, double a4Hz = 440.0}) {
+      double hz, {bool preferFlats = false, bool pedalHarp = false, double a4Hz = 440.0}) {
     final midi = 69.0 + 12.0 * log(hz / a4Hz) / ln2;
     final roundedMidi = midi.round();
     final cents = (midi - roundedMidi) * 100.0;
     final noteIndex = ((roundedMidi % 12) + 12) % 12;
     final octave = (roundedMidi ~/ 12) - 1;
-    final names = preferFlats ? _noteNamesFlats : _noteNamesSharps;
+    final names = pedalHarp ? _noteNamesPedalHarp
+        : (preferFlats ? _noteNamesFlats : _noteNamesSharps);
+    // C♭ (index 11) is enharmonic to B♮ but belongs to the octave above in
+    // harp notation — the C string in octave N flat sounds like B(N-1), so
+    // the displayed octave must be incremented by 1 to match string labels.
+    final displayOctave = (pedalHarp && noteIndex == 11) ? octave + 1 : octave;
     return (
-      noteName: '${names[noteIndex]}$octave',
-      octave: octave,
+      noteName: '${names[noteIndex]}$displayOctave',
+      octave: displayOctave,
       cents: cents.clamp(-50.0, 50.0),
     );
   }

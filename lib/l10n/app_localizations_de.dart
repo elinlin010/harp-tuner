@@ -54,13 +54,13 @@ class AppLocalizationsDe extends AppLocalizations {
   String get harpTypeLeverHarp => 'Hakenharfe';
 
   @override
-  String get harpTypeLeverHarpSubtitle => '34 Saiten · A1–F6';
+  String get harpTypeLeverHarpSubtitle => '34 Saiten · A♭1–F6 · Es-Dur';
 
   @override
   String get harpTypePedalHarp => 'Pedalharfe';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 Saiten · C1–G7';
+  String get harpTypePedalHarpSubtitle => '47 Saiten · C♭1–G♭7 · Flache Lage';
 
   @override
   String get settingsDarkModeToggle => 'Dunkelmodus';

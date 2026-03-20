@@ -32,17 +32,23 @@ class HarpStringModel {
   final int index; // 1-based, 1 = lowest
   final NoteName note;
   final int octave;
+  /// -1 = flat (e.g. B♭), 0 = natural, +1 = sharp
+  final int semitoneAdjust;
 
   const HarpStringModel({
     required this.index,
     required this.note,
     required this.octave,
+    this.semitoneAdjust = 0,
   });
 
-  String get label => '${note.label}$octave';
+  String get label {
+    final acc = semitoneAdjust == -1 ? '♭' : semitoneAdjust == 1 ? '♯' : '';
+    return '${note.label}$acc$octave';
+  }
 
-  /// MIDI note number (C4 = 60)
-  int get midiNote => 12 * (octave + 1) + note.semitoneOffset;
+  /// MIDI note number (C4 = 60), adjusted for accidental.
+  int get midiNote => 12 * (octave + 1) + note.semitoneOffset + semitoneAdjust;
 
   /// Frequency in Hz using standard A4 = 440 Hz.
   double get frequency => 440.0 * pow(2.0, (midiNote - 69) / 12.0);
@@ -52,8 +58,11 @@ class HarpStringModel {
 
   @override
   bool operator ==(Object other) =>
-      other is HarpStringModel && other.note == note && other.octave == octave;
+      other is HarpStringModel &&
+      other.note == note &&
+      other.octave == octave &&
+      other.semitoneAdjust == semitoneAdjust;
 
   @override
-  int get hashCode => Object.hash(note, octave);
+  int get hashCode => Object.hash(note, octave, semitoneAdjust);
 }
