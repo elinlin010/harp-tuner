@@ -12,6 +12,7 @@ import '../providers/locale_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/mode_toggle.dart';
 import '../widgets/pitch_light_indicator.dart';
 import '../widgets/string_visualizer.dart';
 import '../widgets/tuner_gauge.dart';
@@ -83,14 +84,21 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
-    // Always show octave number (e.g. "A4" not "A")
-    final noteName = tuner.closestNoteName;
+    final l10n  = AppLocalizations.of(context)!;
 
     final harpStrings = tuner.selectedHarp != null
         ? HarpPresets.stringsFor(tuner.selectedHarp!)
         : <HarpStringModel>[];
-    final activeString =
-        _closestString(harpStrings, tuner.detectedHz, tuner.a4Hz);
+
+    // In reference mode the active string is the pinned reference string;
+    // in auto mode it is the closest detected string.
+    final isReference = tuner.tunerMode == TunerMode.reference;
+    final activeString = isReference
+        ? tuner.referenceString
+        : _closestString(harpStrings, tuner.detectedHz, tuner.a4Hz);
+
+    // The note name shown on the gauge always matches the active string.
+    final noteName = tuner.closestNoteName;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -157,12 +165,37 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ),
               const SizedBox(height: 16),
 
-              // ── String visualizer ─────────────────────────────────────────
+              // ── Mode toggle + string visualizer ───────────────────────────
               if (tuner.selectedHarp != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 12),
+                Center(
+                  child: ModeToggle(
+                    mode: tuner.tunerMode,
+                    onChanged: (m) =>
+                        ref.read(tunerProvider.notifier).setTunerMode(m),
+                    theme: theme,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // Hint text in reference mode so users know to tap
+                if (isReference)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      l10n.referenceTapHint,
+                      textAlign: TextAlign.center,
+                      style: theme.sans(12, color: theme.textDim),
+                    ),
+                  ),
                 StringVisualizer(
                   strings: harpStrings,
                   activeString: activeString,
+                  playingString: isReference ? tuner.referenceString : null,
+                  onTap: isReference
+                      ? (s) => ref
+                          .read(tunerProvider.notifier)
+                          .playReferenceString(s)
+                      : null,
                   theme: theme,
                 ),
                 const SizedBox(height: 4),

@@ -14,12 +14,23 @@ const _kDarkStringNatural = Color(0xFF4E6A80); // slate blue
 class StringVisualizer extends StatefulWidget {
   final List<HarpStringModel> strings;
   final HarpStringModel? activeString;
+
+  /// The string currently playing a reference tone. Shows a speaker icon and
+  /// a brief pulse animation. Null in auto mode.
+  final HarpStringModel? playingString;
+
+  /// Callback fired when a string cell is tapped (reference mode only).
+  /// Null in auto mode — taps are disabled.
+  final void Function(HarpStringModel)? onTap;
+
   final TunerThemeData theme;
 
   const StringVisualizer({
     super.key,
     required this.strings,
     required this.activeString,
+    this.playingString,
+    this.onTap,
     required this.theme,
   });
 
@@ -89,12 +100,15 @@ class _StringVisualizerState extends State<StringVisualizer> {
         itemExtent: _kItemWidth,
         itemBuilder: (ctx, i) {
           final s = widget.strings[i];
-          final isActive = s == widget.activeString;
+          final isActive  = s == widget.activeString;
+          final isPlaying = s == widget.playingString;
           return _StringCell(
             string: s,
             isActive: isActive,
+            isPlaying: isPlaying,
             stringColor: _stringColor(s.note),
             theme: widget.theme,
+            onTap: widget.onTap != null ? () => widget.onTap!(s) : null,
           );
         },
       ),
@@ -107,14 +121,21 @@ class _StringVisualizerState extends State<StringVisualizer> {
 class _StringCell extends StatelessWidget {
   final HarpStringModel string;
   final bool isActive;
+
+  /// True while this string's reference tone is playing.
+  final bool isPlaying;
+
   final Color stringColor;
   final TunerThemeData theme;
+  final VoidCallback? onTap;
 
   const _StringCell({
     required this.string,
     required this.isActive,
+    required this.isPlaying,
     required this.stringColor,
     required this.theme,
+    this.onTap,
   });
 
   bool get _isDark => theme.brightness == Brightness.dark;
@@ -142,7 +163,7 @@ class _StringCell extends StatelessWidget {
           )
         : null;
 
-    return Column(
+    Widget cell = Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // String + glow
@@ -188,6 +209,20 @@ class _StringCell extends StatelessWidget {
                   border: rimBorder,
                 ),
               ),
+              // Speaker icon overlay while tone is playing
+              if (isPlaying)
+                Positioned(
+                  top: 4,
+                  child: AnimatedOpacity(
+                    opacity: isPlaying ? 1.0 : 0.0,
+                    duration: animDuration,
+                    child: Icon(
+                      Icons.volume_up_rounded,
+                      size: 12,
+                      color: stringColor.withValues(alpha: 0.90),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -214,5 +249,16 @@ class _StringCell extends StatelessWidget {
         ),
       ],
     );
+
+    // In reference mode, wrap with a tap affordance.
+    if (onTap != null) {
+      cell = GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: cell,
+      );
+    }
+
+    return cell;
   }
 }

@@ -87,6 +87,15 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gaugeStaleSemantics => 'Tuner reading stale — play a note';
 
   @override
+  String get modeAuto => 'AUTO';
+
+  @override
+  String get modeReference => 'REFERENCE';
+
+  @override
+  String get referenceTapHint => 'Tap a string to hear it and tune to it';
+
+  @override
   String get pitchLightFlatLabel => 'Zu tief';
 
   @override
