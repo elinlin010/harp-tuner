@@ -407,8 +407,8 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
     // ── Reference mode: measure cents relative to the pinned string ──────────
     if (state.tunerMode == TunerMode.reference && state.referenceString != null) {
-      final refHz   = state.referenceString!.frequencyAt(state.a4Hz.toDouble());
-      final refCents = 1200 * log(stableHz / refHz) / ln2;
+      final refHz    = state.referenceString!.frequencyAt(state.a4Hz.toDouble());
+      final refCents = (1200 * log(stableHz / refHz) / ln2).clamp(-100.0, 100.0);
       state = state.copyWith(
         isStale: false,
         detectedHz: stableHz,

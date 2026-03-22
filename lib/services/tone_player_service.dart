@@ -6,10 +6,11 @@ import 'package:flutter/foundation.dart';
 
 /// Plays a harp-like reference tone for a given frequency.
 ///
-/// Uses additive synthesis: fundamental + 4 harmonics, each with an
-/// independent exponential decay. Higher harmonics decay faster, producing
-/// the characteristic bright-attack → warm-sustain → decay envelope of a
-/// plucked harp string.
+/// Uses additive synthesis with inharmonicity: fundamental + 7 sustained
+/// harmonics plus 4 fast-decaying pluck-transient partials. Inharmonicity
+/// stretches each partial slightly (as in real string stiffness), and the
+/// transient partials fade within ~10–25 ms to reproduce the bright "ping"
+/// of a plucked harp string without sounding electronic.
 class TonePlayerService {
   AudioPlayer? _player;
 
@@ -35,20 +36,36 @@ class TonePlayerService {
   // ── Synthesis ───────────────────────────────────────────────────────────────
 
   static Uint8List _generateTone(double hz) {
-    const sampleRate  = 44100;
-    const numSamples  = sampleRate * 2; // 2 seconds
-    const attackLen   = 220;           // ~5 ms linear attack to avoid click
+    const sampleRate = 44100;
+    const numSamples = sampleRate * 2; // 2 seconds
+    const attackLen  = 150;            // ~3.4 ms sharp attack for pluck character
 
-    // Additive partials: (harmonic n, amplitude, decay rate s⁻¹)
-    // Amplitudes and decay rates tuned to approximate harp string timbre:
-    //   low partials are strong and sustain longer,
-    //   high partials add initial brightness then fade quickly.
+    // Inharmonicity: real harp strings are slightly stiff, so each partial
+    // is stretched above its harmonic: freq_n = n·f₀·√(1 + B·n²).
+    // B ≈ 0.00018 is typical for mid-range concert harp strings.
+    const B = 0.00018;
+
+    // Sustained partials: fundamental + 7 harmonics with natural decay.
+    // Low partials are strongest and sustain longest.
     const partials = [
-      (1, 1.00, 1.4),
-      (2, 0.55, 2.5),
-      (3, 0.35, 4.0),
-      (4, 0.20, 5.5),
-      (5, 0.12, 7.0),
+      (1, 1.00, 1.0),
+      (2, 0.58, 1.9),
+      (3, 0.38, 3.1),
+      (4, 0.24, 4.6),
+      (5, 0.16, 6.2),
+      (6, 0.10, 8.0),
+      (7, 0.06, 10.5),
+      (8, 0.04, 13.0),
+    ];
+
+    // Pluck transient: very high harmonics that vanish within ~10–25 ms,
+    // giving the attack its characteristic bright "ping" without sounding
+    // electronic.
+    const transient = [
+      (9,  0.11, 55.0),
+      (10, 0.08, 72.0),
+      (11, 0.06, 90.0),
+      (12, 0.04, 112.0),
     ];
 
     final pcm = Int16List(numSamples);
@@ -57,9 +74,14 @@ class TonePlayerService {
       final attack = i < attackLen ? i / attackLen : 1.0;
       var sample   = 0.0;
       for (final (n, amp, decay) in partials) {
-        sample += amp * exp(-t * decay) * sin(2 * pi * hz * n * t);
+        final freq = hz * n * sqrt(1.0 + B * n * n);
+        sample += amp * exp(-t * decay) * sin(2 * pi * freq * t);
       }
-      pcm[i] = (sample * attack * 22000).clamp(-32768, 32767).toInt();
+      for (final (n, amp, decay) in transient) {
+        final freq = hz * n * sqrt(1.0 + B * n * n);
+        sample += amp * exp(-t * decay) * sin(2 * pi * freq * t);
+      }
+      pcm[i] = (sample * attack * 12000).clamp(-32768, 32767).toInt();
     }
 
     return _toWav(pcm.buffer.asUint8List(), sampleRate);
