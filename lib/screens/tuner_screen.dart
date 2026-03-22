@@ -574,10 +574,10 @@ class _MicErrorBanner extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: BoxDecoration(
-          color: Colors.amber.withValues(alpha: 0.10),
+          color: theme.sharp.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: Colors.amber.withValues(alpha: 0.40), width: 1),
+              color: theme.sharp.withValues(alpha: 0.35), width: 1),
         ),
         child: Builder(builder: (ctx) {
           final l10n = AppLocalizations.of(ctx)!;
@@ -588,7 +588,7 @@ class _MicErrorBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.warning_amber_rounded,
-                      size: 20, color: Colors.amber.shade800),
+                      size: 20, color: theme.sharp),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
