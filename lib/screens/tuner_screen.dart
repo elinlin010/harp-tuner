@@ -102,7 +102,13 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Column(
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            // Cap the gauge at 42 % of the safe-area height, clamped to
+            // [200, 270] px.  Without this, the arc steals the majority of
+            // the screen on large phones and leaves nothing for the bottom.
+            final gaugeH = (constraints.maxHeight * 0.42).clamp(200.0, 270.0);
+            return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Top-right settings icon ────────────────────────────────────
@@ -141,7 +147,8 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ),
 
               // ── Gauge + readout (full width, no horizontal padding) ────────
-              Expanded(
+              SizedBox(
+                height: gaugeH,
                 child: TunerGauge(
                   cents: tuner.cents,
                   noteName: noteName,
@@ -178,8 +185,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ],
 
               // ── Pitch light indicator ──────────────────────────────────────
-              // compact=true in Reference mode: all bulbs shrink to 36 px,
-              // saving ~20 px for the gauge and string visualizer above.
               const SizedBox(height: 6),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -187,7 +192,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   cents: tuner.cents,
                   isListening: tuner.isListening,
                   isStale: tuner.isStale,
-                  compact: isReference,
                   theme: theme,
                 ),
               ),
@@ -230,9 +234,11 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
               const SizedBox(height: 12),
             ],
-        ),
-      ),
-    );
+          ); // Column
+          }, // LayoutBuilder builder
+        ), // LayoutBuilder
+      ), // SafeArea
+    ); // Scaffold
   }
 }
 
