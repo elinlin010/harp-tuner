@@ -95,44 +95,45 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Top-right settings icon ────────────────────────────────────
               const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Material(
-                  color: theme.surfaceHi,
-                  borderRadius: BorderRadius.circular(20),
-                  child: InkWell(
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Material(
+                    color: theme.surfaceHi,
                     borderRadius: BorderRadius.circular(20),
-                    onTap: () => _showSettings(context),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 14),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.tune_rounded,
-                              size: 18, color: theme.textSecondary),
-                          const SizedBox(width: 6),
-                          Text(
-                            AppLocalizations.of(context)!.settingsTitle,
-                            style: theme.sans(14,
-                                weight: FontWeight.w600,
-                                color: theme.textSecondary),
-                          ),
-                        ],
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => _showSettings(context),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 14),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.tune_rounded,
+                                size: 18, color: theme.textSecondary),
+                            const SizedBox(width: 6),
+                            Text(
+                              AppLocalizations.of(context)!.settingsTitle,
+                              style: theme.sans(14,
+                                  weight: FontWeight.w600,
+                                  color: theme.textSecondary),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
 
-              // ── Gauge + readout ────────────────────────────────────────────
+              // ── Gauge + readout (full width, no horizontal padding) ────────
               Expanded(
                 child: TunerGauge(
                   cents: tuner.cents,
@@ -145,11 +146,14 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
               // ── Pitch light indicator ──────────────────────────────────────
               const SizedBox(height: 20),
-              PitchLightIndicator(
-                cents: tuner.cents,
-                isListening: tuner.isListening,
-                isStale: tuner.isStale,
-                theme: theme,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: PitchLightIndicator(
+                  cents: tuner.cents,
+                  isListening: tuner.isListening,
+                  isStale: tuner.isStale,
+                  theme: theme,
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -165,34 +169,42 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ],
 
               // ── Listen button ──────────────────────────────────────────────
-              _ListenButton(
-                isListening: tuner.isListening,
-                controller: _listenBtnCtrl,
-                onTap: () =>
-                    ref.read(tunerProvider.notifier).toggleListening(),
-                theme: theme,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _ListenButton(
+                  isListening: tuner.isListening,
+                  controller: _listenBtnCtrl,
+                  onTap: () =>
+                      ref.read(tunerProvider.notifier).toggleListening(),
+                  theme: theme,
+                ),
               ),
 
               // ── Permission denied banner ───────────────────────────────────
               if (tuner.permissionDenied) ...[
                 const SizedBox(height: 12),
-                _PermissionBanner(theme: theme),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _PermissionBanner(theme: theme),
+                ),
               ],
 
               // ── Mic hardware/API error banner ──────────────────────────────
               if (tuner.micError != null) ...[
                 const SizedBox(height: 12),
-                _MicErrorBanner(
-                  message: tuner.micError!,
-                  onDismiss: () =>
-                      ref.read(tunerProvider.notifier).clearMicError(),
-                  theme: theme,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: _MicErrorBanner(
+                    message: tuner.micError!,
+                    onDismiss: () =>
+                        ref.read(tunerProvider.notifier).clearMicError(),
+                    theme: theme,
+                  ),
                 ),
               ],
 
               const SizedBox(height: 20),
             ],
-          ),
         ),
       ),
     );

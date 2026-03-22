@@ -18,9 +18,12 @@ class PitchLightIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isFlat   = cents != null && cents! < -5;
-    final isInTune = cents != null && cents!.abs() <= 5;
-    final isSharp  = cents != null && cents! > 5;
+    // Round to nearest int to prevent flicker at the ±15 boundary
+    // (raw pitch detection has micro-noise; the gauge needle is spring-smoothed)
+    final cRound   = cents?.round() ?? 0;
+    final isFlat   = cents != null && cRound < -15;
+    final isInTune = cents != null && cRound.abs() <= 15;
+    final isSharp  = cents != null && cRound > 15;
 
     final animDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
