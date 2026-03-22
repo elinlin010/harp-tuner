@@ -123,7 +123,7 @@ class _StringCell extends StatelessWidget {
   double get _inactiveAlpha {
     return switch (string.note) {
       NoteName.c || NoteName.f => 0.92,
-      _ => _isDark ? 0.65 : 0.65,
+      _ => 0.65,
     };
   }
 
