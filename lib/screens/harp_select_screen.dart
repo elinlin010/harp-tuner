@@ -25,7 +25,16 @@ class _HarpSelectScreenState extends ConsumerState<HarpSelectScreen>
       duration: const Duration(milliseconds: 900),
     );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _fadeCtrl.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _fadeCtrl.value = 1.0;
+    } else if (!_fadeCtrl.isCompleted) {
+      _fadeCtrl.forward();
+    }
   }
 
   @override
@@ -36,12 +45,16 @@ class _HarpSelectScreenState extends ConsumerState<HarpSelectScreen>
 
   void _select(HarpType type) {
     ref.read(tunerProvider.notifier).setSelectedHarp(type);
+    final disableAnim = MediaQuery.disableAnimationsOf(context);
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (ctx, a1, a2) => const TunerScreen(),
-        transitionsBuilder: (ctx, anim, a2, child) =>
-            FadeTransition(opacity: anim, child: child),
-        transitionDuration: const Duration(milliseconds: 400),
+        transitionsBuilder: (ctx, anim, a2, child) => disableAnim
+            ? child
+            : FadeTransition(opacity: anim, child: child),
+        transitionDuration: disableAnim
+            ? Duration.zero
+            : const Duration(milliseconds: 400),
       ),
     );
   }
@@ -73,8 +86,8 @@ class _HarpSelectScreenState extends ConsumerState<HarpSelectScreen>
                 const SizedBox(height: 32),
                 Center(
                   child: Text(
-                    'SELECT YOUR INSTRUMENT',
-                    style: AppTextStyles.label(13, color: AppColors.textSecondary),
+                    'Select your instrument',
+                    style: AppTextStyles.sans(14, color: AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -95,7 +108,7 @@ class _Header extends StatelessWidget {
       children: [
         Text(
           'HARP',
-          style: AppTextStyles.label(12, color: AppColors.gold),
+          style: AppTextStyles.label(12, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 4),
         Text(
@@ -220,7 +233,7 @@ class _CardContentState extends State<_CardContent> {
                   const SizedBox(height: 2),
                   Text(
                     widget.type.subtitle,
-                    style: AppTextStyles.sans(12, color: AppColors.gold),
+                    style: AppTextStyles.sans(12, color: AppColors.textSecondary),
                   ),
                   const SizedBox(height: 4),
                   Text(

@@ -59,6 +59,39 @@ lib/
 
 **Design system:** Dark walnut palette defined in `AppColors`. Fonts: Cormorant Garamond (display) + Cutive Mono (numbers/readouts). All colors/text styles come from `app_theme.dart` — do not use hard-coded colors.
 
+## gstack Skills
+
+Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+Available skills:
+- `/office-hours` — Brainstorm and reframe a product idea before writing code
+- `/plan-ceo-review` — Strategic review of a feature plan
+- `/plan-eng-review` — Architecture review of a technical plan
+- `/plan-design-review` — Design review of a plan
+- `/design-consultation` — Create or audit a design system
+- `/review` — Pre-landing code review (bugs, security, structure)
+- `/ship` — Full ship workflow: tests → review → bump version → PR
+- `/land-and-deploy` — Land PR and deploy to production
+- `/canary` — Canary deploy workflow
+- `/benchmark` — Performance benchmarking
+- `/browse` — Headless browser for QA and dogfooding
+- `/qa` — Full QA pass on the app
+- `/qa-only` — QA without code changes
+- `/design-review` — Visual design audit
+- `/setup-browser-cookies` — Set up browser session cookies
+- `/setup-deploy` — Set up deploy pipeline
+- `/retro` — Weekly retrospective and dev stats
+- `/investigate` — Debug errors and investigate issues
+- `/document-release` — Post-ship documentation updates
+- `/codex` — Adversarial second-opinion code review
+- `/careful` — Safety mode for production/live systems
+- `/freeze` — Scope edits to one module/directory
+- `/guard` — Maximum safety mode (destructive warnings + edit restrictions)
+- `/unfreeze` — Remove edit restrictions
+- `/gstack-upgrade` — Upgrade gstack to latest version
+
+If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup` to rebuild.
+
 ## Next Steps (not yet implemented)
 
 - Real mic pitch detection: replace `TunerNotifier.mockReading` with `mic_stream` + `pitch_detector_dart`
