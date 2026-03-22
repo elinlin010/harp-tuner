@@ -5,6 +5,12 @@ import '../theme/app_theme.dart';
 
 const _kItemWidth = 52.0;
 
+// Traditional harp string palette — same colors used on physical instruments.
+// In dark themes these are used as the fill with a white rim for legibility.
+const _kDarkStringC       = Color(0xFFC0280A); // deep red
+const _kDarkStringF       = Color(0xFF1A1C1E); // near-black
+const _kDarkStringNatural = Color(0xFF4E6A80); // slate blue
+
 class StringVisualizer extends StatefulWidget {
   final List<HarpStringModel> strings;
   final HarpStringModel? activeString;
@@ -53,11 +59,22 @@ class _StringVisualizerState extends State<StringVisualizer> {
     super.dispose();
   }
 
-  Color _stringColor(NoteName note) => switch (note) {
-    NoteName.c => widget.theme.stringC,
-    NoteName.f => widget.theme.stringF,
-    _ => widget.theme.stringNatural,
-  };
+  Color _stringColor(NoteName note) {
+    // Dark themes: use the traditional physical-harp palette. A white rim
+    // (added in _StringCell) makes the dark colors legible on dark backgrounds.
+    if (widget.theme.brightness == Brightness.dark) {
+      return switch (note) {
+        NoteName.c => _kDarkStringC,
+        NoteName.f => _kDarkStringF,
+        _ => _kDarkStringNatural,
+      };
+    }
+    return switch (note) {
+      NoteName.c => widget.theme.stringC,
+      NoteName.f => widget.theme.stringF,
+      _ => widget.theme.stringNatural,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,11 +117,32 @@ class _StringCell extends StatelessWidget {
     required this.theme,
   });
 
+  bool get _isDark => theme.brightness == Brightness.dark;
+
+  // Light mode: landmark strings (C, F) stay opaque; naturals fade slightly.
+  // Dark mode: uniform opacity — the white rim carries the visual distinction.
+  double get _inactiveAlpha {
+    if (_isDark) return 0.80;
+    return switch (string.note) {
+      NoteName.c || NoteName.f => 0.90,
+      _ => 0.65,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final animDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 200);
+
+    // Dark mode: thin white/light rim makes traditional string colors legible
+    // on dark backgrounds. Glow replaces the rim when active.
+    final rimBorder = (_isDark && !isActive)
+        ? Border.all(
+            color: Colors.white.withValues(alpha: 0.30),
+            width: 1.0,
+          )
+        : null;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -147,8 +185,9 @@ class _StringCell extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isActive
                       ? stringColor
-                      : stringColor.withValues(alpha: 0.65),
+                      : stringColor.withValues(alpha: _inactiveAlpha),
                   borderRadius: BorderRadius.circular(2),
+                  border: rimBorder,
                 ),
               ),
             ],
@@ -156,12 +195,22 @@ class _StringCell extends StatelessWidget {
         ),
         const SizedBox(height: 2),
         // Label (note + octave, e.g. "C4")
+        // Light mode: C and F labels show a tint of their string color when
+        // inactive to reinforce the landmark identity. Dark mode uses
+        // textSecondary for all inactive labels (string colors are too dark
+        // to show on dark backgrounds).
         AnimatedDefaultTextStyle(
           duration: animDuration,
           style: theme.sans(
             isActive ? 13 : 12,
             weight: isActive ? FontWeight.w700 : FontWeight.w400,
-            color: isActive ? stringColor : theme.textSecondary,
+            color: isActive
+                ? stringColor
+                : (!_isDark &&
+                        (string.note == NoteName.c ||
+                            string.note == NoteName.f))
+                    ? stringColor.withValues(alpha: 0.70)
+                    : theme.textSecondary,
           ),
           child: Text(string.label, textAlign: TextAlign.center),
         ),
@@ -169,4 +218,3 @@ class _StringCell extends StatelessWidget {
     );
   }
 }
-

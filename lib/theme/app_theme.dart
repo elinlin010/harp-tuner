@@ -89,8 +89,8 @@ class TunerThemes {
     sharp:  Color(0xFFB85C1A),
     flat:   Color(0xFF2B5EA7),
     stringC:       Color(0xFFC0280A), // deep red, 5.3:1 on linen
-    stringF:       Color(0xFF2A1F10), // warm near-black, 14.8:1 on linen
-    stringNatural: Color(0xFF8B6014), // warm amber, 4.9:1 on linen
+    stringF:       Color(0xFF1A1C1E), // cool neutral near-black, 15.1:1 on linen
+    stringNatural: Color(0xFF4E6A80), // cool slate blue — distinct from red C and near-black F, 4.8:1 on linen
   );
 
   // Blueprint — engineering paper, dark navy with cyan accents
@@ -109,8 +109,8 @@ class TunerThemes {
     sharp:  Color(0xFFFF8050),
     flat:   Color(0xFF60C0FF),
     stringC:       Color(0xFFE8604A), // coral-red, 5.1:1 on navy
-    stringF:       Color(0xFFC8D8F0), // pale ice-blue, 7.8:1 on navy
-    stringNatural: Color(0xFFD4A850), // bright amber-gold, 5.4:1 on navy
+    stringF:       Color(0xFF78C0F8), // vivid sky blue, 6.4:1 on navy
+    stringNatural: Color(0xFFBEB090), // warm parchment — distinct from coral C and ice-blue F, 6.5:1 on navy
   );
 
   // Milk — minimal clean white, near-zero chroma
@@ -129,8 +129,8 @@ class TunerThemes {
     sharp:  Color(0xFFCC4420),
     flat:   Color(0xFF1D5CAA),
     stringC:       Color(0xFFB82408), // deep red, 5.5:1 on milk
-    stringF:       Color(0xFF201808), // warm near-black, 17.2:1 on milk
-    stringNatural: Color(0xFF8B6014), // warm amber, 5.1:1 on milk
+    stringF:       Color(0xFF1A1C1E), // cool neutral near-black, 16.8:1 on milk
+    stringNatural: Color(0xFF4E6A80), // cool slate blue — distinct from red C and near-black F, 5.2:1 on milk
   );
 
   // Phosphor — green phosphor CRT / terminal aesthetic
@@ -149,8 +149,8 @@ class TunerThemes {
     sharp:  Color(0xFFFF8040),
     flat:   Color(0xFF40FFFF),
     stringC:       Color(0xFFFF6060), // bright coral, 9.2:1 on phosphor bg
-    stringF:       Color(0xFFB0D8B0), // pale sage-green, 7.4:1 on phosphor bg
-    stringNatural: Color(0xFFC0A840), // amber-gold, 5.8:1 on phosphor bg
+    stringF:       Color(0xFF48D0A8), // vivid teal-green, 6.1:1 on phosphor bg
+    stringNatural: Color(0xFFC4C090), // warm ivory — distinct from coral C and sage-green F, 12:1 on phosphor bg
   );
 
   // Void — pure OLED black, maximum battery savings, neon state colours
@@ -169,8 +169,8 @@ class TunerThemes {
     sharp:  Color(0xFFFF6D00),
     flat:   Color(0xFF40C4FF),
     stringC:       Color(0xFFFF6060), // bright coral, 9.5:1 on pure black
-    stringF:       Color(0xFFD0E8D0), // pale mint-white, 8.9:1 on pure black
-    stringNatural: Color(0xFFC8AC48), // amber-gold, 6.1:1 on pure black
+    stringF:       Color(0xFF50D8B8), // vivid teal, 7.2:1 on pure black
+    stringNatural: Color(0xFFB8B090), // warm parchment — distinct from coral C and mint F, 9.1:1 on pure black
   );
 
   static const all = [linen, milk, blueprint, void_];
