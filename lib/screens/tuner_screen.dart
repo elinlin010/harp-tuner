@@ -119,7 +119,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                         theme: theme,
                       ),
                     const Spacer(),
-                    // Settings icon button
+                    // Settings pill
                     Material(
                       color: theme.surfaceHi,
                       borderRadius: BorderRadius.circular(20),
@@ -127,9 +127,22 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                         borderRadius: BorderRadius.circular(20),
                         onTap: () => _showSettings(context),
                         child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Icon(Icons.tune_rounded, size: 20,
-                              color: theme.textSecondary),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.tune_rounded,
+                                  size: 18, color: theme.textSecondary),
+                              const SizedBox(width: 6),
+                              Text(
+                                AppLocalizations.of(context)!.settingsTitle,
+                                style: theme.sans(14,
+                                    weight: FontWeight.w600,
+                                    color: theme.textSecondary),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

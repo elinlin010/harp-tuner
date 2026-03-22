@@ -28,13 +28,15 @@ class ModeToggle extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           _Tab(
-            label: 'AUTO',
+            icon: Icons.mic_rounded,
+            label: 'Auto',
             active: mode == TunerMode.auto,
             onTap: () => onChanged(TunerMode.auto),
             theme: theme,
           ),
           _Tab(
-            label: 'REFERENCE',
+            icon: Icons.music_note_rounded,
+            label: 'Reference',
             active: mode == TunerMode.reference,
             onTap: () => onChanged(TunerMode.reference),
             theme: theme,
@@ -46,12 +48,14 @@ class ModeToggle extends StatelessWidget {
 }
 
 class _Tab extends StatelessWidget {
+  final IconData icon;
   final String label;
   final bool active;
   final VoidCallback onTap;
   final TunerThemeData theme;
 
   const _Tab({
+    required this.icon,
     required this.label,
     required this.active,
     required this.onTap,
@@ -62,13 +66,17 @@ class _Tab extends StatelessWidget {
   Widget build(BuildContext context) {
     final animDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
-        : const Duration(milliseconds: 180);
+        : const Duration(milliseconds: 220);
 
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: animDuration,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        curve: Curves.easeInOut,
+        padding: EdgeInsets.symmetric(
+          horizontal: active ? 12 : 9,
+          vertical: 7,
+        ),
         decoration: BoxDecoration(
           color: active ? theme.inTune.withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(17),
@@ -76,12 +84,37 @@ class _Tab extends StatelessWidget {
               ? Border.all(color: theme.inTune.withValues(alpha: 0.45), width: 0.5)
               : null,
         ),
-        child: Text(
-          label,
-          style: theme.label(
-            12,
-            color: active ? theme.inTune : theme.textDim,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: active ? theme.inTune : theme.textDim,
+            ),
+            // Label slides in/out via ClipRect + AnimatedAlign widthFactor.
+            // widthFactor 0→1 collapses/expands the label width while the
+            // AnimatedContainer above simultaneously adjusts the padding,
+            // giving a single smooth pill-resize animation.
+            ClipRect(
+              child: AnimatedAlign(
+                duration: animDuration,
+                curve: Curves.easeInOut,
+                alignment: Alignment.centerLeft,
+                widthFactor: active ? 1.0 : 0.0,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(width: 5),
+                    Text(
+                      label,
+                      style: theme.label(12, color: theme.inTune),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
