@@ -102,13 +102,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     return Scaffold(
       backgroundColor: theme.bg,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (ctx, constraints) {
-            // Cap the gauge at 42 % of the safe-area height, clamped to
-            // [200, 270] px.  Without this, the arc steals the majority of
-            // the screen on large phones and leaves nothing for the bottom.
-            final gaugeH = (constraints.maxHeight * 0.42).clamp(200.0, 270.0);
-            return Column(
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Top-right settings icon ────────────────────────────────────
@@ -147,8 +141,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ),
 
               // ── Gauge + readout (full width, no horizontal padding) ────────
-              SizedBox(
-                height: gaugeH,
+              Expanded(
                 child: TunerGauge(
                   cents: tuner.cents,
                   noteName: noteName,
@@ -234,11 +227,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
               const SizedBox(height: 12),
             ],
-          ); // Column
-          }, // LayoutBuilder builder
-        ), // LayoutBuilder
-      ), // SafeArea
-    ); // Scaffold
+        ),
+      ),
+    );
   }
 }
 

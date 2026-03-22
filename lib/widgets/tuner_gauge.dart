@@ -216,10 +216,18 @@ class _TunerGaugeState extends State<TunerGauge>
                         duration: const Duration(milliseconds: 200),
                         child: Align(
                           alignment: Alignment.center,
-                          child: _IdleReadout(
-                            isListening: widget.isListening,
-                            pulse: _pulseCtrl,
-                            theme: widget.theme,
+                          // FittedBox scales the idle readout down when the
+                          // available readoutH is smaller than the content's
+                          // intrinsic height (icon 48 + gap 16 + text ~28 = 92px).
+                          // This prevents the overflow that occurs on small screens
+                          // when a harp is selected and the gauge has limited space.
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: _IdleReadout(
+                              isListening: widget.isListening,
+                              pulse: _pulseCtrl,
+                              theme: widget.theme,
+                            ),
                           ),
                         ),
                       ),
