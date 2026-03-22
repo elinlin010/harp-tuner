@@ -166,19 +166,17 @@ class _TunerGaugeState extends State<TunerGauge>
         final r = (maxW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
         // Show from arc top down to just below the anchor/needle-tail dot.
         // anchor is at r*0.50 above cy; cy = r+30 → anchorY = r*0.50+30 from top.
-        // Guard: if the gauge is given very little height (e.g. the mode
-        // toggle + hint shrink the available space in reference mode), ensure
-        // clamp() never receives a lower bound > upper bound — that throws
-        // `Invalid argument(s): 150.0` / `130.0` in Dart.
-        final arcH = (r * 0.50 + 64).clamp(
-          150.0, max(150.0, maxH * 0.48).toDouble(),
-        );
+        // Arc takes its natural size (r*0.50+64), capped at 65% of available
+        // height so the readout below always gets room. Floor is 100px.
+        // Using a proportional cap instead of a fixed 150px floor prevents
+        // `clamp(lower, upper)` from throwing when maxH is small (e.g. reference
+        // mode on iPhone SE where 150 > maxH*0.48 caused `Invalid arguments`).
+        final double arcHMax = maxH * 0.65 > 100.0 ? maxH * 0.65 : 100.0;
+        final double arcH = (r * 0.50 + 64).clamp(100.0, arcHMax);
 
-        // Readout height: tall enough for the 100px note letter, capped so it
-        // doesn't crowd the arc on short screens.
-        final readoutH = (maxH * 0.28).clamp(
-          min(130.0, maxH * 0.28).toDouble(), 180.0,
-        );
+        // Readout gets exactly what remains after the arc + 16px gap.
+        // Guarantee: arcH + 16 + readoutH == maxH (no internal Column overflow).
+        final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 180.0);
 
         return Column(
             mainAxisSize: MainAxisSize.max,
