@@ -84,16 +84,16 @@ class AppLocalizationsIt extends AppLocalizations {
   String get gaugeTapToBeginMsg => 'Tocca per iniziare';
 
   @override
-  String get gaugeStaleSemantics => 'Tuner reading stale — play a note';
+  String get gaugeStaleSemantics => 'Lettura scaduta — suona una nota';
 
   @override
-  String get modeAuto => 'AUTO';
+  String get modeAuto => 'Auto';
 
   @override
-  String get modeReference => 'REFERENCE';
+  String get modeReference => 'Riferimento';
 
   @override
-  String get referenceTapHint => 'Tap a string to hear it and tune to it';
+  String get referenceTapHint => 'Tocca una corda per ascoltarla e accordarla';
 
   @override
   String get pitchLightFlatLabel => 'Basso';

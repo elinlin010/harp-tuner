@@ -163,7 +163,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
               // ── String visualizer ──────────────────────────────────────────
               if (tuner.selectedHarp != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 StringVisualizer(
                   strings: harpStrings,
                   activeString: activeString,
@@ -177,17 +177,14 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ],
 
               // ── Pitch light indicator ──────────────────────────────────────
-              const SizedBox(height: 6),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: PitchLightIndicator(
-                  cents: tuner.cents,
-                  isListening: tuner.isListening,
-                  isStale: tuner.isStale,
-                  theme: theme,
-                ),
+              const SizedBox(height: 14),
+              PitchLightIndicator(
+                cents: tuner.cents,
+                isListening: tuner.isListening,
+                isStale: tuner.isStale,
+                theme: theme,
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 14),
 
               // ── Listen button ──────────────────────────────────────────────
               Padding(
@@ -224,7 +221,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ],
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
             ],
         ),
       ),

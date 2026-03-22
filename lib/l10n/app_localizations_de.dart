@@ -84,16 +84,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get gaugeTapToBeginMsg => 'Antippen zum Starten';
 
   @override
-  String get gaugeStaleSemantics => 'Tuner reading stale — play a note';
+  String get gaugeStaleSemantics => 'Messung veraltet — bitte Ton spielen';
 
   @override
-  String get modeAuto => 'AUTO';
+  String get modeAuto => 'Auto';
 
   @override
-  String get modeReference => 'REFERENCE';
+  String get modeReference => 'Referenz';
 
   @override
-  String get referenceTapHint => 'Tap a string to hear it and tune to it';
+  String get referenceTapHint => 'Saite antippen zum Hören und Stimmen';
 
   @override
   String get pitchLightFlatLabel => 'Zu tief';

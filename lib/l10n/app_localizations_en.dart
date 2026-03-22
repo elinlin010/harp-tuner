@@ -87,10 +87,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gaugeStaleSemantics => 'Tuner reading stale — play a note';
 
   @override
-  String get modeAuto => 'AUTO';
+  String get modeAuto => 'Auto';
 
   @override
-  String get modeReference => 'REFERENCE';
+  String get modeReference => 'Reference';
 
   @override
   String get referenceTapHint => 'Tap a string to hear it and tune to it';

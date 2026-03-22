@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_localizations.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 
@@ -24,25 +25,29 @@ class ModeToggle extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: theme.surfaceRim, width: 0.5),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _Tab(
-            icon: Icons.mic_rounded,
-            label: 'Auto',
-            active: mode == TunerMode.auto,
-            onTap: () => onChanged(TunerMode.auto),
-            theme: theme,
-          ),
-          _Tab(
-            icon: Icons.music_note_rounded,
-            label: 'Reference',
-            active: mode == TunerMode.reference,
-            onTap: () => onChanged(TunerMode.reference),
-            theme: theme,
-          ),
-        ],
-      ),
+      child: Builder(builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _Tab(
+              // Tuning fork concept: graphic_eq shows frequency bars (pitch analysis)
+              icon: Icons.graphic_eq_rounded,
+              label: l10n.modeAuto,
+              active: mode == TunerMode.auto,
+              onTap: () => onChanged(TunerMode.auto),
+              theme: theme,
+            ),
+            _Tab(
+              icon: Icons.volume_up_rounded,
+              label: l10n.modeReference,
+              active: mode == TunerMode.reference,
+              onTap: () => onChanged(TunerMode.reference),
+              theme: theme,
+            ),
+          ],
+        );
+      }),
     );
   }
 }

@@ -264,13 +264,13 @@ abstract class AppLocalizations {
   /// No description provided for @modeAuto.
   ///
   /// In en, this message translates to:
-  /// **'AUTO'**
+  /// **'Auto'**
   String get modeAuto;
 
   /// No description provided for @modeReference.
   ///
   /// In en, this message translates to:
-  /// **'REFERENCE'**
+  /// **'Reference'**
   String get modeReference;
 
   /// No description provided for @referenceTapHint.
