@@ -105,38 +105,48 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Top-right settings icon ────────────────────────────────────
-              const SizedBox(height: 8),
+              // ── Nav bar: mode toggle (left) + settings (right) ────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Material(
-                    color: theme.surfaceHi,
-                    borderRadius: BorderRadius.circular(20),
-                    child: InkWell(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: [
+                    // Mode toggle — only shown when a harp is selected
+                    if (tuner.selectedHarp != null)
+                      ModeToggle(
+                        mode: tuner.tunerMode,
+                        onChanged: (m) =>
+                            ref.read(tunerProvider.notifier).setTunerMode(m),
+                        theme: theme,
+                      ),
+                    const Spacer(),
+                    // Settings pill
+                    Material(
+                      color: theme.surfaceHi,
                       borderRadius: BorderRadius.circular(20),
-                      onTap: () => _showSettings(context),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.tune_rounded,
-                                size: 18, color: theme.textSecondary),
-                            const SizedBox(width: 6),
-                            Text(
-                              AppLocalizations.of(context)!.settingsTitle,
-                              style: theme.sans(14,
-                                  weight: FontWeight.w600,
-                                  color: theme.textSecondary),
-                            ),
-                          ],
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => _showSettings(context),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.tune_rounded,
+                                  size: 18, color: theme.textSecondary),
+                              const SizedBox(width: 6),
+                              Text(
+                                AppLocalizations.of(context)!.settingsTitle,
+                                style: theme.sans(14,
+                                    weight: FontWeight.w600,
+                                    color: theme.textSecondary),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
 
@@ -151,20 +161,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ),
 
-              // ── Mode toggle + string visualizer ───────────────────────────
-              // Placed above the pitch lights so the interaction (tap a string)
-              // precedes the feedback (flat/in-tune/sharp) in reading order.
+              // ── String visualizer ──────────────────────────────────────────
               if (tuner.selectedHarp != null) ...[
                 const SizedBox(height: 6),
-                Center(
-                  child: ModeToggle(
-                    mode: tuner.tunerMode,
-                    onChanged: (m) =>
-                        ref.read(tunerProvider.notifier).setTunerMode(m),
-                    theme: theme,
-                  ),
-                ),
-                const SizedBox(height: 4),
                 StringVisualizer(
                   strings: harpStrings,
                   activeString: activeString,

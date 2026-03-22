@@ -85,7 +85,7 @@ class _StringVisualizerState extends State<StringVisualizer> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 88,
+      height: 116,
       child: ListView.builder(
         controller: _scrollCtrl,
         clipBehavior: Clip.none,
@@ -157,7 +157,7 @@ class _StringCell extends StatelessWidget {
         // String + glow
         SizedBox(
           width: _kItemWidth,
-          height: 56,
+          height: 80,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -165,7 +165,7 @@ class _StringCell extends StatelessWidget {
               AnimatedContainer(
                 duration: animDuration,
                 width: isActive ? 28 : 0,
-                height: isActive ? 52 : 0,
+                height: isActive ? 76 : 0,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: isActive
@@ -188,12 +188,12 @@ class _StringCell extends StatelessWidget {
               AnimatedContainer(
                 duration: animDuration,
                 width: isActive ? 4.0 : 2.5,
-                height: 48,
+                height: 68,
                 decoration: BoxDecoration(
                   color: isActive
                       ? stringColor
                       : stringColor.withValues(alpha: _inactiveAlpha),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(3),
                   border: rimBorder,
                 ),
               ),
