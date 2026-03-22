@@ -84,7 +84,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
-    final l10n  = AppLocalizations.of(context)!;
 
     final harpStrings = tuner.selectedHarp != null
         ? HarpPresets.stringsFor(tuner.selectedHarp!)
@@ -152,22 +151,11 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ),
 
-              // ── Pitch light indicator ──────────────────────────────────────
-              const SizedBox(height: 10),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: PitchLightIndicator(
-                  cents: tuner.cents,
-                  isListening: tuner.isListening,
-                  isStale: tuner.isStale,
-                  theme: theme,
-                ),
-              ),
-              const SizedBox(height: 8),
-
               // ── Mode toggle + string visualizer ───────────────────────────
+              // Placed above the pitch lights so the interaction (tap a string)
+              // precedes the feedback (flat/in-tune/sharp) in reading order.
               if (tuner.selectedHarp != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Center(
                   child: ModeToggle(
                     mode: tuner.tunerMode,
@@ -176,14 +164,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                     theme: theme,
                   ),
                 ),
-                const SizedBox(height: 4),
-                // Hint text in reference mode so users know to tap
-                if (isReference)
-                  Text(
-                    l10n.referenceTapHint,
-                    textAlign: TextAlign.center,
-                    style: theme.sans(12, color: theme.textDim),
-                  ),
                 const SizedBox(height: 4),
                 StringVisualizer(
                   strings: harpStrings,
@@ -196,6 +176,22 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   theme: theme,
                 ),
               ],
+
+              // ── Pitch light indicator ──────────────────────────────────────
+              // compact=true in Reference mode: all bulbs shrink to 36 px,
+              // saving ~20 px for the gauge and string visualizer above.
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: PitchLightIndicator(
+                  cents: tuner.cents,
+                  isListening: tuner.isListening,
+                  isStale: tuner.isStale,
+                  compact: isReference,
+                  theme: theme,
+                ),
+              ),
+              const SizedBox(height: 4),
 
               // ── Listen button ──────────────────────────────────────────────
               Padding(
@@ -232,7 +228,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ],
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
             ],
         ),
       ),
@@ -518,7 +514,7 @@ class _ListenButton extends StatelessWidget {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               color: isListening

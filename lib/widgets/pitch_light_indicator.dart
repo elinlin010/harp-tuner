@@ -6,6 +6,9 @@ class PitchLightIndicator extends StatelessWidget {
   final double? cents;
   final bool isListening;
   final bool isStale;
+  /// When true (Reference mode), all bulbs render at 36 px instead of 40/60/40.
+  /// Saves ~20 px of vertical space where screen real estate is tighter.
+  final bool compact;
   final TunerThemeData theme;
 
   const PitchLightIndicator({
@@ -13,6 +16,7 @@ class PitchLightIndicator extends StatelessWidget {
     required this.cents,
     required this.isListening,
     this.isStale = false,
+    this.compact = false,
     required this.theme,
   });
 
@@ -35,6 +39,14 @@ class PitchLightIndicator extends StatelessWidget {
         ? Duration.zero
         : const Duration(milliseconds: 300);
 
+    // compact=true (Reference mode): all bulbs 36 px — saves ~20 px of height
+    // while preserving color + symbol semantics.
+    final outerSize  = compact ? 36.0 : 40.0;
+    final centerSize = compact ? 36.0 : 60.0;
+    final outerSym   = compact ? 16.0 : 18.0;
+    final centerSym  = compact ? 18.0 : 26.0;
+    final labelSz    = compact ? 11.0 : 14.0;
+
     // No surrounding panel — lights float directly on the page background.
     return AnimatedOpacity(
       opacity: isStale ? 0.35 : 1.0,
@@ -46,8 +58,9 @@ class PitchLightIndicator extends StatelessWidget {
           symbol: '♭',
           active: isFlat,
           color: theme.flat,
-          size: 40,
-          symbolSize: 18,
+          size: outerSize,
+          symbolSize: outerSym,
+          labelSize: labelSz,
           theme: theme,
           animDuration: animDuration,
         )),
@@ -56,8 +69,9 @@ class PitchLightIndicator extends StatelessWidget {
           symbol: '✓',
           active: isInTune,
           color: theme.inTune,
-          size: 60,           // larger — most important state
-          symbolSize: 26,
+          size: centerSize,
+          symbolSize: centerSym,
+          labelSize: labelSz,
           theme: theme,
           animDuration: animDuration,
         )),
@@ -66,8 +80,9 @@ class PitchLightIndicator extends StatelessWidget {
           symbol: '♯',
           active: isSharp,
           color: theme.sharp,
-          size: 40,
-          symbolSize: 18,
+          size: outerSize,
+          symbolSize: outerSym,
+          labelSize: labelSz,
           theme: theme,
           animDuration: animDuration,
         )),
@@ -84,6 +99,7 @@ class _Bulb extends StatelessWidget {
   final Color color;
   final double size;
   final double symbolSize;
+  final double labelSize;
   final TunerThemeData theme;
   final Duration animDuration;
 
@@ -94,6 +110,7 @@ class _Bulb extends StatelessWidget {
     required this.color,
     required this.size,
     required this.symbolSize,
+    required this.labelSize,
     required this.theme,
     required this.animDuration,
   });
@@ -158,11 +175,11 @@ class _Bulb extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         AnimatedDefaultTextStyle(
           duration: animDuration,
           style: theme.sans(
-            14,
+            labelSize,
             weight: active ? FontWeight.w600 : FontWeight.w400,
             color: active ? color : theme.textSecondary,
           ),
