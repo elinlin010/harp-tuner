@@ -565,10 +565,11 @@ class _MicErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
-      label: 'Microphone error',
+      label: l10n.errorMicDeniedTitle,
       button: true,
-      hint: 'Tap to dismiss',
+      hint: l10n.tapToDismiss,
       child: GestureDetector(
       onTap: onDismiss,
       child: Container(
