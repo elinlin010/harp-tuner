@@ -167,7 +167,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
               // ── Mode toggle + string visualizer ───────────────────────────
               if (tuner.selectedHarp != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: 4),
                 Center(
                   child: ModeToggle(
                     mode: tuner.tunerMode,
@@ -176,21 +176,23 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                     theme: theme,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 // Hint text in reference mode so users know to tap
                 if (isReference)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Text(
-                      l10n.referenceTapHint,
-                      textAlign: TextAlign.center,
-                      style: theme.sans(12, color: theme.textDim),
-                    ),
+                  Text(
+                    l10n.referenceTapHint,
+                    textAlign: TextAlign.center,
+                    style: theme.sans(12, color: theme.textDim),
                   ),
+                const SizedBox(height: 4),
                 StringVisualizer(
                   strings: harpStrings,
                   activeString: activeString,
-                  playingString: isReference ? tuner.referenceString : null,
+                  // Speaker icon only while the tone is audible, not while
+                  // the string is merely selected as the reference target.
+                  playingString: isReference && tuner.isPlayingTone
+                      ? tuner.referenceString
+                      : null,
                   onTap: isReference
                       ? (s) => ref
                           .read(tunerProvider.notifier)
@@ -198,7 +200,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                       : null,
                   theme: theme,
                 ),
-                const SizedBox(height: 4),
               ],
 
               // ── Listen button ──────────────────────────────────────────────
