@@ -113,7 +113,8 @@ class _Tab extends StatelessWidget {
                     const SizedBox(width: 5),
                     Text(
                       label,
-                      style: theme.label(12, color: theme.inTune),
+                      style: theme.sans(12,
+                          weight: FontWeight.w600, color: theme.inTune),
                     ),
                   ],
                 ),
