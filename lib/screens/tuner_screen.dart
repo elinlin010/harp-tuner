@@ -298,7 +298,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Instrument ────────────────────────────────────────────────────
           Text(l10n.settingsInstrumentLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 4),
           _InstrumentRow(
             label: l10n.settingsInstrumentNone,
@@ -323,7 +323,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Note display + A4 calibration ────────────────────────────────
           Text(l10n.settingsNoteDisplayLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 12),
           _SheetSwitchRow(
             label: l10n.settingsAlwaysShowFlatsToggle,
@@ -357,7 +357,7 @@ class _SettingsSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Text(l10n.settingsThemeLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 16),
           _ThemePickerRow(
             currentTheme: theme,
@@ -371,7 +371,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Language ──────────────────────────────────────────────────────
           Text(l10n.settingsLanguageLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 4),
           for (final lang in _languages)
             _LanguageRow(
