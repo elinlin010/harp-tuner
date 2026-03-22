@@ -166,11 +166,19 @@ class _TunerGaugeState extends State<TunerGauge>
         final r = (maxW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
         // Show from arc top down to just below the anchor/needle-tail dot.
         // anchor is at r*0.50 above cy; cy = r+30 → anchorY = r*0.50+30 from top.
-        final arcH = (r * 0.50 + 64).clamp(150.0, maxH * 0.48);
+        // Guard: if the gauge is given very little height (e.g. the mode
+        // toggle + hint shrink the available space in reference mode), ensure
+        // clamp() never receives a lower bound > upper bound — that throws
+        // `Invalid argument(s): 150.0` / `130.0` in Dart.
+        final arcH = (r * 0.50 + 64).clamp(
+          150.0, max(150.0, maxH * 0.48).toDouble(),
+        );
 
         // Readout height: tall enough for the 100px note letter, capped so it
         // doesn't crowd the arc on short screens.
-        final readoutH = (maxH * 0.28).clamp(130.0, 180.0);
+        final readoutH = (maxH * 0.28).clamp(
+          min(130.0, maxH * 0.28).toDouble(), 180.0,
+        );
 
         return Column(
             mainAxisSize: MainAxisSize.max,
