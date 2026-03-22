@@ -84,6 +84,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get gaugeTapToBeginMsg => 'Tap Start Tuning to begin';
 
   @override
+  String get gaugeStaleSemantics => 'Tuner reading stale — play a note';
+
+  @override
   String get pitchLightFlatLabel => 'Flat';
 
   @override

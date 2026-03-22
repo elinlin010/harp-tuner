@@ -150,8 +150,9 @@ class _TunerGaugeState extends State<TunerGauge>
         ? Duration.zero
         : const Duration(milliseconds: 300);
 
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
-      label: widget.isStale ? 'Tuner reading stale — play a note' : null,
+      label: widget.isStale ? l10n.gaugeStaleSemantics : null,
       child: AnimatedOpacity(
       opacity: widget.isStale ? 0.40 : 1.0,
       duration: animDur,

@@ -25,6 +25,7 @@
   "tunerStopBtn": "Stop",
   "gaugeListeningMsg": "Listening for a note…",
   "gaugeTapToBeginMsg": "Tap Start Tuning to begin",
+  "gaugeStaleSemantics": "Tuner reading stale — play a note",
   "pitchLightFlatLabel": "Flat",
   "pitchLightInTuneLabel": "In Tune",
   "pitchLightSharpLabel": "Sharp",

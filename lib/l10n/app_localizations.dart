@@ -255,6 +255,12 @@ abstract class AppLocalizations {
   /// **'Tap Start Tuning to begin'**
   String get gaugeTapToBeginMsg;
 
+  /// No description provided for @gaugeStaleSemantics.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuner reading stale — play a note'**
+  String get gaugeStaleSemantics;
+
   /// No description provided for @pitchLightFlatLabel.
   ///
   /// In en, this message translates to:

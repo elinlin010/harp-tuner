@@ -84,6 +84,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gaugeTapToBeginMsg => '點擊以開始調音';
 
   @override
+  String get gaugeStaleSemantics => 'Tuner reading stale — play a note';
+
+  @override
   String get pitchLightFlatLabel => '偏低';
 
   @override
