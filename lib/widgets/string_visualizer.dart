@@ -5,11 +5,6 @@ import '../theme/app_theme.dart';
 
 const _kItemWidth = 52.0;
 
-// Traditional harp string palette — same colors used on physical instruments.
-// In dark themes these are used as the fill with a white rim for legibility.
-const _kDarkStringC       = Color(0xFFC0280A); // deep red
-const _kDarkStringF       = Color(0xFFCDCDC8); // warm off-white — F is near-black on light, near-white on dark (inverted landmark)
-const _kDarkStringNatural = Color(0xFF4E6A80); // slate blue
 
 class StringVisualizer extends StatefulWidget {
   final List<HarpStringModel> strings;
@@ -66,15 +61,8 @@ class _StringVisualizerState extends State<StringVisualizer> {
   }
 
   Color _stringColor(NoteName note) {
-    // Dark themes: use the traditional physical-harp palette. A white rim
-    // (added in _StringCell) makes the dark colors legible on dark backgrounds.
-    if (widget.theme.brightness == Brightness.dark) {
-      return switch (note) {
-        NoteName.c => _kDarkStringC,
-        NoteName.f => _kDarkStringF,
-        _ => _kDarkStringNatural,
-      };
-    }
+    // Each theme (light and dark) defines its own contrast-verified string
+    // palette in TunerThemeData.stringC/F/Natural. Use them directly.
     return switch (note) {
       NoteName.c => widget.theme.stringC,
       NoteName.f => widget.theme.stringF,
