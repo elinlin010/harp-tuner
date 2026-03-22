@@ -174,13 +174,14 @@ class _TunerGaugeState extends State<TunerGauge>
         final double arcHMax = maxH * 0.65 > 100.0 ? maxH * 0.65 : 100.0;
         final double arcH = (r * 0.50 + 64).clamp(100.0, arcHMax);
 
-        // Readout is capped at 120px so it doesn't consume excess height on
-        // large screens. The Column's mainAxisAlignment.center distributes any
-        // leftover space evenly above the arc and below the readout.
-        final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 120.0);
+        // Readout is capped at 80px — enough for the note name.
+        // The Column uses mainAxisSize.min so the gauge reports only
+        // arcH + 16 + readoutH (~266px) as its natural height, rather than
+        // filling all Flexible space. Excess space falls below the button.
+        final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 80.0);
 
         return Column(
-            mainAxisSize: MainAxisSize.max,
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // ── Arc ─────────────────────────────────────────────────────

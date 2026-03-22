@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 
 class PitchLightIndicator extends StatelessWidget {
@@ -31,13 +32,15 @@ class PitchLightIndicator extends StatelessWidget {
         ? Duration.zero
         : const Duration(milliseconds: 300);
 
+    final l10n = AppLocalizations.of(context)!;
+
     return AnimatedOpacity(
       opacity: isStale ? 0.35 : 1.0,
       duration: staleDur,
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _Bulb(
+          Expanded(child: _Bulb(
+            label: l10n.pitchLightFlatLabel,
             symbol: '♭',
             active: isFlat,
             color: theme.flat,
@@ -45,9 +48,9 @@ class PitchLightIndicator extends StatelessWidget {
             symbolSize: 14,
             theme: theme,
             animDuration: animDuration,
-          ),
-          const SizedBox(width: 20),
-          _Bulb(
+          )),
+          Expanded(child: _Bulb(
+            label: l10n.pitchLightInTuneLabel,
             symbol: '✓',
             active: isInTune,
             color: theme.inTune,
@@ -55,9 +58,9 @@ class PitchLightIndicator extends StatelessWidget {
             symbolSize: 20,
             theme: theme,
             animDuration: animDuration,
-          ),
-          const SizedBox(width: 20),
-          _Bulb(
+          )),
+          Expanded(child: _Bulb(
+            label: l10n.pitchLightSharpLabel,
             symbol: '♯',
             active: isSharp,
             color: theme.sharp,
@@ -65,7 +68,7 @@ class PitchLightIndicator extends StatelessWidget {
             symbolSize: 14,
             theme: theme,
             animDuration: animDuration,
-          ),
+          )),
         ],
       ),
     );
@@ -73,6 +76,7 @@ class PitchLightIndicator extends StatelessWidget {
 }
 
 class _Bulb extends StatelessWidget {
+  final String label;
   final String symbol;
   final bool active;
   final Color color;
@@ -82,6 +86,7 @@ class _Bulb extends StatelessWidget {
   final Duration animDuration;
 
   const _Bulb({
+    required this.label,
     required this.symbol,
     required this.active,
     required this.color,
@@ -93,7 +98,10 @@ class _Bulb extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AnimatedContainer(
       duration: animDuration,
       width: size,
       height: size,
@@ -141,6 +149,18 @@ class _Bulb extends StatelessWidget {
           child: Text(symbol),
         ),
       ),
+    ),
+        const SizedBox(height: 6),
+        AnimatedDefaultTextStyle(
+          duration: animDuration,
+          style: theme.sans(
+            12,
+            weight: active ? FontWeight.w600 : FontWeight.w400,
+            color: active ? color : theme.textSecondary,
+          ),
+          child: Text(label, textAlign: TextAlign.center),
+        ),
+      ],
     );
   }
 }
