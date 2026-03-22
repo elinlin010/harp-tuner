@@ -517,7 +517,7 @@ class _IdleReadout extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isListening ? Icons.mic_rounded : Icons.music_note_rounded,
+            isListening ? Icons.graphic_eq_rounded : Icons.mic_none_rounded,
             size: 48,
             color: theme.textSecondary,
           ),
