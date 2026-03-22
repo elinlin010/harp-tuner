@@ -12,6 +12,7 @@ import '../providers/locale_provider.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/mode_toggle.dart';
 import '../widgets/pitch_light_indicator.dart';
 import '../widgets/string_visualizer.dart';
 import '../widgets/tuner_gauge.dart';
@@ -83,14 +84,20 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
-    // Always show octave number (e.g. "A4" not "A")
-    final noteName = tuner.closestNoteName;
 
     final harpStrings = tuner.selectedHarp != null
         ? HarpPresets.stringsFor(tuner.selectedHarp!)
         : <HarpStringModel>[];
-    final activeString =
-        _closestString(harpStrings, tuner.detectedHz, tuner.a4Hz);
+
+    // In reference mode the active string is the pinned reference string;
+    // in auto mode it is the closest detected string.
+    final isReference = tuner.tunerMode == TunerMode.reference;
+    final activeString = isReference
+        ? tuner.referenceString
+        : _closestString(harpStrings, tuner.detectedHz, tuner.a4Hz);
+
+    // The note name shown on the gauge always matches the active string.
+    final noteName = tuner.closestNoteName;
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -98,38 +105,48 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // ── Top-right settings icon ────────────────────────────────────
-              const SizedBox(height: 8),
+              // ── Nav bar: mode toggle (left) + settings (right) ────────────
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: Material(
-                    color: theme.surfaceHi,
-                    borderRadius: BorderRadius.circular(20),
-                    child: InkWell(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: [
+                    // Mode toggle — only shown when a harp is selected
+                    if (tuner.selectedHarp != null)
+                      ModeToggle(
+                        mode: tuner.tunerMode,
+                        onChanged: (m) =>
+                            ref.read(tunerProvider.notifier).setTunerMode(m),
+                        theme: theme,
+                      ),
+                    const Spacer(),
+                    // Settings pill
+                    Material(
+                      color: theme.surfaceHi,
                       borderRadius: BorderRadius.circular(20),
-                      onTap: () => _showSettings(context),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.tune_rounded,
-                                size: 18, color: theme.textSecondary),
-                            const SizedBox(width: 6),
-                            Text(
-                              AppLocalizations.of(context)!.settingsTitle,
-                              style: theme.sans(14,
-                                  weight: FontWeight.w600,
-                                  color: theme.textSecondary),
-                            ),
-                          ],
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(20),
+                        onTap: () => _showSettings(context),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.tune_rounded,
+                                  size: 18, color: theme.textSecondary),
+                              const SizedBox(width: 6),
+                              Text(
+                                AppLocalizations.of(context)!.settingsTitle,
+                                style: theme.sans(14,
+                                    weight: FontWeight.w600,
+                                    color: theme.textSecondary),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
 
@@ -144,29 +161,30 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ),
 
-              // ── Pitch light indicator ──────────────────────────────────────
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: PitchLightIndicator(
-                  cents: tuner.cents,
-                  isListening: tuner.isListening,
-                  isStale: tuner.isStale,
-                  theme: theme,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // ── String visualizer ─────────────────────────────────────────
+              // ── String visualizer ──────────────────────────────────────────
               if (tuner.selectedHarp != null) ...[
-                const SizedBox(height: 4),
+                const SizedBox(height: 10),
                 StringVisualizer(
                   strings: harpStrings,
                   activeString: activeString,
+                  onTap: isReference
+                      ? (s) => ref
+                          .read(tunerProvider.notifier)
+                          .playReferenceString(s)
+                      : null,
                   theme: theme,
                 ),
-                const SizedBox(height: 4),
               ],
+
+              // ── Pitch light indicator ──────────────────────────────────────
+              const SizedBox(height: 14),
+              PitchLightIndicator(
+                cents: tuner.cents,
+                isListening: tuner.isListening,
+                isStale: tuner.isStale,
+                theme: theme,
+              ),
+              const SizedBox(height: 14),
 
               // ── Listen button ──────────────────────────────────────────────
               Padding(
@@ -203,7 +221,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ],
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
             ],
         ),
       ),
@@ -280,7 +298,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Instrument ────────────────────────────────────────────────────
           Text(l10n.settingsInstrumentLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 4),
           _InstrumentRow(
             label: l10n.settingsInstrumentNone,
@@ -305,7 +323,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Note display + A4 calibration ────────────────────────────────
           Text(l10n.settingsNoteDisplayLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 12),
           _SheetSwitchRow(
             label: l10n.settingsAlwaysShowFlatsToggle,
@@ -339,7 +357,7 @@ class _SettingsSheet extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           Text(l10n.settingsThemeLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 16),
           _ThemePickerRow(
             currentTheme: theme,
@@ -353,7 +371,7 @@ class _SettingsSheet extends ConsumerWidget {
 
           // ── Language ──────────────────────────────────────────────────────
           Text(l10n.settingsLanguageLabel,
-              style: theme.label(13, color: theme.textSecondary)),
+              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
           const SizedBox(height: 4),
           for (final lang in _languages)
             _LanguageRow(
@@ -489,7 +507,7 @@ class _ListenButton extends StatelessWidget {
           return AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               color: isListening

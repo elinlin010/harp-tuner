@@ -261,6 +261,24 @@ abstract class AppLocalizations {
   /// **'Tuner reading stale — play a note'**
   String get gaugeStaleSemantics;
 
+  /// No description provided for @modeAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get modeAuto;
+
+  /// No description provided for @modeReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference'**
+  String get modeReference;
+
+  /// No description provided for @referenceTapHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a string to hear it and tune to it'**
+  String get referenceTapHint;
+
   /// No description provided for @pitchLightFlatLabel.
   ///
   /// In en, this message translates to:

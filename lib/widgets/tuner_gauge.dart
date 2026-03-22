@@ -166,14 +166,22 @@ class _TunerGaugeState extends State<TunerGauge>
         final r = (maxW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
         // Show from arc top down to just below the anchor/needle-tail dot.
         // anchor is at r*0.50 above cy; cy = r+30 → anchorY = r*0.50+30 from top.
-        final arcH = (r * 0.50 + 64).clamp(150.0, maxH * 0.48);
+        // Arc takes its natural size (r*0.50+64), capped at 65% of available
+        // height so the readout below always gets room. Floor is 100px.
+        // Using a proportional cap instead of a fixed 150px floor prevents
+        // `clamp(lower, upper)` from throwing when maxH is small (e.g. reference
+        // mode on iPhone SE where 150 > maxH*0.48 caused `Invalid arguments`).
+        final double arcHMax = maxH * 0.65 > 100.0 ? maxH * 0.65 : 100.0;
+        final double arcH = (r * 0.50 + 64).clamp(100.0, arcHMax);
 
-        // Readout height: tall enough for the 100px note letter, capped so it
-        // doesn't crowd the arc on short screens.
-        final readoutH = (maxH * 0.28).clamp(130.0, 180.0);
+        // Readout is capped at 80px — enough for the note name.
+        // The Column uses mainAxisSize.min so the gauge reports only
+        // arcH + 16 + readoutH (~266px) as its natural height, rather than
+        // filling all Flexible space. Excess space falls below the button.
+        final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 80.0);
 
         return Column(
-            mainAxisSize: MainAxisSize.max,
+            mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // ── Arc ─────────────────────────────────────────────────────
@@ -210,10 +218,18 @@ class _TunerGaugeState extends State<TunerGauge>
                         duration: const Duration(milliseconds: 200),
                         child: Align(
                           alignment: Alignment.center,
-                          child: _IdleReadout(
-                            isListening: widget.isListening,
-                            pulse: _pulseCtrl,
-                            theme: widget.theme,
+                          // FittedBox scales the idle readout down when the
+                          // available readoutH is smaller than the content's
+                          // intrinsic height (icon 48 + gap 16 + text ~28 = 92px).
+                          // This prevents the overflow that occurs on small screens
+                          // when a harp is selected and the gauge has limited space.
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: _IdleReadout(
+                              isListening: widget.isListening,
+                              pulse: _pulseCtrl,
+                              theme: widget.theme,
+                            ),
                           ),
                         ),
                       ),
@@ -501,7 +517,7 @@ class _IdleReadout extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            isListening ? Icons.mic_rounded : Icons.music_note_rounded,
+            isListening ? Icons.graphic_eq_rounded : Icons.mic_none_rounded,
             size: 48,
             color: theme.textSecondary,
           ),

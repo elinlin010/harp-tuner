@@ -5,21 +5,22 @@ import '../theme/app_theme.dart';
 
 const _kItemWidth = 52.0;
 
-// Traditional harp string palette — same colors used on physical instruments.
-// In dark themes these are used as the fill with a white rim for legibility.
-const _kDarkStringC       = Color(0xFFC0280A); // deep red
-const _kDarkStringF       = Color(0xFFCDCDC8); // warm off-white — F is near-black on light, near-white on dark (inverted landmark)
-const _kDarkStringNatural = Color(0xFF4E6A80); // slate blue
 
 class StringVisualizer extends StatefulWidget {
   final List<HarpStringModel> strings;
   final HarpStringModel? activeString;
+
+  /// Callback fired when a string cell is tapped (reference mode only).
+  /// Null in auto mode — taps are disabled.
+  final void Function(HarpStringModel)? onTap;
+
   final TunerThemeData theme;
 
   const StringVisualizer({
     super.key,
     required this.strings,
     required this.activeString,
+    this.onTap,
     required this.theme,
   });
 
@@ -60,15 +61,8 @@ class _StringVisualizerState extends State<StringVisualizer> {
   }
 
   Color _stringColor(NoteName note) {
-    // Dark themes: use the traditional physical-harp palette. A white rim
-    // (added in _StringCell) makes the dark colors legible on dark backgrounds.
-    if (widget.theme.brightness == Brightness.dark) {
-      return switch (note) {
-        NoteName.c => _kDarkStringC,
-        NoteName.f => _kDarkStringF,
-        _ => _kDarkStringNatural,
-      };
-    }
+    // Each theme (light and dark) defines its own contrast-verified string
+    // palette in TunerThemeData.stringC/F/Natural. Use them directly.
     return switch (note) {
       NoteName.c => widget.theme.stringC,
       NoteName.f => widget.theme.stringF,
@@ -79,7 +73,7 @@ class _StringVisualizerState extends State<StringVisualizer> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 88,
+      height: 116,
       child: ListView.builder(
         controller: _scrollCtrl,
         clipBehavior: Clip.none,
@@ -95,6 +89,7 @@ class _StringVisualizerState extends State<StringVisualizer> {
             isActive: isActive,
             stringColor: _stringColor(s.note),
             theme: widget.theme,
+            onTap: widget.onTap != null ? () => widget.onTap!(s) : null,
           );
         },
       ),
@@ -109,12 +104,14 @@ class _StringCell extends StatelessWidget {
   final bool isActive;
   final Color stringColor;
   final TunerThemeData theme;
+  final VoidCallback? onTap;
 
   const _StringCell({
     required this.string,
     required this.isActive,
     required this.stringColor,
     required this.theme,
+    this.onTap,
   });
 
   bool get _isDark => theme.brightness == Brightness.dark;
@@ -142,13 +139,13 @@ class _StringCell extends StatelessWidget {
           )
         : null;
 
-    return Column(
+    Widget cell = Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         // String + glow
         SizedBox(
           width: _kItemWidth,
-          height: 56,
+          height: 80,
           child: Stack(
             alignment: Alignment.center,
             children: [
@@ -156,7 +153,7 @@ class _StringCell extends StatelessWidget {
               AnimatedContainer(
                 duration: animDuration,
                 width: isActive ? 28 : 0,
-                height: isActive ? 52 : 0,
+                height: isActive ? 76 : 0,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: isActive
@@ -179,12 +176,12 @@ class _StringCell extends StatelessWidget {
               AnimatedContainer(
                 duration: animDuration,
                 width: isActive ? 4.0 : 2.5,
-                height: 48,
+                height: 68,
                 decoration: BoxDecoration(
                   color: isActive
                       ? stringColor
                       : stringColor.withValues(alpha: _inactiveAlpha),
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(3),
                   border: rimBorder,
                 ),
               ),
@@ -214,5 +211,16 @@ class _StringCell extends StatelessWidget {
         ),
       ],
     );
+
+    // In reference mode, wrap with a tap affordance.
+    if (onTap != null) {
+      cell = GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: cell,
+      );
+    }
+
+    return cell;
   }
 }

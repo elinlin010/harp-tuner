@@ -84,7 +84,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get gaugeTapToBeginMsg => '點擊以開始調音';
 
   @override
-  String get gaugeStaleSemantics => 'Tuner reading stale — play a note';
+  String get gaugeStaleSemantics => '讀數已逾時 — 請演奏音符';
+
+  @override
+  String get modeAuto => '自動';
+
+  @override
+  String get modeReference => '參照';
+
+  @override
+  String get referenceTapHint => '點擊琴弦以聆聽並調音';
 
   @override
   String get pitchLightFlatLabel => '偏低';
@@ -191,6 +200,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get gaugeTapToBeginMsg => '點擊以開始調音';
+
+  @override
+  String get gaugeStaleSemantics => '讀數已逾時 — 請演奏音符';
+
+  @override
+  String get modeAuto => '自動';
+
+  @override
+  String get modeReference => '參照';
+
+  @override
+  String get referenceTapHint => '點擊琴弦以聆聽並調音';
 
   @override
   String get pitchLightFlatLabel => '偏低';

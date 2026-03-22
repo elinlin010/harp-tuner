@@ -5,13 +5,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/harp_string_model.dart';
 import '../models/harp_type.dart';
 import '../services/pitch_detection_service.dart';
+import '../services/tone_player_service.dart';
 import '../utils/music_utils.dart';
 
 // ── Enums ─────────────────────────────────────────────────────────────────────
 
-enum TunerMode { auto, manual }
+enum TunerMode { auto, reference }
 
 // ── Tuner state ───────────────────────────────────────────────────────────────
 
@@ -22,6 +24,9 @@ class TunerState {
   final bool showOctave;
   final int a4Hz;
   final HarpType? selectedHarp;
+  final TunerMode tunerMode;
+  final HarpStringModel? referenceString;
+  final bool isPlayingTone;
   final double? cents;
   final double? detectedHz;
   final String? closestNoteName;
@@ -35,6 +40,9 @@ class TunerState {
     this.showOctave = false,
     this.a4Hz = 440,
     this.selectedHarp,
+    this.tunerMode = TunerMode.auto,
+    this.referenceString,
+    this.isPlayingTone = false,
     this.cents,
     this.detectedHz,
     this.closestNoteName,
@@ -50,6 +58,10 @@ class TunerState {
     int? a4Hz,
     HarpType? selectedHarp,
     bool clearSelectedHarp = false,
+    TunerMode? tunerMode,
+    HarpStringModel? referenceString,
+    bool clearReferenceString = false,
+    bool? isPlayingTone,
     double? cents,
     double? detectedHz,
     String? closestNoteName,
@@ -65,6 +77,9 @@ class TunerState {
       showOctave: showOctave ?? this.showOctave,
       a4Hz: a4Hz ?? this.a4Hz,
       selectedHarp: clearSelectedHarp ? null : (selectedHarp ?? this.selectedHarp),
+      tunerMode: tunerMode ?? this.tunerMode,
+      referenceString: clearReferenceString ? null : (referenceString ?? this.referenceString),
+      isPlayingTone: isPlayingTone ?? this.isPlayingTone,
       cents: clearPitch ? null : (cents ?? this.cents),
       detectedHz: clearPitch ? null : (detectedHz ?? this.detectedHz),
       closestNoteName:
@@ -79,7 +94,8 @@ class TunerState {
 // ── Tuner notifier ────────────────────────────────────────────────────────────
 
 class TunerNotifier extends StateNotifier<TunerState> {
-  final PitchDetectionService _service = PitchDetectionService();
+  final PitchDetectionService _service    = PitchDetectionService();
+  final TonePlayerService     _tonePlayer = TonePlayerService();
   StreamSubscription<PitchResult?>? _pitchSub;
   SharedPreferences? _prefs;
 
@@ -102,6 +118,10 @@ class TunerNotifier extends StateNotifier<TunerState> {
   String? _confirmedNote;
   String? _challengeNote;
   int _challengeCount = 0;
+
+  // Mic suppression: ignore pitch results briefly after playing a reference
+  // tone so the speaker output doesn't confuse the pitch detector.
+  DateTime? _suppressUntil;
 
   TunerNotifier() : super(const TunerState()) {
     _loadPrefs();
@@ -193,6 +213,63 @@ class TunerNotifier extends StateNotifier<TunerState> {
     state = state.copyWith(clearMicError: true);
   }
 
+  // ── Mode switching ─────────────────────────────────────────────────────────
+
+  Future<void> setTunerMode(TunerMode mode) async {
+    if (mode == state.tunerMode) return;
+    if (mode == TunerMode.auto) {
+      // Leaving reference mode: stop any playing tone and wipe reference state.
+      try {
+        await _tonePlayer.stop();
+      } catch (e) {
+        debugPrint('TunerNotifier: failed to stop tone on mode switch: $e');
+      }
+      state = state.copyWith(
+        tunerMode: TunerMode.auto,
+        clearReferenceString: true,
+        isPlayingTone: false,
+        clearPitch: true,
+      );
+    } else {
+      state = state.copyWith(
+        tunerMode: TunerMode.reference,
+        clearPitch: true,
+      );
+    }
+  }
+
+  // ── Reference tone playback ────────────────────────────────────────────────
+
+  /// Tap a string in reference mode: play its tone and pin it as the tuning
+  /// target. The mic continues listening; pitch results within the suppression
+  /// window are ignored to avoid speaker feedback confusing the detector.
+  Future<void> playReferenceString(HarpStringModel string) async {
+    // If the same string is tapped again, replay the tone.
+    state = state.copyWith(
+      referenceString: string,
+      isPlayingTone: true,
+      clearPitch: true,
+    );
+    _suppressUntil = DateTime.now().add(const Duration(milliseconds: 500));
+
+    // Reset detection history so the next note gets a clean reading.
+    _freqHistory.clear();
+    _confirmedNote = null;
+    _challengeNote = null;
+    _challengeCount = 0;
+
+    final hz = string.frequencyAt(state.a4Hz.toDouble());
+    try {
+      await _tonePlayer.play(hz);
+    } catch (e) {
+      debugPrint('TunerNotifier: failed to play reference tone: $e');
+    } finally {
+      if (mounted) state = state.copyWith(isPlayingTone: false);
+    }
+  }
+
+  // ── Settings ────────────────────────────────────────────────────────────────
+
   Future<void> toggleShowOctave() async {
     final newVal = !state.showOctave;
     state = state.copyWith(showOctave: newVal);
@@ -256,7 +333,14 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
   Future<void> setSelectedHarp(HarpType? harp) async {
     if (harp == null) {
-      state = state.copyWith(clearSelectedHarp: true);
+      // Deselecting instrument: also exit reference mode
+      await _tonePlayer.stop();
+      state = state.copyWith(
+        clearSelectedHarp: true,
+        tunerMode: TunerMode.auto,
+        clearReferenceString: true,
+        isPlayingTone: false,
+      );
     } else {
       // Harp selected — always enable preferFlats (B♭ convention)
       state = state.copyWith(selectedHarp: harp, preferFlats: true);
@@ -298,6 +382,12 @@ class TunerNotifier extends StateNotifier<TunerState> {
       return;
     }
 
+    // Suppress pitch updates briefly after playing a reference tone so the
+    // speaker output doesn't confuse the pitch detector.
+    if (_suppressUntil != null && DateTime.now().isBefore(_suppressUntil!)) {
+      return;
+    }
+
     // Signal returned — reset silence tracking
     _silenceCount = 0;
 
@@ -323,6 +413,26 @@ class TunerNotifier extends StateNotifier<TunerState> {
     if (_centSpread(_freqHistory) > _stableCents) return;
 
     final stableHz = _median(_freqHistory);
+
+    // ── Reference mode: measure cents relative to the pinned string ──────────
+    // If no string has been tapped yet, suppress all updates — the gauge should
+    // stay blank rather than silently behaving like auto mode.
+    if (state.tunerMode == TunerMode.reference && state.referenceString == null) {
+      return;
+    }
+    if (state.tunerMode == TunerMode.reference && state.referenceString != null) {
+      final refHz    = state.referenceString!.frequencyAt(state.a4Hz.toDouble());
+      final refCents = (1200 * log(stableHz / refHz) / ln2).clamp(-100.0, 100.0);
+      state = state.copyWith(
+        isStale: false,
+        detectedHz: stableHz,
+        closestNoteName: state.referenceString!.label,
+        cents: refCents,
+      );
+      return;
+    }
+
+    // ── Auto mode: find the closest note ────────────────────────────────────
     final info = MusicUtils.frequencyToNoteInfo(
       stableHz,
       preferFlats: state.preferFlats,
@@ -391,6 +501,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
   void dispose() {
     _pitchSub?.cancel();
     _service.stop();
+    _tonePlayer.dispose();
     super.dispose();
   }
 }
