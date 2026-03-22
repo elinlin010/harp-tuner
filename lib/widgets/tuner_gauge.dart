@@ -389,7 +389,6 @@ class _ArcPainter extends CustomPainter {
     _drawLabel(canvas, '−50', _centsToAngle(-47), cx, cy, r + 24, labelColor);
     _drawLabel(canvas, '0',   _centsToAngle(0),   cx, cy, r + 28, labelColor);
     _drawLabel(canvas, '+50', _centsToAngle(47),  cx, cy, r + 24, labelColor);
-    _drawLabel(canvas, 'CENT', _centsToAngle(40), cx, cy, r + 24, labelColor);
 
     // ── Needle ────────────────────────────────────────────────────────────
     final angle = _centsToAngle(needlePos.clamp(-50.0, 50.0));
