@@ -153,7 +153,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ),
 
               // ── Pitch light indicator ──────────────────────────────────────
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: PitchLightIndicator(
@@ -163,7 +163,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   theme: theme,
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
               // ── Mode toggle + string visualizer ───────────────────────────
               if (tuner.selectedHarp != null) ...[
@@ -188,11 +188,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 StringVisualizer(
                   strings: harpStrings,
                   activeString: activeString,
-                  // Speaker icon only while the tone is audible, not while
-                  // the string is merely selected as the reference target.
-                  playingString: isReference && tuner.isPlayingTone
-                      ? tuner.referenceString
-                      : null,
                   onTap: isReference
                       ? (s) => ref
                           .read(tunerProvider.notifier)
