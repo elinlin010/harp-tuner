@@ -219,7 +219,11 @@ class TunerNotifier extends StateNotifier<TunerState> {
     if (mode == state.tunerMode) return;
     if (mode == TunerMode.auto) {
       // Leaving reference mode: stop any playing tone and wipe reference state.
-      await _tonePlayer.stop();
+      try {
+        await _tonePlayer.stop();
+      } catch (e) {
+        debugPrint('TunerNotifier: failed to stop tone on mode switch: $e');
+      }
       state = state.copyWith(
         tunerMode: TunerMode.auto,
         clearReferenceString: true,
@@ -255,8 +259,13 @@ class TunerNotifier extends StateNotifier<TunerState> {
     _challengeCount = 0;
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
-    await _tonePlayer.play(hz);
-    if (mounted) state = state.copyWith(isPlayingTone: false);
+    try {
+      await _tonePlayer.play(hz);
+    } catch (e) {
+      debugPrint('TunerNotifier: failed to play reference tone: $e');
+    } finally {
+      if (mounted) state = state.copyWith(isPlayingTone: false);
+    }
   }
 
   // ── Settings ────────────────────────────────────────────────────────────────
@@ -406,6 +415,11 @@ class TunerNotifier extends StateNotifier<TunerState> {
     final stableHz = _median(_freqHistory);
 
     // ── Reference mode: measure cents relative to the pinned string ──────────
+    // If no string has been tapped yet, suppress all updates — the gauge should
+    // stay blank rather than silently behaving like auto mode.
+    if (state.tunerMode == TunerMode.reference && state.referenceString == null) {
+      return;
+    }
     if (state.tunerMode == TunerMode.reference && state.referenceString != null) {
       final refHz    = state.referenceString!.frequencyAt(state.a4Hz.toDouble());
       final refCents = (1200 * log(stableHz / refHz) / ln2).clamp(-100.0, 100.0);

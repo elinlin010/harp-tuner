@@ -31,10 +31,14 @@ class TonePlayerService {
   /// Stops any currently playing tone first.
   Future<void> play(double hz) async {
     _player ??= AudioPlayer();
-    await _player!.stop();
+    // Capture player locally so a concurrent dispose() can't null it between
+    // the compute() await and the final play() call.
+    final player = _player!;
+    await player.stop();
     // Generate WAV bytes off the main thread to avoid any potential jank.
     final bytes = await compute(_generateTone, hz);
-    await _player!.play(BytesSource(bytes));
+    if (_player == null) return; // disposed while computing
+    await player.play(BytesSource(bytes));
   }
 
   Future<void> stop() async {
