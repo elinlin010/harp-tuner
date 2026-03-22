@@ -8,7 +8,7 @@ const _kItemWidth = 52.0;
 // Traditional harp string palette — same colors used on physical instruments.
 // In dark themes these are used as the fill with a white rim for legibility.
 const _kDarkStringC       = Color(0xFFC0280A); // deep red
-const _kDarkStringF       = Color(0xFF1A1C1E); // near-black
+const _kDarkStringF       = Color(0xFFCDCDC8); // warm off-white — F is near-black on light, near-white on dark (inverted landmark)
 const _kDarkStringNatural = Color(0xFF4E6A80); // slate blue
 
 class StringVisualizer extends StatefulWidget {
@@ -119,12 +119,10 @@ class _StringCell extends StatelessWidget {
 
   bool get _isDark => theme.brightness == Brightness.dark;
 
-  // Light mode: landmark strings (C, F) stay opaque; naturals fade slightly.
-  // Dark mode: uniform opacity — the white rim carries the visual distinction.
+  // Landmark strings (C, F) stay more opaque than naturals in both modes.
   double get _inactiveAlpha {
-    if (_isDark) return 0.80;
     return switch (string.note) {
-      NoteName.c || NoteName.f => 0.90,
+      NoteName.c || NoteName.f => 0.92,
       _ => 0.65,
     };
   }
@@ -139,7 +137,7 @@ class _StringCell extends StatelessWidget {
     // on dark backgrounds. Glow replaces the rim when active.
     final rimBorder = (_isDark && !isActive)
         ? Border.all(
-            color: Colors.white.withValues(alpha: 0.30),
+            color: Colors.white.withValues(alpha: 0.45),
             width: 1.0,
           )
         : null;

@@ -112,7 +112,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                       onTap: () => _showSettings(context),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 14),
+                            horizontal: 14, vertical: 10),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -401,7 +401,7 @@ class _SheetSwitchRow extends StatelessWidget {
         onTap: onToggle,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(
             children: [
               Expanded(
@@ -565,15 +565,20 @@ class _MicErrorBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      label: l10n.errorMicDeniedTitle,
+      button: true,
+      hint: l10n.tapToDismiss,
+      child: GestureDetector(
       onTap: onDismiss,
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
         decoration: BoxDecoration(
-          color: Colors.amber.withValues(alpha: 0.10),
+          color: theme.sharp.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: Colors.amber.withValues(alpha: 0.40), width: 1),
+              color: theme.sharp.withValues(alpha: 0.35), width: 1),
         ),
         child: Builder(builder: (ctx) {
           final l10n = AppLocalizations.of(ctx)!;
@@ -584,7 +589,7 @@ class _MicErrorBanner extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Icon(Icons.warning_amber_rounded,
-                      size: 20, color: Colors.amber.shade800),
+                      size: 20, color: theme.sharp),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
@@ -605,7 +610,8 @@ class _MicErrorBanner extends StatelessWidget {
           );
         }),
       ),
-    );
+      ),    // GestureDetector
+    );      // Semantics
   }
 }
 
@@ -751,7 +757,10 @@ class _StepBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final enabled = onTap != null;
-    return GestureDetector(
+    return Semantics(
+      button: true,
+      enabled: enabled,
+      child: GestureDetector(
       onTap: onTap,
       child: SizedBox(
         width: 48,
@@ -762,6 +771,7 @@ class _StepBtn extends StatelessWidget {
             color: enabled ? theme.textPrimary : theme.textDim,
           ),
         ),
+      ),
       ),
     );
   }
@@ -827,7 +837,7 @@ class _InstrumentRow extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 13),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(
             children: [
               AnimatedContainer(
@@ -910,7 +920,7 @@ class _ThemePickerRow extends StatelessWidget {
               swatch: t,
               selected: t.id == currentTheme.id,
               accentColor: currentTheme.inTune,
-              labelStyle: currentTheme.sans(11),
+              labelStyle: currentTheme.sans(13),
               onTap: () => onSelect(t),
             ),
           ),
@@ -1037,7 +1047,9 @@ class _LanguageRow extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Padding(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Row(
           children: [
@@ -1054,7 +1066,8 @@ class _LanguageRow extends StatelessWidget {
               Icon(Icons.check_rounded, size: 20, color: theme.inTune),
           ],
         ),
-      ),
+        ),  // Padding
+      ),    // ConstrainedBox
     );
   }
 }

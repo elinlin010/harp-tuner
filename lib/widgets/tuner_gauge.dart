@@ -150,25 +150,58 @@ class _TunerGaugeState extends State<TunerGauge>
         ? Duration.zero
         : const Duration(milliseconds: 300);
 
-    return AnimatedOpacity(
+    final l10n = AppLocalizations.of(context)!;
+    return Semantics(
+      label: widget.isStale ? l10n.gaugeStaleSemantics : null,
+      child: AnimatedOpacity(
       opacity: widget.isStale ? 0.40 : 1.0,
       duration: animDur,
       child: LayoutBuilder(
       builder: (ctx, constraints) {
         final maxH = constraints.maxHeight;
         final maxW = constraints.maxWidth;
-        // arcH is derived from the arc geometry so the full arc + pivot always fits.
-        // r = radius; pivot is at bottom; arc top is r above pivot.
-        // Add 44px: 30 for ticks/labels above arc + 14 for pivot dot below.
+        // r is fully width-derived so the arc always spans the screen.
+        // arcH is independent — we only show the upper portion of the arc by
+        // placing cy (the geometric pivot) below the canvas bottom in the painter.
         final r = (maxW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
-        final arcH = (r + 44).clamp(0.0, maxH * 0.65);
+        // Show from arc top down to just below the anchor/needle-tail dot.
+        // anchor is at r*0.50 above cy; cy = r+30 → anchorY = r*0.50+30 from top.
+        final arcH = (r * 0.50 + 64).clamp(150.0, maxH * 0.48);
+
+        // Readout height: tall enough for the 100px note letter, capped so it
+        // doesn't crowd the arc on short screens.
+        final readoutH = (maxH * 0.28).clamp(130.0, 180.0);
 
         return Column(
             mainAxisSize: MainAxisSize.max,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // ── Readout ─────────────────────────────────────────────────
-              Expanded(
+              // ── Arc ─────────────────────────────────────────────────────
+              SizedBox(
+                height: arcH,
+                child: AnimatedBuilder(
+                  animation: Listenable.merge([_pulseCtrl, _needleCtrl]),
+                  builder: (ctx, child) => CustomPaint(
+                    size: Size(maxW, arcH),
+                    painter: _ArcPainter(
+                      radius: r,
+                      needlePos: needlePos,
+                      showNeedle: showNeedle,
+                      stateColor: _stateColor,
+                      isListening: widget.isListening,
+                      hasSignal: hasSignal,
+                      pulse: _pulseCtrl.value,
+                      theme: widget.theme,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Readout (fixed height so mainAxisAlignment.center works) ─
+              SizedBox(
+                height: readoutH,
                 child: Stack(
                   children: [
                     Positioned.fill(
@@ -204,39 +237,19 @@ class _TunerGaugeState extends State<TunerGauge>
                   ],
                 ),
               ),
-
-              const SizedBox(height: 12),
-
-              // ── Arc ─────────────────────────────────────────────────────
-              SizedBox(
-                height: arcH,
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([_pulseCtrl, _needleCtrl]),
-                  builder: (ctx, child) => CustomPaint(
-                    size: Size(maxW, arcH),
-                    painter: _ArcPainter(
-                      needlePos: needlePos,
-                      showNeedle: showNeedle,
-                      stateColor: _stateColor,
-                      isListening: widget.isListening,
-                      hasSignal: hasSignal,
-                      pulse: _pulseCtrl.value,
-                      theme: widget.theme,
-                    ),
-                  ),
-                ),
-              ),
             ],
         );
       },
     ),  // LayoutBuilder
-    );  // AnimatedOpacity
+    ),  // AnimatedOpacity
+    );  // Semantics
   }
 }
 
 // ── Arc painter ───────────────────────────────────────────────────────────────
 
 class _ArcPainter extends CustomPainter {
+  final double radius;
   final double needlePos;
   final bool showNeedle;
   final Color stateColor;
@@ -246,6 +259,7 @@ class _ArcPainter extends CustomPainter {
   final TunerThemeData theme;
 
   _ArcPainter({
+    required this.radius,
     required this.needlePos,
     required this.showNeedle,
     required this.stateColor,
@@ -264,10 +278,15 @@ class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
-    final cy = size.height - 6;
-    // Width-based radius — matches the arcH calculation in build()
-    final r = (size.width - _kGaugeChordInset) / (2 * sin(_sweep / 2));
+    final r = radius;
+    // Place the geometric pivot 30px below the arc top so labels (at r+28 above
+    // cy) land at ~2px from the canvas top. cy may exceed size.height — the
+    // lower portions simply don't draw within the visible SizedBox.
+    final cy = r + 30.0;
     final arcRect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+
+    // Needle tail depth — shared with center line and pivot dot placement
+    final needleTailR = r * 0.50;
 
     final tickColor = theme.textPrimary;
     final labelColor = theme.textSecondary;
@@ -331,12 +350,11 @@ class _ArcPainter extends CustomPainter {
       );
     }
 
-    // ── Center "0" reference line — full length from pivot through arc,
-    //    always visible as the resting position guide
+    // ── Center "0" reference line — matches needle span (tail → just above arc)
     final zeroAngle = _centsToAngle(0);
     canvas.drawLine(
-      Offset(cx, cy),                                              // pivot
-      Offset(cx + (r + 18) * cos(zeroAngle), cy + (r + 18) * sin(zeroAngle)), // above arc
+      Offset(cx + needleTailR * cos(zeroAngle), cy + needleTailR * sin(zeroAngle)),
+      Offset(cx + (r + 16) * cos(zeroAngle),    cy + (r + 16) * sin(zeroAngle)),
       Paint()
         ..color = tickColor.withValues(alpha: showNeedle ? 0.18 : 0.55)
         ..strokeWidth = 1.5
@@ -346,9 +364,8 @@ class _ArcPainter extends CustomPainter {
     // ── In-tune triangles (▼ at ±15¢, above ticks, pointing toward arc) ─
     for (final c in [-15.0, 15.0]) {
       final a = _centsToAngle(c);
-      // Triangle tip touches the top of the tallest tick area
-      final tipR  = r + 18;
-      final baseR = r + 28;
+      final tipR  = r + 16;
+      final baseR = r + 24;
       final tipX  = cx + tipR * cos(a);
       final tipY  = cy + tipR * sin(a);
       // Perpendicular direction for the base width
@@ -371,21 +388,22 @@ class _ArcPainter extends CustomPainter {
 
     // ── Scale labels (outside ticks) ─────────────────────────────────────
     _drawLabel(canvas, '−50', _centsToAngle(-47), cx, cy, r + 24, labelColor);
-    _drawLabel(canvas, '0', _centsToAngle(0), cx, cy, r + 30, labelColor);
-    _drawLabel(canvas, '+50', _centsToAngle(47), cx, cy, r + 24, labelColor);
-    // "CENT" unit label near +50 (like the reference tuner)
-    _drawLabel(canvas, 'CENT', _centsToAngle(40), cx, cy, r + 24, labelColor);
+    _drawLabel(canvas, '0',   _centsToAngle(0),   cx, cy, r + 28, labelColor);
+    _drawLabel(canvas, '+50', _centsToAngle(47),  cx, cy, r + 24, labelColor);
 
     // ── Needle ────────────────────────────────────────────────────────────
     final angle = _centsToAngle(needlePos.clamp(-50.0, 50.0));
-    final needleLen = r - 4; // needle tip reaches just below the arc
-    final tipNX = cx + needleLen * cos(angle);
-    final tipNY = cy + needleLen * sin(angle);
+    final needleTip = r - 4;   // tip just below the arc line
+    // needleTailR defined above (r * 0.50) — shared with center line & pivot
+    final tipNX  = cx + needleTip  * cos(angle);
+    final tipNY  = cy + needleTip  * sin(angle);
+    final tailNX = cx + needleTailR * cos(angle);
+    final tailNY = cy + needleTailR * sin(angle);
 
     if (showNeedle) {
       // Soft halo
       canvas.drawLine(
-        Offset(cx, cy),
+        Offset(tailNX, tailNY),
         Offset(tipNX, tipNY),
         Paint()
           ..color = stateColor.withValues(alpha: 0.10 + pulse * 0.06)
@@ -395,7 +413,7 @@ class _ArcPainter extends CustomPainter {
       );
       // Core
       canvas.drawLine(
-        Offset(cx, cy),
+        Offset(tailNX, tailNY),
         Offset(tipNX, tipNY),
         Paint()
           ..color = stateColor
@@ -405,9 +423,11 @@ class _ArcPainter extends CustomPainter {
       );
     }
 
-    // Pivot dot — always on the center line
+    // Anchor dot — sits at the base of the center reference line / needle tail
+    final anchorX = cx + needleTailR * cos(zeroAngle);
+    final anchorY = cy + needleTailR * sin(zeroAngle);
     canvas.drawCircle(
-      Offset(cx, cy),
+      Offset(anchorX, anchorY),
       showNeedle ? 5.0 : 4.0,
       Paint()
         ..color = showNeedle
@@ -416,10 +436,10 @@ class _ArcPainter extends CustomPainter {
         ..style = PaintingStyle.fill,
     );
 
-    // Idle pulse ring — concentric with pivot dot, reinforcing center line
+    // Idle pulse ring — concentric with anchor dot
     if (isListening && !hasSignal) {
       canvas.drawCircle(
-        Offset(cx, cy),
+        Offset(anchorX, anchorY),
         12 + pulse * 7,
         Paint()
           ..style = PaintingStyle.stroke
@@ -445,6 +465,7 @@ class _ArcPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_ArcPainter old) =>
+      old.radius != radius ||
       old.needlePos != needlePos ||
       old.showNeedle != showNeedle ||
       old.stateColor != stateColor ||
@@ -482,7 +503,7 @@ class _IdleReadout extends StatelessWidget {
           Icon(
             isListening ? Icons.mic_rounded : Icons.music_note_rounded,
             size: 48,
-            color: isListening ? theme.textSecondary : theme.textDim,
+            color: theme.textSecondary,
           ),
           const SizedBox(height: 16),
           Text(
@@ -538,7 +559,7 @@ class _SignalReadout extends StatelessWidget {
               if (noteOctave.isNotEmpty)
                 Text(
                   noteOctave,
-                  style: theme.sans(30, weight: FontWeight.w300, color: theme.textSecondary).copyWith(height: 1),
+                  style: theme.sans(30, weight: FontWeight.w400, color: theme.textSecondary).copyWith(height: 1),
                 ),
             ],
           ),
