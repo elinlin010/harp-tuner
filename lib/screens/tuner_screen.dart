@@ -112,7 +112,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                       onTap: () => _showSettings(context),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 16),
+                            horizontal: 14, vertical: 10),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
