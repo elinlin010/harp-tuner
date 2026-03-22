@@ -174,9 +174,10 @@ class _TunerGaugeState extends State<TunerGauge>
         final double arcHMax = maxH * 0.65 > 100.0 ? maxH * 0.65 : 100.0;
         final double arcH = (r * 0.50 + 64).clamp(100.0, arcHMax);
 
-        // Readout gets exactly what remains after the arc + 16px gap.
-        // Guarantee: arcH + 16 + readoutH == maxH (no internal Column overflow).
-        final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 180.0);
+        // Readout is capped at 120px so it doesn't consume excess height on
+        // large screens. The Column's mainAxisAlignment.center distributes any
+        // leftover space evenly above the arc and below the readout.
+        final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 120.0);
 
         return Column(
             mainAxisSize: MainAxisSize.max,
