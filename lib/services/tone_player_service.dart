@@ -131,21 +131,34 @@ class TonePlayerService {
     final noiseBandCoeff = (2 * pi * noiseCenterHz / sampleRate).clamp(0.0, 0.99);
     double noiseLp = 0;
 
-    // ── Body knock impulse (fixed-frequency soundboard modes) ───────────────
-    const knock1Hz = 180.0;
-    const knock2Hz = 350.0;
-    const knockDecay = 550.0; // dies in ~8 ms
+    // ── Body resonance (soft soundboard ring, not percussive knock) ────────
+    const body1Hz = 180.0;
+    const body2Hz = 350.0;
+    const bodyDecay = 320.0; // ~13 ms ring (softer than old 550 = 8 ms)
+
+    // ── Pitch glide (subtle plucked-string scoop) ───────────────────────────
+    // Finger deflection raises pitch slightly at onset. ~8 cents over 60–150 ms.
+    // Subtle enough to not sound like two notes, but adds organic warmth.
+    final glideCents = 8.0;
+    final glideLen = (sampleRate * (0.06 + 0.09 * (1.0 - hz / 3000).clamp(0.0, 1.0))).round();
 
     final pcm = Int16List(numSamples);
     for (var i = 0; i < numSamples; i++) {
       final t = i / sampleRate;
-      final attack = i < attackLen ? i / attackLen : 1.0;
+      // Raised-cosine attack (softer finger-pad onset vs linear ramp)
+      final attack = i < attackLen
+          ? 0.5 * (1.0 - cos(pi * i / attackLen))
+          : 1.0;
+      // Pitch glide: quadratic ease-out from +8 cents to 0
+      final glideRatio = i < glideLen
+          ? pow(2.0, glideCents * pow(1.0 - i / glideLen, 2) / 1200.0)
+          : 1.0;
       var sample = 0.0;
 
       // ── Sustained partials with all register-dependent shaping ────────────
       for (var n = 1; n <= maxHarmonic; n++) {
         final jitter = jitterTables[n - 1][i];
-        final freq = hz * n * sqrt(1.0 + B * n * n) * (1.0 + jitter);
+        final freq = hz * n * sqrt(1.0 + B * n * n) * glideRatio * (1.0 + jitter);
         final fast = baseFast(n) * decayScale;
         final slow = baseSlow(n) * decayScale;
         final env  = 0.60 * exp(-t * fast) + 0.40 * exp(-t * slow);
@@ -172,10 +185,10 @@ class TonePlayerService {
       noiseLp += noiseBandCoeff * (rawNoise - noiseLp); // crude bandpass
       sample += noiseAmp * noiseLp * exp(-t * noiseDecayRate);
 
-      // ── Body knock impulse ────────────────────────────────────────────────
-      final knockEnv = exp(-t * knockDecay);
-      sample += 0.08 * knockEnv * sin(2 * pi * knock1Hz * t);
-      sample += 0.05 * knockEnv * sin(2 * pi * knock2Hz * t);
+      // ── Body resonance (gentle soundboard ring) ──────────────────────────
+      final bodyEnv = exp(-t * bodyDecay);
+      sample += 0.04 * bodyEnv * sin(2 * pi * body1Hz * t);
+      sample += 0.025 * bodyEnv * sin(2 * pi * body2Hz * t);
 
       pcm[i] = (sample * attack * 9000).clamp(-32768, 32767).toInt();
     }
