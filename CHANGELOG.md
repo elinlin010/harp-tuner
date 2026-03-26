@@ -2,6 +2,22 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.0.3+4] - 2026-03-26
+
+### Fixed
+- Reference mode on Android: tapping a string now plays the tone immediately through the speaker instead of after stopping tuning. Root cause was an Android audio routing conflict — `AudioRecord` (mic) and `MediaPlayer` (tone) simultaneously active routes output to the earpiece. Fix: mic is paused while the tone plays and automatically restarts 2.3 s later.
+- Tone synthesis tail wobble: polarisation beating and frequency jitter now fade out faster than the main tone (4× decay multiplier) so the sustain tail rings clean and stable.
+- Reference tone pitch accuracy: removed the pitch glide (+8 cents at onset) which could cause users to tune sharp if they matched the attack rather than the settled pitch. Reference tones are now pitch-accurate from the first sample.
+- iOS AppDelegate no longer activates `AVAudioSession` at launch (which was interrupting background music and risked App Store rejection). Audio session configuration now happens only when the mic is first activated.
+- Body resonance filter: `bodyGain` is now clamped to 1.0 to prevent the 180 Hz resonant peak from boosting partials above unity and causing clipping on bass strings.
+- Concurrent precompute: background tone synthesis is now limited to 4 simultaneous isolates (was unbounded), preventing OOM spikes on pedal harp (47 strings × ~9 MB peak = ~420 MB before the fix).
+- Double-subscription guard added to `_attachMicSubscription` to prevent a second mic stream being created if called while one is already active.
+- Rapid double-tap bug: the mic restart timer now uses `state.isListening` (intent) rather than `_pitchSub != null` (actual) so tapping two strings quickly no longer leaves the mic paused indefinitely.
+
+### Changed
+- Tone synthesis upgraded from 4 acoustic layers to 8: register-scaled inharmonicity, pitch-dependent decay, dynamic partial count, soundboard body filter, pluck noise burst, body knock impulse, partial frequency jitter, polarisation beating.
+- Reference tone precomputation: all harp string tones are synthesised in the background when entering reference mode so the first tap plays instantly.
+
 ## [1.0.2+3] - 2026-03-22
 
 ### Added
