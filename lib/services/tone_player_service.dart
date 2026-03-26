@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 /// Plays a harp-like reference tone for a given frequency.
 ///
-/// Nine acoustic layers model a real plucked concert harp string:
+/// Eight acoustic layers model a real plucked concert harp string:
 ///
 /// 1. **Register-scaled inharmonicity** — B rises from ~0.00008 (bass) to
 ///    ~0.004 (top treble), matching gut/nylon string stiffness variation.
@@ -29,25 +29,74 @@ import 'package:flutter/foundation.dart';
 /// 7. **Partial frequency jitter** — slow random walk (~3 Hz modulation)
 ///    breaks perfect periodicity. Amplitude ~0.03 %.
 ///
-/// 8. **Register-scaled polarisation beating** — secondary string vibration
-///    plane fades from 10 % (bass) to 3 % (treble) because high strings
-///    decay before beats develop.
-///
-/// 9. **Early reflections** — post-pass echoes at 20/35/60 ms model a
-///    small acoustic space without full convolution reverb.
+/// 8. **Register-scaled polarisation beating** + **early reflections** —
+///    secondary vibration plane fades bass→treble; three echo taps at
+///    20/35/60 ms give acoustic-space impression without full reverb.
 class TonePlayerService {
   AudioPlayer? _player;
+
+  // Cache of precomputed WAV bytes keyed by frequency.
+  // Avoids re-running the expensive synthesis isolate on every tap.
+  final Map<double, Uint8List> _cache = {};
+
+  // Track in-flight compute futures so duplicate requests don't double-compute.
+  final Map<double, Future<Uint8List>> _pending = {};
+
+  // Limit concurrent isolate launches during precompute. Each synthesis call
+  // allocates ~9 MB peak (jitter tables + PCM buffers). Launching all 47 pedal-
+  // harp strings simultaneously would spike to ~420 MB — enough to OOM on
+  // constrained Android devices. Process at most 4 strings in parallel.
+  static const _maxConcurrent = 4;
+  int _runningComputes = 0;
+  final _precomputeQueue = <double>[];
+
+  /// Kick off background computation for a set of frequencies so they are
+  /// cached before the user taps them.  Safe to call multiple times.
+  void precompute(List<double> frequencies) {
+    for (final hz in frequencies) {
+      if (!_cache.containsKey(hz) && !_pending.containsKey(hz)) {
+        _precomputeQueue.add(hz);
+      }
+    }
+    _drainPrecomputeQueue();
+  }
+
+  void _drainPrecomputeQueue() {
+    while (_runningComputes < _maxConcurrent && _precomputeQueue.isNotEmpty) {
+      final hz = _precomputeQueue.removeAt(0);
+      if (_cache.containsKey(hz) || _pending.containsKey(hz)) {
+        continue; // already handled — pick next
+      }
+      _runningComputes++;
+      _getBytes(hz).whenComplete(() {
+        _runningComputes--;
+        _drainPrecomputeQueue();
+      }).ignore();
+    }
+  }
+
+  Future<Uint8List> _getBytes(double hz) {
+    if (_cache.containsKey(hz)) return Future.value(_cache[hz]!);
+    // Join an in-flight compute if one exists, otherwise start a new one.
+    return _pending[hz] ??= compute(_generateTone, hz).then((bytes) {
+      _cache[hz] = bytes;
+      _pending.remove(hz);
+      return bytes;
+    }).catchError((e) {
+      _pending.remove(hz);
+      throw e;
+    });
+  }
 
   /// Play a harp-like reference tone at [hz] for ~2 seconds.
   /// Stops any currently playing tone first.
   Future<void> play(double hz) async {
     _player ??= AudioPlayer();
     // Capture player locally so a concurrent dispose() can't null it between
-    // the compute() await and the final play() call.
+    // the await and the final play() call.
     final player = _player!;
     await player.stop();
-    // Generate WAV bytes off the main thread to avoid any potential jank.
-    final bytes = await compute(_generateTone, hz);
+    final bytes = await _getBytes(hz);
     if (_player == null) return; // disposed while computing
     await player.play(BytesSource(bytes));
   }
@@ -82,10 +131,17 @@ class TonePlayerService {
 
     // ── 4. Soundboard body filter — per-partial amplitude shaping ───────────
     double bodyGain(double freq) {
-      if (freq < 120) return freq / 120.0;
-      if (freq < 400) return 1.0 + 0.25 * (1.0 - (freq - 180).abs() / 220);
-      if (freq < 2500) return 1.0;
-      return 2500.0 / freq; // gentle 6 dB/oct roll-off
+      double g;
+      if (freq < 120) {
+        g = freq / 120.0;
+      } else if (freq < 400) {
+        g = 1.0 + 0.25 * (1.0 - (freq - 180).abs() / 220);
+      } else if (freq < 2500) {
+        g = 1.0;
+      } else {
+        g = 2500.0 / freq; // gentle 6 dB/oct roll-off
+      }
+      return g.clamp(0.0, 1.0); // never boost above unity — prevents clipping on resonant peak
     }
 
     // ── 7. Register-scaled attack ───────────────────────────────────────────
@@ -136,12 +192,6 @@ class TonePlayerService {
     const body2Hz = 350.0;
     const bodyDecay = 320.0; // ~13 ms ring (softer than old 550 = 8 ms)
 
-    // ── Pitch glide (subtle plucked-string scoop) ───────────────────────────
-    // Finger deflection raises pitch slightly at onset. ~8 cents over 60–150 ms.
-    // Subtle enough to not sound like two notes, but adds organic warmth.
-    final glideCents = 8.0;
-    final glideLen = (sampleRate * (0.06 + 0.09 * (1.0 - hz / 3000).clamp(0.0, 1.0))).round();
-
     final pcm = Int16List(numSamples);
     for (var i = 0; i < numSamples; i++) {
       final t = i / sampleRate;
@@ -149,16 +199,15 @@ class TonePlayerService {
       final attack = i < attackLen
           ? 0.5 * (1.0 - cos(pi * i / attackLen))
           : 1.0;
-      // Pitch glide: quadratic ease-out from +8 cents to 0
-      final glideRatio = i < glideLen
-          ? pow(2.0, glideCents * pow(1.0 - i / glideLen, 2) / 1200.0)
-          : 1.0;
       var sample = 0.0;
 
       // ── Sustained partials with all register-dependent shaping ────────────
+      // Beating & jitter fade out faster than the main tone so the tail is clean.
+      final modFade = exp(-t * 4.0);
       for (var n = 1; n <= maxHarmonic; n++) {
-        final jitter = jitterTables[n - 1][i];
-        final freq = hz * n * sqrt(1.0 + B * n * n) * glideRatio * (1.0 + jitter);
+        final jitter = jitterTables[n - 1][i] * modFade;
+        // No pitch glide — reference tones must be pitch-accurate from the first sample.
+        final freq = hz * n * sqrt(1.0 + B * n * n) * (1.0 + jitter);
         final fast = baseFast(n) * decayScale;
         final slow = baseSlow(n) * decayScale;
         final env  = 0.60 * exp(-t * fast) + 0.40 * exp(-t * slow);
@@ -166,8 +215,8 @@ class TonePlayerService {
 
         // Primary polarisation plane
         sample += amp * env * sin(2 * pi * freq * t);
-        // Secondary plane — reduced in treble to avoid unrealistic modulation
-        sample += amp * beatAmp * env * sin(2 * pi * (freq + beatHz(n)) * t);
+        // Secondary plane — fades out so the tail rings clean
+        sample += amp * beatAmp * modFade * env * sin(2 * pi * (freq + beatHz(n)) * t);
       }
 
       // ── Pluck transient partials (harmonics maxHarmonic+1 .. +4) ──────────
@@ -216,7 +265,7 @@ class TonePlayerService {
     final header  = ByteData(44);
     int p = 0;
 
-    void str(String s) { for (final c in s.codeUnits) header.setUint8(p++, c); }
+    void str(String s) { for (final c in s.codeUnits) { header.setUint8(p++, c); } }
     void u32(int v)    { header.setUint32(p, v, Endian.little); p += 4; }
     void u16(int v)    { header.setUint16(p, v, Endian.little); p += 2; }
 
