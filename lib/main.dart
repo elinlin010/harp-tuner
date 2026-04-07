@@ -34,7 +34,7 @@ class HarpTunerApp extends ConsumerWidget {
       statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
     ));
     return MaterialApp(
-      title: 'Harp Tuner',
+      title: 'Harpie',
       theme: AppTheme.dark,
       debugShowCheckedModeBanner: false,
       localizationsDelegates: AppLocalizations.localizationsDelegates,
