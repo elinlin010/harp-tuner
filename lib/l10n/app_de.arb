@@ -45,10 +45,11 @@
       }
     }
   },
-  "harpTypeLeverHarpSubtitleFmt": "{count} Saiten · A♭1–{topNote} · Es-Dur",
+  "harpTypeLeverHarpSubtitleFmt": "{count} Saiten · {bottomNote}–{topNote} · Es-Dur",
   "@harpTypeLeverHarpSubtitleFmt": {
     "placeholders": {
       "count": { "type": "int" },
+      "bottomNote": { "type": "String" },
       "topNote": { "type": "String" }
     }
   },

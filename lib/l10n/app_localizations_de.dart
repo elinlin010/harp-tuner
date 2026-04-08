@@ -126,8 +126,12 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
-    return '$count Saiten · A♭1–$topNote · Es-Dur';
+  String harpTypeLeverHarpSubtitleFmt(
+    int count,
+    String bottomNote,
+    String topNote,
+  ) {
+    return '$count Saiten · $bottomNote–$topNote · Es-Dur';
   }
 
   @override

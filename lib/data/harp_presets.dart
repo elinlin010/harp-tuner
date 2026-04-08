@@ -32,15 +32,16 @@ class HarpPresets {
   }
 
   /// Lever (Celtic) harp with configurable string count (19–40).
-  /// The full pool of 40 strings runs A♭1–E♭7; we take the first [count]
-  /// from the bass end so smaller counts shorten the treble range.
+  /// The full pool of 40 strings runs A♭1–E♭7; the treble end (E♭7) is fixed
+  /// and smaller counts shorten the bass range.
   static List<HarpStringModel> leverHarpWithCount(int count) {
     final pool = _buildRange(
       startOctave: 1, startNote: NoteName.a,
       endOctave: 7,   endNote: NoteName.e,
       flatNotes: {NoteName.e, NoteName.a, NoteName.b},
     );
-    final taken = pool.take(count.clamp(19, 40)).toList();
+    final clamped = count.clamp(19, 40);
+    final taken = pool.sublist(pool.length - clamped);
     return List.generate(taken.length, (i) => HarpStringModel(
       index: i + 1,
       note: taken[i].note,

@@ -336,8 +336,12 @@ abstract class AppLocalizations {
   /// No description provided for @harpTypeLeverHarpSubtitleFmt.
   ///
   /// In en, this message translates to:
-  /// **'{count} strings · A♭1–{topNote} · E♭ maj'**
-  String harpTypeLeverHarpSubtitleFmt(int count, String topNote);
+  /// **'{count} strings · {bottomNote}–{topNote} · E♭ maj'**
+  String harpTypeLeverHarpSubtitleFmt(
+    int count,
+    String bottomNote,
+    String topNote,
+  );
 
   /// No description provided for @settingsLeverStringCountLabel.
   ///

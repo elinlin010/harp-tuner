@@ -14,7 +14,7 @@
   "settingsA4CalibStandard": "重置為 440 Hz",
   "harpTypeLapHarp": "膝琴",
   "harpTypeLapHarpSubtitle": "15 弦 · C4–C6",
-  "harpTypeLeverHarp": "槓桿豎琴",
+  "harpTypeLeverHarp": "撥鍵豎琴",
   "harpTypeLeverHarpSubtitle": "34 弦 · A♭1–F6 · 降E大調",
   "harpTypePedalHarp": "踏板豎琴",
   "harpTypePedalHarpSubtitle": "47 弦 · C♭1–G♭7 · 降音位",
@@ -45,10 +45,11 @@
       }
     }
   },
-  "harpTypeLeverHarpSubtitleFmt": "{count} 弦 · A♭1–{topNote} · 降E大調",
+  "harpTypeLeverHarpSubtitleFmt": "{count} 弦 · {bottomNote}–{topNote} · 降E大調",
   "@harpTypeLeverHarpSubtitleFmt": {
     "placeholders": {
       "count": { "type": "int" },
+      "bottomNote": { "type": "String" },
       "topNote": { "type": "String" }
     }
   },
@@ -62,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "顯示調音提醒",
-  "reminderPedalSnack": "調音前請將所有踏板置於降音位置（最上格）。",
-  "reminderLeverSnack": "調音前請將所有升降桿放下（關閉狀態）。",
+  "reminderPedalSnack": "調音前把踏板放至最上格（降音位）。",
+  "reminderLeverSnack": "調音前把撥鍵放下來。",
   "reminderDismissBtn": "知道了"
 }

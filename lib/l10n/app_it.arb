@@ -45,10 +45,11 @@
       }
     }
   },
-  "harpTypeLeverHarpSubtitleFmt": "{count} corde · A♭1–{topNote} · Mi♭ mag",
+  "harpTypeLeverHarpSubtitleFmt": "{count} corde · {bottomNote}–{topNote} · Mi♭ mag",
   "@harpTypeLeverHarpSubtitleFmt": {
     "placeholders": {
       "count": { "type": "int" },
+      "bottomNote": { "type": "String" },
       "topNote": { "type": "String" }
     }
   },

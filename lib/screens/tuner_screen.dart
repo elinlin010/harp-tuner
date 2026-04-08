@@ -317,42 +317,49 @@ String _harpName(HarpType type, AppLocalizations l10n) {
 String _harpSubtitle(HarpType type, AppLocalizations l10n, {int leverStringCount = 34}) {
   switch (type) {
     case HarpType.leverHarp:
-      return l10n.harpTypeLeverHarpSubtitleFmt(leverStringCount, _leverTopNote(leverStringCount));
+      return l10n.harpTypeLeverHarpSubtitleFmt(leverStringCount, _leverBottomNote(leverStringCount), _kLeverTopNote);
     case HarpType.pedalHarp: return l10n.harpTypePedalHarpSubtitle;
   }
 }
 
-String _leverTopNote(int count) {
-  // Pool: A♭1, B♭1, C2…B♭2, C3…B♭3, … up to E♭7 at 40 strings.
-  // Strings 1-2: A♭1, B♭1; then 7 per octave from C.
-  // String 19 = E♭4, string 34 = F6 (default), string 40 = E♭7.
-  const topNotes = [
-    'E♭4', // 19
-    'F4',  // 20
-    'G4',  // 21
-    'A♭4', // 22
-    'B♭4', // 23
-    'C5',  // 24
-    'D5',  // 25
-    'E♭5', // 26
-    'F5',  // 27
-    'G5',  // 28
-    'A♭5', // 29
-    'B♭5', // 30
-    'C6',  // 31
-    'D6',  // 32
-    'E♭6', // 33
-    'F6',  // 34 — default (matches existing preset)
-    'G6',  // 35
-    'A♭6', // 36
-    'B♭6', // 37
-    'C7',  // 38
-    'D7',  // 39
-    'E♭7', // 40
-  ];
-  final idx = (count - 19).clamp(0, topNotes.length - 1);
-  return topNotes[idx];
+// Pool: A♭1(0), B♭1(1), C2(2)…B♭2(8), C3(9)…B♭3(15), C4(16)…B♭4(22),
+//       C5(23)…B♭5(29), C6(30)…B♭6(36), C7(37), D7(38), E♭7(39).
+// Treble end is fixed at E♭7 (index 39); the bottom note index is 40 - count.
+
+// Bottom note for each count (index = 40 - count, so count=40→index 0=A♭1,
+// count=34→index 6=G2, count=19→index 21=A♭4).
+const _kLeverBottomNotes = [
+  'A♭1', // 40 — full range
+  'B♭1', // 39
+  'C2',  // 38
+  'D2',  // 37
+  'E♭2', // 36
+  'F2',  // 35
+  'G2',  // 34 — default
+  'A♭2', // 33
+  'B♭2', // 32
+  'C3',  // 31
+  'D3',  // 30
+  'E♭3', // 29
+  'F3',  // 28
+  'G3',  // 27
+  'A♭3', // 26
+  'B♭3', // 25
+  'C4',  // 24
+  'D4',  // 23
+  'E♭4', // 22
+  'F4',  // 21
+  'G4',  // 20
+  'A♭4', // 19 — minimum
+];
+
+String _leverBottomNote(int count) {
+  final idx = (40 - count.clamp(19, 40)).clamp(0, _kLeverBottomNotes.length - 1);
+  return _kLeverBottomNotes[idx];
 }
+
+// Top note is always E♭7 (the treble end is fixed).
+const _kLeverTopNote = 'E♭7';
 
 // ── Settings bottom sheet ─────────────────────────────────────────────────────
 

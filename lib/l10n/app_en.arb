@@ -45,10 +45,11 @@
       }
     }
   },
-  "harpTypeLeverHarpSubtitleFmt": "{count} strings · A♭1–{topNote} · E♭ maj",
+  "harpTypeLeverHarpSubtitleFmt": "{count} strings · {bottomNote}–{topNote} · E♭ maj",
   "@harpTypeLeverHarpSubtitleFmt": {
     "placeholders": {
       "count": { "type": "int" },
+      "bottomNote": { "type": "String" },
       "topNote": { "type": "String" }
     }
   },
