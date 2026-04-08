@@ -16,6 +16,7 @@ flutter test
 
 # Run single test file
 flutter test test/widget_test.dart
+flutter test test/harp_presets_test.dart
 
 # Build release APK / iOS archive
 flutter build apk
