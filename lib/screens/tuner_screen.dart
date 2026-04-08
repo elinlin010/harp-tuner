@@ -62,24 +62,58 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     final text = harp == HarpType.pedalHarp
         ? l10n.reminderPedalSnack
         : l10n.reminderLeverSnack;
-    // textPrimary is dark on light themes, light on dark themes —
-    // so the snackbar always contrasts against the screen background.
-    // contentColor (bg) is the inverse: cream on light themes, near-black on dark.
-    // actionColor: sharp (warm amber/coral) on light bg; surfaceRim (muted dark)
-    // on the inverted-light dark-theme snackbar — both clear at ≥ 3:1.
-    final isLight = theme.brightness == Brightness.light;
+
+    // Light themes (Linen, Milk): dark-inverted snackbar, sharp (amber) action.
+    //
+    // Dark themes: split by whether sharp achieves ≥ 3:1 on the inverted
+    // (textPrimary) background:
+    //   • Blueprint: textPrimary ≈ #E8F4FF, sharp ≈ #FF8050 → 3.44:1 ✓
+    //     → inverted snackbar + sharp (coral) action.
+    //   • Void/Phosphor: textPrimary too luminous (≥ 0.78), sharp only ~1.9–2.5:1 ✗
+    //     → keep dark snackbar (surfaceHi) + inTune accent; add inTune border ring
+    //     so the card reads against the pure-black/near-black screen.
+    final Color bgColor;
+    final Color contentColor;
+    final Color actionColor;
+    Color? accentBorder;
+
+    if (theme.brightness == Brightness.light) {
+      bgColor = theme.textPrimary;
+      contentColor = theme.bg;
+      actionColor = theme.sharp;
+    } else {
+      final invLum = theme.textPrimary.computeLuminance();
+      final sharpLum = theme.sharp.computeLuminance();
+      final sharpOnInv = (invLum + 0.05) / (sharpLum + 0.05);
+      if (sharpOnInv >= 3.0) {
+        // e.g. Blueprint — inverted light snackbar, coral action
+        bgColor = theme.textPrimary;
+        contentColor = theme.bg;
+        actionColor = theme.sharp;
+      } else {
+        // e.g. Void / Phosphor — dark snackbar, inTune accent + border ring
+        bgColor = theme.surfaceHi;
+        contentColor = theme.textPrimary;
+        actionColor = theme.inTune;
+        accentBorder = theme.inTune;
+      }
+    }
+
     messenger.showSnackBar(
       SnackBar(
-        backgroundColor: theme.textPrimary,
+        backgroundColor: bgColor,
         behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          side: accentBorder != null
+              ? BorderSide(color: accentBorder, width: 1.5)
+              : BorderSide.none,
         ),
-        content: Text(text, style: theme.sans(14, color: theme.bg)),
+        content: Text(text, style: theme.sans(14, color: contentColor)),
         duration: const Duration(days: 365),
         action: SnackBarAction(
           label: l10n.reminderDismissBtn,
-          textColor: isLight ? theme.sharp : theme.surfaceRim,
+          textColor: actionColor,
           onPressed: messenger.hideCurrentSnackBar,
         ),
       ),
