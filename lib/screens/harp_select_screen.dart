@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../models/harp_type.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
@@ -86,8 +87,8 @@ class _HarpSelectScreenState extends ConsumerState<HarpSelectScreen>
                 const SizedBox(height: 32),
                 Center(
                   child: Text(
-                    'Select your instrument',
-                    style: AppTextStyles.sans(14, color: AppColors.textSecondary),
+                    AppLocalizations.of(context)!.selectYourInstrument,
+                    style: AppTextStyles.sans(16, color: AppColors.textSecondary),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -113,7 +114,7 @@ class _Header extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           'Tuner',
-          style: AppTextStyles.sans(52, weight: FontWeight.w300),
+          style: AppTextStyles.sans(52, weight: FontWeight.w400),
         ),
         const SizedBox(height: 8),
         Container(height: 1, width: 60, color: AppColors.goldDeep),
@@ -264,7 +265,6 @@ class _HarpIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final count = switch (type) {
-      HarpType.lapHarp   => 5,
       HarpType.leverHarp => 7,
       HarpType.pedalHarp => 9,
     };

@@ -80,7 +80,7 @@ class _Tab extends StatelessWidget {
         curve: Curves.easeInOut,
         padding: EdgeInsets.symmetric(
           horizontal: active ? 12 : 9,
-          vertical: 7,
+          vertical: 12,
         ),
         decoration: BoxDecoration(
           color: active ? theme.inTune.withValues(alpha: 0.15) : Colors.transparent,
