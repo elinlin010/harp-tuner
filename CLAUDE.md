@@ -99,8 +99,14 @@ All font choices, colors, spacing, and aesthetic direction are defined there.
 Do not deviate without explicit user approval.
 In QA mode, flag any code that doesn't match `DESIGN.md`.
 
-## Next Steps (not yet implemented)
+## Implemented Features
 
-- Real mic pitch detection: replace `TunerNotifier.mockReading` with `mic_stream` + `pitch_detector_dart`
-- Reference tone playback: replace `TunerNotifier.playTone` stub with sine-wave generation + audioplayers
-- Microphone permission: add `permission_handler` and request `Permission.microphone` before listening
+All core features are shipped:
+
+- **Mic pitch detection**: `mic_stream` + `pitch_detector_dart` in `PitchDetectionService`
+- **Reference tone playback**: 8-layer harp acoustic synthesis in `TonePlayerService`; tones are precomputed and cached when entering reference mode
+- **Microphone permission**: `permission_handler` via a custom iOS method channel (`com.harptuner/mic_permission`) and Android manifest
+
+## Android Audio Notes
+
+On Android, `AudioRecord` (mic) and `MediaPlayer` (tone) conflict for audio routing: if both are active simultaneously, output is silently routed to the earpiece. The fix in `TunerNotifier.playReferenceString` pauses the mic subscription while the tone plays and restarts it automatically after 2.3 s via `_micRestartTimer`.
