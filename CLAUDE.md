@@ -139,7 +139,8 @@ All core features are shipped:
 - **Reference tone playback**: 8-layer harp acoustic synthesis in `TonePlayerService`; tones are precomputed and cached when entering reference mode
 - **Microphone permission**: `permission_handler` via a custom iOS method channel (`com.harptuner/mic_permission`) and Android manifest
 - **Reference mode**: tap a string to hear it and tune to it; gauge shows cents relative to that string
-- **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language
+- **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language, showTuningReminder
+- **Tuning reminder**: on mic start, a floating snackbar prompts pedal harp users to set pedals to flat and lever harp users to disengage levers. Dismissed via "Got it" or mic stop. Toggle in settings (`showTuningReminder`, persisted via SharedPreferences key `tuner_show_tuning_reminder`).
 
 ## Android Audio Notes
 
