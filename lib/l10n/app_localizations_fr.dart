@@ -138,4 +138,18 @@ class AppLocalizationsFr extends AppLocalizations {
   String settingsLeverStringCountValue(int count) {
     return '$count cordes';
   }
+
+  @override
+  String get settingsShowReminderToggle => 'Afficher le rappel d\'accord';
+
+  @override
+  String get reminderPedalSnack =>
+      'Mettez toutes les pédales en position bémol (cran supérieur) avant d\'accorder.';
+
+  @override
+  String get reminderLeverSnack =>
+      'Désengagez tous les leviers (vers le bas) avant d\'accorder.';
+
+  @override
+  String get reminderDismissBtn => 'Compris';
 }

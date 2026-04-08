@@ -60,5 +60,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "settingsShowReminderToggle": "Mostra promemoria accordatura",
+  "reminderPedalSnack": "Porta tutti i pedali in posizione bemolle (tacca superiore) prima di accordare.",
+  "reminderLeverSnack": "Disattiva tutte le leve (verso il basso) prima di accordare.",
+  "reminderDismissBtn": "Capito"
 }

@@ -60,5 +60,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "settingsShowReminderToggle": "Show tuning reminder",
+  "reminderPedalSnack": "Set all pedals to the flat position (top notch) before tuning.",
+  "reminderLeverSnack": "Set all levers to disengaged (down) before tuning.",
+  "reminderDismissBtn": "Got it"
 }

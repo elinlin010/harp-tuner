@@ -137,4 +137,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsLeverStringCountValue(int count) {
     return '$count strings';
   }
+
+  @override
+  String get settingsShowReminderToggle => 'Show tuning reminder';
+
+  @override
+  String get reminderPedalSnack =>
+      'Set all pedals to the flat position (top notch) before tuning.';
+
+  @override
+  String get reminderLeverSnack =>
+      'Set all levers to disengaged (down) before tuning.';
+
+  @override
+  String get reminderDismissBtn => 'Got it';
 }

@@ -137,4 +137,18 @@ class AppLocalizationsDe extends AppLocalizations {
   String settingsLeverStringCountValue(int count) {
     return '$count Saiten';
   }
+
+  @override
+  String get settingsShowReminderToggle => 'Stimmhinweis anzeigen';
+
+  @override
+  String get reminderPedalSnack =>
+      'Alle Pedale vor dem Stimmen in die Flach-Position (obste Raste) bringen.';
+
+  @override
+  String get reminderLeverSnack =>
+      'Alle Haken vor dem Stimmen aushaken (nach unten) bringen.';
+
+  @override
+  String get reminderDismissBtn => 'Verstanden';
 }

@@ -55,6 +55,25 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     super.dispose();
   }
 
+  void _showTuningReminderSnackBar(HarpType harp) {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    final text = harp == HarpType.pedalHarp
+        ? l10n.reminderPedalSnack
+        : l10n.reminderLeverSnack;
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(text),
+        duration: const Duration(days: 365),
+        action: SnackBarAction(
+          label: l10n.reminderDismissBtn,
+          onPressed: messenger.hideCurrentSnackBar,
+        ),
+      ),
+    );
+  }
+
   HarpStringModel? _closestString(
       List<HarpStringModel> strings, double? hz, int a4Hz) {
     if (hz == null || strings.isEmpty) return null;
@@ -84,6 +103,21 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
+
+    ref.listen<TunerState>(tunerProvider, (prev, next) {
+      final startedListening = !(prev?.isListening ?? false) && next.isListening;
+      final stoppedListening = (prev?.isListening ?? false) && !next.isListening;
+      final harpChangedWhileListening = next.isListening &&
+          prev?.selectedHarp != next.selectedHarp &&
+          next.selectedHarp != null;
+      if ((startedListening || harpChangedWhileListening) &&
+          next.showTuningReminder &&
+          next.selectedHarp != null) {
+        _showTuningReminderSnackBar(next.selectedHarp!);
+      } else if (stoppedListening) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    });
 
     final harpStrings = tuner.selectedHarp != null
         ? HarpPresets.stringsFor(tuner.selectedHarp!, leverStringCount: tuner.leverStringCount)
@@ -357,6 +391,18 @@ class _SettingsSheet extends ConsumerWidget {
                 theme: theme,
               ),
             ],
+          ],
+
+          if (tuner.selectedHarp != null) ...[
+            _SheetSwitchRow(
+              label: l10n.settingsShowReminderToggle,
+              value: tuner.showTuningReminder,
+              onToggle: () => ref
+                  .read(tunerProvider.notifier)
+                  .toggleShowTuningReminder(),
+              theme: theme,
+              animDuration: animDuration,
+            ),
           ],
 
           const SizedBox(height: 20),
