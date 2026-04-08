@@ -55,19 +55,28 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     super.dispose();
   }
 
-  void _showTuningReminderSnackBar(HarpType harp) {
+  void _showTuningReminderSnackBar(HarpType harp, TunerThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentSnackBar();
     final text = harp == HarpType.pedalHarp
         ? l10n.reminderPedalSnack
         : l10n.reminderLeverSnack;
+    final isLight = theme.brightness == Brightness.light;
+    final bgColor = isLight ? theme.textPrimary : theme.surfaceHi;
+    final contentColor = isLight ? theme.bg : theme.textPrimary;
     messenger.showSnackBar(
       SnackBar(
-        content: Text(text),
+        backgroundColor: bgColor,
+        behavior: SnackBarBehavior.floating,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(10)),
+        ),
+        content: Text(text, style: theme.sans(14, color: contentColor)),
         duration: const Duration(days: 365),
         action: SnackBarAction(
           label: l10n.reminderDismissBtn,
+          textColor: theme.sharp,
           onPressed: messenger.hideCurrentSnackBar,
         ),
       ),
@@ -113,7 +122,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
       if ((startedListening || harpChangedWhileListening) &&
           next.showTuningReminder &&
           next.selectedHarp != null) {
-        _showTuningReminderSnackBar(next.selectedHarp!);
+        _showTuningReminderSnackBar(next.selectedHarp!, theme);
       } else if (stoppedListening) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
       }
