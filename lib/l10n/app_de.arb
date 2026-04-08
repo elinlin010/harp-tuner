@@ -63,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Stimmhinweis anzeigen",
-  "reminderPedalSnack": "Alle Pedale vor dem Stimmen in die Flach-Position (oberste Raste) bringen.",
-  "reminderLeverSnack": "Alle Haken vor dem Stimmen aushaken (nach unten) bringen.",
+  "reminderPedalSnack": "Vor dem Stimmen alle Pedale in die Flach-Position (oberste Raste) bringen.",
+  "reminderLeverSnack": "Vor dem Stimmen alle Haken aushaken (nach unten).",
   "reminderDismissBtn": "Verstanden"
 }

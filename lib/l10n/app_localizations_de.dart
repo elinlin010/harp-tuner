@@ -147,11 +147,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reminderPedalSnack =>
-      'Alle Pedale vor dem Stimmen in die Flach-Position (oberste Raste) bringen.';
+      'Vor dem Stimmen alle Pedale in die Flach-Position (oberste Raste) bringen.';
 
   @override
   String get reminderLeverSnack =>
-      'Alle Haken vor dem Stimmen aushaken (nach unten) bringen.';
+      'Vor dem Stimmen alle Haken aushaken (nach unten).';
 
   @override
   String get reminderDismissBtn => 'Verstanden';

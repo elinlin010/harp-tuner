@@ -147,11 +147,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get reminderPedalSnack =>
-      'Set all pedals to the flat position (top notch) before tuning.';
+      'Before tuning, set all pedals to the flat position (top notch).';
 
   @override
   String get reminderLeverSnack =>
-      'Set all levers to disengaged (down) before tuning.';
+      'Before tuning, disengage all levers (push down).';
 
   @override
   String get reminderDismissBtn => 'Got it';
