@@ -86,7 +86,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     final theme = ref.watch(tunerThemeProvider);
 
     final harpStrings = tuner.selectedHarp != null
-        ? HarpPresets.stringsFor(tuner.selectedHarp!)
+        ? HarpPresets.stringsFor(tuner.selectedHarp!, leverStringCount: tuner.leverStringCount)
         : <HarpStringModel>[];
 
     // In reference mode the active string is the pinned reference string;
@@ -233,18 +233,49 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
 String _harpName(HarpType type, AppLocalizations l10n) {
   switch (type) {
-    case HarpType.lapHarp:   return l10n.harpTypeLapHarp;
     case HarpType.leverHarp: return l10n.harpTypeLeverHarp;
     case HarpType.pedalHarp: return l10n.harpTypePedalHarp;
   }
 }
 
-String _harpSubtitle(HarpType type, AppLocalizations l10n) {
+String _harpSubtitle(HarpType type, AppLocalizations l10n, {int leverStringCount = 34}) {
   switch (type) {
-    case HarpType.lapHarp:   return l10n.harpTypeLapHarpSubtitle;
-    case HarpType.leverHarp: return l10n.harpTypeLeverHarpSubtitle;
+    case HarpType.leverHarp:
+      return l10n.harpTypeLeverHarpSubtitleFmt(leverStringCount, _leverTopNote(leverStringCount));
     case HarpType.pedalHarp: return l10n.harpTypePedalHarpSubtitle;
   }
+}
+
+String _leverTopNote(int count) {
+  // Pool: A♭1, B♭1, C2…B♭2, C3…B♭3, … up to E♭7 at 40 strings.
+  // Strings 1-2: A♭1, B♭1; then 7 per octave from C.
+  // String 19 = E♭4, string 34 = F6 (default), string 40 = E♭7.
+  const topNotes = [
+    'E♭4', // 19
+    'F4',  // 20
+    'G4',  // 21
+    'A♭4', // 22
+    'B♭4', // 23
+    'C5',  // 24
+    'D5',  // 25
+    'E♭5', // 26
+    'F5',  // 27
+    'G5',  // 28
+    'A♭5', // 29
+    'B♭5', // 30
+    'C6',  // 31
+    'D6',  // 32
+    'E♭6', // 33
+    'F6',  // 34 — default (matches existing preset)
+    'G6',  // 35
+    'A♭6', // 36
+    'B♭6', // 37
+    'C7',  // 38
+    'D7',  // 39
+    'E♭7', // 40
+  ];
+  final idx = (count - 19).clamp(0, topNotes.length - 1);
+  return topNotes[idx];
 }
 
 // ── Settings bottom sheet ─────────────────────────────────────────────────────
@@ -273,7 +304,7 @@ class _SettingsSheet extends ConsumerWidget {
       padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottomPad),
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.88,
+          maxHeight: MediaQuery.of(context).size.height * 0.72,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -297,8 +328,7 @@ class _SettingsSheet extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // ── Instrument ────────────────────────────────────────────────────
-          Text(l10n.settingsInstrumentLabel,
-              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
+          _SectionHeader(label: l10n.settingsInstrumentLabel, icon: Icons.piano_rounded, theme: theme),
           const SizedBox(height: 4),
           _InstrumentRow(
             label: l10n.settingsInstrumentNone,
@@ -307,23 +337,34 @@ class _SettingsSheet extends ConsumerWidget {
                 ref.read(tunerProvider.notifier).setSelectedHarp(null),
             theme: theme,
           ),
-          for (final type in HarpType.values)
+          for (final type in HarpType.values) ...[
             _InstrumentRow(
               label: _harpName(type, l10n),
-              subtitle: _harpSubtitle(type, l10n),
+              subtitle: _harpSubtitle(type, l10n,
+                  leverStringCount: tuner.leverStringCount),
               selected: tuner.selectedHarp == type,
               onTap: () =>
                   ref.read(tunerProvider.notifier).setSelectedHarp(type),
               theme: theme,
             ),
+            if (type == HarpType.leverHarp && tuner.selectedHarp == HarpType.leverHarp) ...[
+              const SizedBox(height: 4),
+              _LeverStringCountRow(
+                count: tuner.leverStringCount,
+                onChanged: (v) => ref
+                    .read(tunerProvider.notifier)
+                    .setLeverStringCount(v),
+                theme: theme,
+              ),
+            ],
+          ],
 
           const SizedBox(height: 20),
           Divider(color: theme.surfaceRim, height: 1),
           const SizedBox(height: 20),
 
           // ── Note display + A4 calibration ────────────────────────────────
-          Text(l10n.settingsNoteDisplayLabel,
-              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
+          _SectionHeader(label: l10n.settingsNoteDisplayLabel, icon: Icons.music_note_rounded, theme: theme),
           const SizedBox(height: 12),
           _SheetSwitchRow(
             label: l10n.settingsAlwaysShowFlatsToggle,
@@ -339,6 +380,9 @@ class _SettingsSheet extends ConsumerWidget {
                 ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
             onIncrement: () =>
                 ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
+            onReset: tuner.a4Hz != 440
+                ? () => ref.read(tunerProvider.notifier).setA4Hz(440)
+                : null,
             theme: theme,
           ),
 
@@ -346,7 +390,9 @@ class _SettingsSheet extends ConsumerWidget {
           Divider(color: theme.surfaceRim, height: 1),
           const SizedBox(height: 20),
 
-          // ── Dark mode + theme picker ──────────────────────────────────────
+          // ── Appearance ────────────────────────────────────────────────────
+          _SectionHeader(label: l10n.settingsThemeLabel, icon: Icons.palette_outlined, theme: theme),
+          const SizedBox(height: 4),
           _SheetSwitchRow(
             label: l10n.settingsDarkModeToggle,
             value: theme.brightness == Brightness.dark,
@@ -355,10 +401,7 @@ class _SettingsSheet extends ConsumerWidget {
             theme: theme,
             animDuration: animDuration,
           ),
-          const SizedBox(height: 12),
-          Text(l10n.settingsThemeLabel,
-              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           _ThemePickerRow(
             currentTheme: theme,
             onSelect: (t) =>
@@ -370,20 +413,15 @@ class _SettingsSheet extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // ── Language ──────────────────────────────────────────────────────
-          Text(l10n.settingsLanguageLabel,
-              style: theme.sans(13, weight: FontWeight.w600, color: theme.textSecondary)),
+          _SectionHeader(label: l10n.settingsLanguageLabel, icon: Icons.language_rounded, theme: theme),
           const SizedBox(height: 4),
-          for (final lang in _languages)
-            _LanguageRow(
-              nativeName: lang.value,
-              locale: lang.key,
-              selected: currentLocale.languageCode == lang.key.languageCode &&
-                  (currentLocale.countryCode ?? '') ==
-                      (lang.key.countryCode ?? ''),
-              onTap: () =>
-                  ref.read(localeProvider.notifier).setLocale(lang.key),
-              theme: theme,
-            ),
+          _LanguageDropdownRow(
+            languages: _languages,
+            currentLocale: currentLocale,
+            onSelect: (locale) =>
+                ref.read(localeProvider.notifier).setLocale(locale),
+            theme: theme,
+          ),
           ],
         ),
       ),
@@ -432,8 +470,8 @@ class _SheetSwitchRow extends StatelessWidget {
                             color: theme.textPrimary)),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
-                      Text(subtitle!,
-                          style: theme.sans(16, color: theme.textSecondary)),
+                      _accText(subtitle!,
+                          theme.sans(16, color: theme.textSecondary)),
                     ],
                   ],
                 ),
@@ -700,12 +738,14 @@ class _A4StepperRow extends StatelessWidget {
   final int a4Hz;
   final VoidCallback onDecrement;
   final VoidCallback onIncrement;
+  final VoidCallback? onReset;
   final TunerThemeData theme;
 
   const _A4StepperRow({
     required this.a4Hz,
     required this.onDecrement,
     required this.onIncrement,
+    required this.onReset,
     required this.theme,
   });
 
@@ -714,28 +754,20 @@ class _A4StepperRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final atMin = a4Hz <= 430;
     final atMax = a4Hz >= 450;
+    final canReset = onReset != null;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.settingsA4CalibLabel,
-                  style: theme.sans(16,
-                      weight: FontWeight.w600, color: theme.textPrimary),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.settingsA4CalibStandard,
-                  style: theme.sans(16, color: theme.textSecondary),
-                ),
-              ],
+            child: Text(
+              l10n.settingsA4CalibLabel,
+              style: theme.sans(16,
+                  weight: FontWeight.w600, color: theme.textPrimary),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
-          const SizedBox(width: 16),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -749,6 +781,7 @@ class _A4StepperRow extends StatelessWidget {
                 child: Text(
                   '$a4Hz Hz',
                   textAlign: TextAlign.center,
+                  maxLines: 1,
                   style: theme.sans(16, weight: FontWeight.w600),
                 ),
               ),
@@ -756,6 +789,23 @@ class _A4StepperRow extends StatelessWidget {
                 pointRight: true,
                 onTap: atMax ? null : onIncrement,
                 theme: theme,
+              ),
+              Semantics(
+                button: true,
+                label: l10n.settingsA4CalibStandard,
+                child: GestureDetector(
+                  onTap: onReset,
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.refresh_rounded,
+                      key: ValueKey(canReset),
+                      size: 20,
+                      color: canReset ? theme.inTune : theme.textDim,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
@@ -781,7 +831,7 @@ class _StepBtn extends StatelessWidget {
       child: GestureDetector(
       onTap: onTap,
       child: SizedBox(
-        width: 48,
+        width: 36,
         height: 48,
         child: CustomPaint(
           painter: _TrianglePainter(
@@ -827,6 +877,106 @@ class _TrianglePainter extends CustomPainter {
       old.pointRight != pointRight || old.color != color;
 }
 
+
+// ── Accidental text helper ────────────────────────────────────────────────────
+
+/// Renders [text] with ♭ and ♯ shown as small subscript-style symbols (~68% size,
+/// bottom-aligned to the surrounding text's descent line).
+Widget _accText(String text, TextStyle style, {TextAlign textAlign = TextAlign.start}) {
+  final accSize = (style.fontSize ?? 16) * 0.68;
+  final regex = RegExp('[♭♯]');
+  final matches = regex.allMatches(text).toList();
+  if (matches.isEmpty) return Text(text, style: style, textAlign: textAlign);
+
+  final spans = <InlineSpan>[];
+  int start = 0;
+  for (final match in matches) {
+    if (match.start > start) {
+      spans.add(TextSpan(text: text.substring(start, match.start), style: style));
+    }
+    spans.add(WidgetSpan(
+      alignment: PlaceholderAlignment.bottom,
+      child: Text(
+        match.group(0)!,
+        style: style.copyWith(fontSize: accSize, height: 1.0),
+      ),
+    ));
+    start = match.end;
+  }
+  if (start < text.length) {
+    spans.add(TextSpan(text: text.substring(start), style: style));
+  }
+  return Text.rich(TextSpan(children: spans), textAlign: textAlign);
+}
+
+// ── Lever string count slider ─────────────────────────────────────────────────
+
+class _LeverStringCountRow extends StatelessWidget {
+  final int count;
+  final ValueChanged<int> onChanged;
+  final TunerThemeData theme;
+
+  const _LeverStringCountRow({
+    required this.count,
+    required this.onChanged,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.settingsLeverStringCountLabel,
+                  style: theme.sans(16, weight: FontWeight.w600,
+                      color: theme.textPrimary),
+                ),
+              ),
+              Text(
+                l10n.settingsLeverStringCountValue(count),
+                style: theme.sans(16, weight: FontWeight.w600,
+                    color: theme.inTune),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: theme.inTune,
+              inactiveTrackColor: theme.surfaceRim,
+              thumbColor: theme.inTune,
+              overlayColor: theme.inTune.withValues(alpha: 0.12),
+              trackHeight: 2,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+              overlayShape: const RoundSliderOverlayShape(overlayRadius: 18),
+            ),
+            child: Slider(
+              value: count.toDouble(),
+              min: 19,
+              max: 40,
+              divisions: 21,
+              onChanged: (v) => onChanged(v.round()),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('19', style: theme.sans(11, color: theme.textSecondary)),
+              Text('40', style: theme.sans(11, color: theme.textSecondary)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 // ── Instrument row ────────────────────────────────────────────────────────────
 
@@ -900,10 +1050,8 @@ class _InstrumentRow extends StatelessWidget {
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
-                      Text(
-                        subtitle!,
-                        style: theme.sans(14, color: theme.textSecondary),
-                      ),
+                      _accText(subtitle!,
+                          theme.sans(14, color: theme.textSecondary)),
                     ],
                   ],
                 ),
@@ -974,6 +1122,7 @@ class _ThemeSwatch extends StatelessWidget {
       button: true,
       child: GestureDetector(
         onTap: onTap,
+        behavior: HitTestBehavior.opaque,
         child: Column(
           children: [
             AnimatedContainer(
@@ -1043,49 +1192,112 @@ const _languages = [
   MapEntry(Locale('it'), 'Italiano'),
 ];
 
-// ── Language row ──────────────────────────────────────────────────────────────
+// ── Section header ────────────────────────────────────────────────────────────
 
-class _LanguageRow extends StatelessWidget {
-  final String nativeName;
-  final Locale locale;
-  final bool selected;
-  final VoidCallback onTap;
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  final IconData icon;
   final TunerThemeData theme;
 
-  const _LanguageRow({
-    required this.nativeName,
-    required this.locale,
-    required this.selected,
-    required this.onTap,
+  const _SectionHeader({
+    required this.label,
+    required this.icon,
     required this.theme,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        child: Row(
-          children: [
-            Text(
-              nativeName,
-              style: theme.sans(
-                16,
-                weight: selected ? FontWeight.w600 : FontWeight.w400,
-                color: selected ? theme.textPrimary : theme.textSecondary,
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: theme.textSecondary),
+        const SizedBox(width: 5),
+        Text(label,
+            style: theme.sans(14,
+                weight: FontWeight.w600, color: theme.textSecondary)),
+      ],
+    );
+  }
+}
+
+// ── Language dropdown ─────────────────────────────────────────────────────────
+
+class _LanguageDropdownRow extends StatelessWidget {
+  final List<MapEntry<Locale, String>> languages;
+  final Locale currentLocale;
+  final ValueChanged<Locale> onSelect;
+  final TunerThemeData theme;
+
+  const _LanguageDropdownRow({
+    required this.languages,
+    required this.currentLocale,
+    required this.onSelect,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final current = languages.firstWhere(
+      (e) =>
+          e.key.languageCode == currentLocale.languageCode &&
+          (e.key.countryCode ?? '') == (currentLocale.countryCode ?? ''),
+      orElse: () => languages.first,
+    );
+
+    return Theme(
+      data: Theme.of(context).copyWith(
+        popupMenuTheme: PopupMenuThemeData(
+          color: theme.surfaceHi,
+          surfaceTintColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
+          textStyle: theme.sans(15, color: theme.textPrimary),
+          elevation: 4,
+        ),
+      ),
+      child: PopupMenuButton<Locale>(
+        onSelected: onSelect,
+        offset: const Offset(0, 8),
+        itemBuilder: (_) => [
+          for (final lang in languages)
+            PopupMenuItem<Locale>(
+              value: lang.key,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              child: Row(
+                children: [
+                  Text(
+                    lang.value,
+                    style: theme.sans(
+                      15,
+                      weight: lang.key.languageCode == currentLocale.languageCode
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: lang.key.languageCode == currentLocale.languageCode
+                          ? theme.inTune
+                          : theme.textPrimary,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (lang.key.languageCode == currentLocale.languageCode &&
+                      (lang.key.countryCode ?? '') ==
+                          (currentLocale.countryCode ?? ''))
+                    Icon(Icons.check_rounded, size: 16, color: theme.inTune),
+                ],
               ),
             ),
-            const Spacer(),
-            if (selected)
-              Icon(Icons.check_rounded, size: 20, color: theme.inTune),
-          ],
+        ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Row(
+            children: [
+              Text(current.value,
+                  style: theme.sans(16, weight: FontWeight.w600)),
+              const SizedBox(width: 4),
+              Icon(Icons.expand_more_rounded,
+                  size: 18, color: theme.textSecondary),
+            ],
+          ),
         ),
-        ),  // Padding
-      ),    // ConstrainedBox
+      ),
     );
   }
 }

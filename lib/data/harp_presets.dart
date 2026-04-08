@@ -31,19 +31,23 @@ class HarpPresets {
     return strings;
   }
 
-  /// Lap harp: 15 strings, C4 – C6, standard C major tuning
-  static List<HarpStringModel> get lapHarp => _buildRange(
-    startOctave: 4, startNote: NoteName.c,
-    endOctave: 6,   endNote: NoteName.c,
-  );
-
-  /// Lever (Celtic) harp: 34 strings, A♭1 – F6, standard E♭ major tuning
-  /// (E♭, A♭, B♭ — the most common factory/default lever harp setup)
-  static List<HarpStringModel> get leverHarp => _buildRange(
-    startOctave: 1, startNote: NoteName.a,
-    endOctave: 6,   endNote: NoteName.f,
-    flatNotes: {NoteName.e, NoteName.a, NoteName.b},
-  );
+  /// Lever (Celtic) harp with configurable string count (19–40).
+  /// The full pool of 40 strings runs A♭1–E♭7; we take the first [count]
+  /// from the bass end so smaller counts shorten the treble range.
+  static List<HarpStringModel> leverHarpWithCount(int count) {
+    final pool = _buildRange(
+      startOctave: 1, startNote: NoteName.a,
+      endOctave: 7,   endNote: NoteName.e,
+      flatNotes: {NoteName.e, NoteName.a, NoteName.b},
+    );
+    final taken = pool.take(count.clamp(19, 40)).toList();
+    return List.generate(taken.length, (i) => HarpStringModel(
+      index: i + 1,
+      note: taken[i].note,
+      octave: taken[i].octave,
+      semitoneAdjust: taken[i].semitoneAdjust,
+    ));
+  }
 
   /// Pedal (concert) harp: 47 strings, C♭1 – G♭7
   /// All pedals in flat position (C♭ major) — standard resting/practice tuning
@@ -56,10 +60,9 @@ class HarpPresets {
     },
   );
 
-  static List<HarpStringModel> stringsFor(HarpType type) {
+  static List<HarpStringModel> stringsFor(HarpType type, {int leverStringCount = 34}) {
     switch (type) {
-      case HarpType.lapHarp:   return lapHarp;
-      case HarpType.leverHarp: return leverHarp;
+      case HarpType.leverHarp: return leverHarpWithCount(leverStringCount);
       case HarpType.pedalHarp: return pedalHarp;
     }
   }

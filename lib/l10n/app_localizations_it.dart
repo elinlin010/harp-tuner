@@ -21,7 +21,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsInstrumentNone => 'Nessuno';
 
   @override
-  String get settingsNoteDisplayLabel => 'Visualizzazione note';
+  String get settingsNoteDisplayLabel => 'Nota';
 
   @override
   String get settingsAlwaysShowFlatsToggle => '♭  Mostra sempre i bemolle';
@@ -42,7 +42,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsA4CalibLabel => 'Riferimento A4';
 
   @override
-  String get settingsA4CalibStandard => 'Standard = 440 Hz';
+  String get settingsA4CalibStandard => 'Ripristina a 440 Hz';
 
   @override
   String get harpTypeLapHarp => 'Arpa da grembo';
@@ -70,6 +70,9 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get settingsLanguageLabel => 'Lingua';
+
+  @override
+  String get selectYourInstrument => 'Seleziona lo strumento';
 
   @override
   String get tunerStartBtn => 'Inizia accordatura';
@@ -120,5 +123,18 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String errorMicUnavailableMsg(String message) {
     return 'Microfono non disponibile: $message';
+  }
+
+  @override
+  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
+    return '$count corde · A♭1–$topNote · Mi♭ mag';
+  }
+
+  @override
+  String get settingsLeverStringCountLabel => 'Numero di corde';
+
+  @override
+  String settingsLeverStringCountValue(int count) {
+    return '$count corde';
   }
 }

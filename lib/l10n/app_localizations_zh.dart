@@ -21,7 +21,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsInstrumentNone => '無';
 
   @override
-  String get settingsNoteDisplayLabel => '音符顯示';
+  String get settingsNoteDisplayLabel => '音符';
 
   @override
   String get settingsAlwaysShowFlatsToggle => '♭  一律顯示降號';
@@ -42,7 +42,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsA4CalibLabel => 'A4 基準音';
 
   @override
-  String get settingsA4CalibStandard => '標準 = 440 Hz';
+  String get settingsA4CalibStandard => '重置為 440 Hz';
 
   @override
   String get harpTypeLapHarp => '膝琴';
@@ -70,6 +70,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsLanguageLabel => '語言';
+
+  @override
+  String get selectYourInstrument => '選擇樂器';
 
   @override
   String get tunerStartBtn => '開始調音';
@@ -120,6 +123,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String errorMicUnavailableMsg(String message) {
     return '麥克風無法使用：$message';
   }
+
+  @override
+  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
+    return '$count 弦 · A♭1–$topNote · 降E大調';
+  }
+
+  @override
+  String get settingsLeverStringCountLabel => '弦數';
+
+  @override
+  String settingsLeverStringCountValue(int count) {
+    return '$count 弦';
+  }
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -139,7 +155,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsInstrumentNone => '無';
 
   @override
-  String get settingsNoteDisplayLabel => '音符顯示';
+  String get settingsNoteDisplayLabel => '音符';
 
   @override
   String get settingsAlwaysShowFlatsToggle => '♭  一律顯示降號';
@@ -160,7 +176,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsA4CalibLabel => 'A4 基準音';
 
   @override
-  String get settingsA4CalibStandard => '標準 = 440 Hz';
+  String get settingsA4CalibStandard => '重置為 440 Hz';
 
   @override
   String get harpTypeLapHarp => '膝琴';
@@ -188,6 +204,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsLanguageLabel => '語言';
+
+  @override
+  String get selectYourInstrument => '選擇樂器';
 
   @override
   String get tunerStartBtn => '開始調音';
@@ -237,5 +256,18 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   @override
   String errorMicUnavailableMsg(String message) {
     return '麥克風無法使用：$message';
+  }
+
+  @override
+  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
+    return '$count 弦 · A♭1–$topNote · 降E大調';
+  }
+
+  @override
+  String get settingsLeverStringCountLabel => '弦數';
+
+  @override
+  String settingsLeverStringCountValue(int count) {
+    return '$count 弦';
   }
 }

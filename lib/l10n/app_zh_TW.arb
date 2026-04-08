@@ -4,14 +4,14 @@
   "settingsTitle": "設定",
   "settingsInstrumentLabel": "樂器",
   "settingsInstrumentNone": "無",
-  "settingsNoteDisplayLabel": "音符顯示",
+  "settingsNoteDisplayLabel": "音符",
   "settingsAlwaysShowFlatsToggle": "♭  一律顯示降號",
   "settingsAlwaysShowFlatsHint": "例：B♭ 而非 A♯",
   "settingsOctaveNumberLabel": "八度音",
   "settingsShowOctaveToggle": "顯示八度音號碼",
   "settingsShowOctaveHint": "例：A4 而非 A",
   "settingsA4CalibLabel": "A4 基準音",
-  "settingsA4CalibStandard": "標準 = 440 Hz",
+  "settingsA4CalibStandard": "重置為 440 Hz",
   "harpTypeLapHarp": "膝琴",
   "harpTypeLapHarpSubtitle": "15 弦 · C4–C6",
   "harpTypeLeverHarp": "槓桿豎琴",
@@ -21,6 +21,7 @@
   "settingsDarkModeToggle": "深色模式",
   "settingsThemeLabel": "主題",
   "settingsLanguageLabel": "語言",
+  "selectYourInstrument": "選擇樂器",
   "tunerStartBtn": "開始調音",
   "tunerStopBtn": "停止",
   "gaugeListeningMsg": "正在聆聽音符…",
@@ -41,6 +42,22 @@
     "placeholders": {
       "message": {
         "type": "String"
+      }
+    }
+  },
+  "harpTypeLeverHarpSubtitleFmt": "{count} 弦 · A♭1–{topNote} · 降E大調",
+  "@harpTypeLeverHarpSubtitleFmt": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "topNote": { "type": "String" }
+    }
+  },
+  "settingsLeverStringCountLabel": "弦數",
+  "settingsLeverStringCountValue": "{count} 弦",
+  "@settingsLeverStringCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   }
