@@ -107,6 +107,22 @@ Available skills:
 
 If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup` to rebuild.
 
+## Development Principles
+
+**i18n is non-negotiable.** Every user-visible string must live in the ARB files — never hardcode text in widgets. When adding any feature that shows text: write the ARB key first in all 6 locales (en, de, fr, it, zh, zh_TW), then use `l10n.yourKey` in the widget. Parametric keys (e.g. `{count} strings`) need typed placeholder metadata in the `@key` block.
+
+**Test across locales before shipping.** German and Italian translations tend to be longer than English. A layout that fits "A4 Reference" may not fit "Riferimento A4". Design settings rows to handle long labels gracefully: `Expanded` on the label with `overflow: TextOverflow.ellipsis, maxLines: 1`, and group controls on the right with `mainAxisSize: MainAxisSize.min`.
+
+**Prefer horizontal layouts in settings rows.** Users scan settings lists vertically. A stacked Column (label above, control below) doubles the visual height of a row and makes the sheet feel taller than it is. Keep label and control on one line whenever possible.
+
+**Icon-only buttons for locale-variable actions.** If a button's label changes length across languages (e.g. "Reset to 440 Hz" vs "Réinitialiser à 440 Hz"), use an icon-only button with `Semantics(label: l10n.theLabel)` for screen readers. It's the only guaranteed overflow-safe solution.
+
+**Visual gaps in CustomPaint come from the SizedBox, not the paint.** A triangle drawn centered in a 48×48 SizedBox has ~17px of dead space on each side. Reduce the SizedBox width (e.g. 36px) to tighten spacing — the touch target height can stay tall independently.
+
+**Touch targets: 44pt minimum, always opaque.** Wrap small tap surfaces in `GestureDetector(behavior: HitTestBehavior.opaque)` so taps on transparent areas still register. Add `Semantics(button: true, label: ...)` on icon-only buttons.
+
+**Accidentals (♭ ♯) in subtitles — use `_accText()`.** Flat and sharp symbols are tall glyphs that disrupt line rhythm when rendered at body size. Use the `_accText()` helper in `tuner_screen.dart` to render them at 68% size, bottom-aligned. Exception: primary labels and toggle row labels should keep them full size for legibility.
+
 ## Implemented Features
 
 - Real mic pitch detection via `PitchDetectionService` (stability-gated, octave-corrected, hysteresis)
