@@ -132,7 +132,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsNoteDisplayLabel.
   ///
   /// In en, this message translates to:
-  /// **'Note display'**
+  /// **'Note'**
   String get settingsNoteDisplayLabel;
 
   /// No description provided for @settingsAlwaysShowFlatsToggle.
@@ -174,7 +174,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsA4CalibStandard.
   ///
   /// In en, this message translates to:
-  /// **'Standard = 440 Hz'**
+  /// **'Reset to 440 Hz'**
   String get settingsA4CalibStandard;
 
   /// No description provided for @harpTypeLapHarp.
@@ -230,6 +230,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Language'**
   String get settingsLanguageLabel;
+
+  /// No description provided for @selectYourInstrument.
+  ///
+  /// In en, this message translates to:
+  /// **'Select your instrument'**
+  String get selectYourInstrument;
 
   /// No description provided for @tunerStartBtn.
   ///
@@ -326,6 +332,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Microphone unavailable: {message}'**
   String errorMicUnavailableMsg(String message);
+
+  /// No description provided for @harpTypeLeverHarpSubtitleFmt.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} strings · A♭1–{topNote} · E♭ maj'**
+  String harpTypeLeverHarpSubtitleFmt(int count, String topNote);
+
+  /// No description provided for @settingsLeverStringCountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'String count'**
+  String get settingsLeverStringCountLabel;
+
+  /// No description provided for @settingsLeverStringCountValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} strings'**
+  String settingsLeverStringCountValue(int count);
 }
 
 class _AppLocalizationsDelegate

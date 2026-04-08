@@ -4,14 +4,14 @@
   "settingsTitle": "Einstellungen",
   "settingsInstrumentLabel": "Instrument",
   "settingsInstrumentNone": "Keines",
-  "settingsNoteDisplayLabel": "Notenname",
+  "settingsNoteDisplayLabel": "Note",
   "settingsAlwaysShowFlatsToggle": "♭  Immer b-Vorzeichen",
   "settingsAlwaysShowFlatsHint": "z.B. B♭ statt A♯",
   "settingsOctaveNumberLabel": "Oktavnummer",
   "settingsShowOctaveToggle": "Oktavnummer anzeigen",
   "settingsShowOctaveHint": "z.B. A4 statt A",
   "settingsA4CalibLabel": "A4-Referenz",
-  "settingsA4CalibStandard": "Standard = 440 Hz",
+  "settingsA4CalibStandard": "Auf 440 Hz zurücksetzen",
   "harpTypeLapHarp": "Schoßharfe",
   "harpTypeLapHarpSubtitle": "15 Saiten · C4–C6",
   "harpTypeLeverHarp": "Hakenharfe",
@@ -21,6 +21,7 @@
   "settingsDarkModeToggle": "Dunkelmodus",
   "settingsThemeLabel": "Design",
   "settingsLanguageLabel": "Sprache",
+  "selectYourInstrument": "Instrument auswählen",
   "tunerStartBtn": "Stimmen starten",
   "tunerStopBtn": "Stopp",
   "gaugeListeningMsg": "Auf Ton hören…",
@@ -41,6 +42,22 @@
     "placeholders": {
       "message": {
         "type": "String"
+      }
+    }
+  },
+  "harpTypeLeverHarpSubtitleFmt": "{count} Saiten · A♭1–{topNote} · Es-Dur",
+  "@harpTypeLeverHarpSubtitleFmt": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "topNote": { "type": "String" }
+    }
+  },
+  "settingsLeverStringCountLabel": "Saitenanzahl",
+  "settingsLeverStringCountValue": "{count} Saiten",
+  "@settingsLeverStringCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   }

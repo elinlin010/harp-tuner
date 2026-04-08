@@ -4,14 +4,14 @@
   "settingsTitle": "Settings",
   "settingsInstrumentLabel": "Instrument",
   "settingsInstrumentNone": "None",
-  "settingsNoteDisplayLabel": "Note display",
+  "settingsNoteDisplayLabel": "Note",
   "settingsAlwaysShowFlatsToggle": "♭  Always show flats",
   "settingsAlwaysShowFlatsHint": "e.g. B♭ instead of A♯",
   "settingsOctaveNumberLabel": "Octave number",
   "settingsShowOctaveToggle": "Show octave number",
   "settingsShowOctaveHint": "e.g. A4 instead of A",
   "settingsA4CalibLabel": "A4 Reference",
-  "settingsA4CalibStandard": "Standard = 440 Hz",
+  "settingsA4CalibStandard": "Reset to 440 Hz",
   "harpTypeLapHarp": "Lap Harp",
   "harpTypeLapHarpSubtitle": "15 strings · C4–C6",
   "harpTypeLeverHarp": "Lever Harp",
@@ -21,6 +21,7 @@
   "settingsDarkModeToggle": "Dark mode",
   "settingsThemeLabel": "Theme",
   "settingsLanguageLabel": "Language",
+  "selectYourInstrument": "Select your instrument",
   "tunerStartBtn": "Start Tuning",
   "tunerStopBtn": "Stop",
   "gaugeListeningMsg": "Listening for a note…",
@@ -41,6 +42,22 @@
     "placeholders": {
       "message": {
         "type": "String"
+      }
+    }
+  },
+  "harpTypeLeverHarpSubtitleFmt": "{count} strings · A♭1–{topNote} · E♭ maj",
+  "@harpTypeLeverHarpSubtitleFmt": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "topNote": { "type": "String" }
+    }
+  },
+  "settingsLeverStringCountLabel": "String count",
+  "settingsLeverStringCountValue": "{count} strings",
+  "@settingsLeverStringCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   }

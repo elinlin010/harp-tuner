@@ -21,7 +21,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsInstrumentNone => 'Keines';
 
   @override
-  String get settingsNoteDisplayLabel => 'Notenname';
+  String get settingsNoteDisplayLabel => 'Note';
 
   @override
   String get settingsAlwaysShowFlatsToggle => '♭  Immer b-Vorzeichen';
@@ -42,7 +42,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsA4CalibLabel => 'A4-Referenz';
 
   @override
-  String get settingsA4CalibStandard => 'Standard = 440 Hz';
+  String get settingsA4CalibStandard => 'Auf 440 Hz zurücksetzen';
 
   @override
   String get harpTypeLapHarp => 'Schoßharfe';
@@ -70,6 +70,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsLanguageLabel => 'Sprache';
+
+  @override
+  String get selectYourInstrument => 'Instrument auswählen';
 
   @override
   String get tunerStartBtn => 'Stimmen starten';
@@ -120,5 +123,18 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String errorMicUnavailableMsg(String message) {
     return 'Mikrofon nicht verfügbar: $message';
+  }
+
+  @override
+  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
+    return '$count Saiten · A♭1–$topNote · Es-Dur';
+  }
+
+  @override
+  String get settingsLeverStringCountLabel => 'Saitenanzahl';
+
+  @override
+  String settingsLeverStringCountValue(int count) {
+    return '$count Saiten';
   }
 }

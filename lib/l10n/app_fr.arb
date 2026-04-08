@@ -4,14 +4,14 @@
   "settingsTitle": "Paramètres",
   "settingsInstrumentLabel": "Instrument",
   "settingsInstrumentNone": "Aucun",
-  "settingsNoteDisplayLabel": "Affichage des notes",
+  "settingsNoteDisplayLabel": "Note",
   "settingsAlwaysShowFlatsToggle": "♭  Toujours en bémol",
   "settingsAlwaysShowFlatsHint": "ex. B♭ au lieu de A♯",
   "settingsOctaveNumberLabel": "Numéro d'octave",
   "settingsShowOctaveToggle": "Afficher l'octave",
   "settingsShowOctaveHint": "ex. A4 au lieu de A",
   "settingsA4CalibLabel": "Référence A4",
-  "settingsA4CalibStandard": "Standard = 440 Hz",
+  "settingsA4CalibStandard": "Réinitialiser à 440 Hz",
   "harpTypeLapHarp": "Harpe de voyage",
   "harpTypeLapHarpSubtitle": "15 cordes · C4–C6",
   "harpTypeLeverHarp": "Harpe celtique",
@@ -21,6 +21,7 @@
   "settingsDarkModeToggle": "Mode sombre",
   "settingsThemeLabel": "Thème",
   "settingsLanguageLabel": "Langue",
+  "selectYourInstrument": "Choisissez votre instrument",
   "tunerStartBtn": "Accorder",
   "tunerStopBtn": "Arrêter",
   "gaugeListeningMsg": "Écoute d'une note…",
@@ -41,6 +42,22 @@
     "placeholders": {
       "message": {
         "type": "String"
+      }
+    }
+  },
+  "harpTypeLeverHarpSubtitleFmt": "{count} cordes · A♭1–{topNote} · Mi♭ maj",
+  "@harpTypeLeverHarpSubtitleFmt": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "topNote": { "type": "String" }
+    }
+  },
+  "settingsLeverStringCountLabel": "Nombre de cordes",
+  "settingsLeverStringCountValue": "{count} cordes",
+  "@settingsLeverStringCountValue": {
+    "placeholders": {
+      "count": {
+        "type": "int"
       }
     }
   }
