@@ -62,21 +62,24 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     final text = harp == HarpType.pedalHarp
         ? l10n.reminderPedalSnack
         : l10n.reminderLeverSnack;
+    // textPrimary is dark on light themes, light on dark themes —
+    // so the snackbar always contrasts against the screen background.
+    // contentColor (bg) is the inverse: cream on light themes, near-black on dark.
+    // actionColor: sharp (warm amber/coral) on light bg; surfaceRim (muted dark)
+    // on the inverted-light dark-theme snackbar — both clear at ≥ 3:1.
     final isLight = theme.brightness == Brightness.light;
-    final bgColor = isLight ? theme.textPrimary : theme.surfaceHi;
-    final contentColor = isLight ? theme.bg : theme.textPrimary;
     messenger.showSnackBar(
       SnackBar(
-        backgroundColor: bgColor,
+        backgroundColor: theme.textPrimary,
         behavior: SnackBarBehavior.floating,
         shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(10)),
         ),
-        content: Text(text, style: theme.sans(14, color: contentColor)),
+        content: Text(text, style: theme.sans(14, color: theme.bg)),
         duration: const Duration(days: 365),
         action: SnackBarAction(
           label: l10n.reminderDismissBtn,
-          textColor: theme.sharp,
+          textColor: isLight ? theme.sharp : theme.surfaceRim,
           onPressed: messenger.hideCurrentSnackBar,
         ),
       ),
@@ -119,12 +122,23 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
       final harpChangedWhileListening = next.isListening &&
           prev?.selectedHarp != next.selectedHarp &&
           next.selectedHarp != null;
+      final reminderTurnedOff =
+          (prev?.showTuningReminder ?? true) && !next.showTuningReminder;
       if ((startedListening || harpChangedWhileListening) &&
           next.showTuningReminder &&
           next.selectedHarp != null) {
         _showTuningReminderSnackBar(next.selectedHarp!, theme);
-      } else if (stoppedListening) {
+      } else if (stoppedListening || (reminderTurnedOff && next.isListening)) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    });
+
+    ref.listen<TunerThemeData>(tunerThemeProvider, (_, nextTheme) {
+      final tuner = ref.read(tunerProvider);
+      if (tuner.isListening &&
+          tuner.showTuningReminder &&
+          tuner.selectedHarp != null) {
+        _showTuningReminderSnackBar(tuner.selectedHarp!, nextTheme);
       }
     });
 
