@@ -73,7 +73,7 @@ lib/
 - Accidentals in subtitles: use `_accText()` helper in `tuner_screen.dart` — renders ♭/♯ at 68% size, bottom-aligned, using `WidgetSpan` + `PlaceholderAlignment.bottom`. Do NOT apply to primary labels (toggle row labels, section headers).
 - Touch targets: wrap icons in `GestureDetector(behavior: HitTestBehavior.opaque)` for reliable hit testing on small targets. Add `Semantics(button: true, label: ...)` for accessibility.
 
-**Design system:** Dark walnut palette defined in `AppColors`. Fonts: Cormorant Garamond (display) + Cutive Mono (numbers/readouts). All colors/text styles come from `app_theme.dart` — do not use hard-coded colors. Theme is runtime-switchable via `tunerThemeProvider`.
+**Design system:** See `DESIGN.md` for the full design system. All colors/text styles come from `app_theme.dart` — do not use hard-coded colors. Use `TunerThemeData.sans()` and `TunerThemeData.label()` for all text; never hard-code `TextStyle` outside the theme. Theme is runtime-switchable via `tunerThemeProvider`.
 
 ## gstack Skills
 
@@ -108,6 +108,13 @@ Available skills:
 
 If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup` to rebuild.
 
+## Design System
+
+Always read `DESIGN.md` before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match `DESIGN.md`.
+
 ## Development Principles
 
 **i18n is non-negotiable.** Every user-visible string must live in the ARB files — never hardcode text in widgets. When adding any feature that shows text: write the ARB key first in all 6 locales (en, de, fr, it, zh, zh_TW), then use `l10n.yourKey` in the widget. Parametric keys (e.g. `{count} strings`) need typed placeholder metadata in the `@key` block.
@@ -126,8 +133,14 @@ If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup` to 
 
 ## Implemented Features
 
-- Real mic pitch detection via `PitchDetectionService` (stability-gated, octave-corrected, hysteresis)
-- Reference tone playback via `TonePlayerService` (sine wave, mic suppression window after playback)
-- Microphone permission via `permission_handler`
-- Reference mode: tap a string to hear it and tune to it; gauge shows cents relative to that string
-- Settings: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language
+All core features are shipped:
+
+- **Mic pitch detection**: `mic_stream` + `pitch_detector_dart` in `PitchDetectionService` (stability-gated, octave-corrected, hysteresis)
+- **Reference tone playback**: 8-layer harp acoustic synthesis in `TonePlayerService`; tones are precomputed and cached when entering reference mode
+- **Microphone permission**: `permission_handler` via a custom iOS method channel (`com.harptuner/mic_permission`) and Android manifest
+- **Reference mode**: tap a string to hear it and tune to it; gauge shows cents relative to that string
+- **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language
+
+## Android Audio Notes
+
+On Android, `AudioRecord` (mic) and `MediaPlayer` (tone) conflict for audio routing: if both are active simultaneously, output is silently routed to the earpiece. The fix in `TunerNotifier.playReferenceString` pauses the mic subscription while the tone plays and restarts it automatically after 2.3 s via `_micRestartTimer`.

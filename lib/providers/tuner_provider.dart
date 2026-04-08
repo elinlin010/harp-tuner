@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../data/harp_presets.dart';
 import '../models/harp_string_model.dart';
 import '../models/harp_type.dart';
 import '../services/pitch_detection_service.dart';
@@ -126,8 +127,13 @@ class TunerNotifier extends StateNotifier<TunerState> {
   String? _challengeNote;
   int _challengeCount = 0;
 
-  // Mic suppression: ignore pitch results briefly after playing a reference
-  // tone so the speaker output doesn't confuse the pitch detector.
+  // On Android, AudioRecord and AudioTrack/MediaPlayer conflict for audio
+  // routing: while the mic is active, speaker output is routed to the earpiece.
+  // We pause the mic during reference tone playback and restart it after.
+  Timer? _micRestartTimer;
+
+  // Mic suppression: ignore pitch results briefly after restarting the mic so
+  // the speaker bleed doesn't confuse the pitch detector.
   DateTime? _suppressUntil;
 
   TunerNotifier() : super(const TunerState()) {
@@ -181,6 +187,11 @@ class TunerNotifier extends StateNotifier<TunerState> {
       clearPitch: true,
     );
 
+    _attachMicSubscription();
+  }
+
+  void _attachMicSubscription() {
+    if (_pitchSub != null) return; // already subscribed — don't create a second one
     _pitchSub = _service.start().listen(
       _onPitchResult,
       onError: (e) async {
@@ -201,6 +212,8 @@ class TunerNotifier extends StateNotifier<TunerState> {
   }
 
   void stopListening() {
+    _micRestartTimer?.cancel();
+    _micRestartTimer = null;
     _pitchSub?.cancel();
     _pitchSub = null;
     _service.stop();
@@ -222,6 +235,14 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
   void clearMicError() {
     state = state.copyWith(clearMicError: true);
+  }
+
+  // ── Tone precomputation ────────────────────────────────────────────────────
+
+  void _precomputeHarpTones(HarpType harp) {
+    final strings = HarpPresets.stringsFor(harp);
+    final freqs = strings.map((s) => s.frequencyAt(state.a4Hz.toDouble())).toList();
+    _tonePlayer.precompute(freqs);
   }
 
   // ── Mode switching ─────────────────────────────────────────────────────────
@@ -246,28 +267,45 @@ class TunerNotifier extends StateNotifier<TunerState> {
         tunerMode: TunerMode.reference,
         clearPitch: true,
       );
+      // Kick off background synthesis for all strings so taps are instant.
+      if (state.selectedHarp != null) _precomputeHarpTones(state.selectedHarp!);
     }
   }
 
   // ── Reference tone playback ────────────────────────────────────────────────
 
   /// Tap a string in reference mode: play its tone and pin it as the tuning
-  /// target. The mic continues listening; pitch results within the suppression
-  /// window are ignored to avoid speaker feedback confusing the detector.
+  /// target.
+  ///
+  /// On Android, AudioRecord and MediaPlayer conflict for audio routing while
+  /// both are active simultaneously — output ends up on the earpiece instead
+  /// of the speaker. To work around this we pause the mic for the duration of
+  /// the tone (2 s) and restart it automatically afterward.
   Future<void> playReferenceString(HarpStringModel string) async {
-    // If the same string is tapped again, replay the tone.
+    // Cancel any pending mic-restart from a previous tap.
+    _micRestartTimer?.cancel();
+    _micRestartTimer = null;
+
     state = state.copyWith(
       referenceString: string,
       isPlayingTone: true,
       clearPitch: true,
     );
-    _suppressUntil = DateTime.now().add(const Duration(milliseconds: 500));
 
     // Reset detection history so the next note gets a clean reading.
     _freqHistory.clear();
+    _silenceCount = 0;
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
+
+    // Pause the mic while the tone plays so Android routes audio to speaker.
+    final wasMicActive = _pitchSub != null;
+    if (wasMicActive) {
+      _pitchSub!.cancel();
+      _pitchSub = null;
+      _service.stop();
+    }
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
     try {
@@ -276,6 +314,23 @@ class TunerNotifier extends StateNotifier<TunerState> {
       debugPrint('TunerNotifier: failed to play reference tone: $e');
     } finally {
       if (mounted) state = state.copyWith(isPlayingTone: false);
+    }
+
+    // Restart mic 2.3 s after playback begins (tone is 2 s; small buffer for
+    // the tail). If the user taps stop tuning before the timer fires,
+    // stopListening() cancels it and isListening → false so the callback
+    // becomes a no-op.
+    // Use state.isListening (intent) not wasMicActive (actual) — on rapid double-tap
+    // the second call sees _pitchSub == null (already stopped by first tap), so
+    // wasMicActive would be false and no restart would ever be scheduled.
+    if (state.isListening && mounted) {
+      _micRestartTimer = Timer(const Duration(milliseconds: 2300), () {
+        _micRestartTimer = null;
+        if (!mounted || !state.isListening || _pitchSub != null) return;
+        // Brief suppression so speaker bleed at end of tone doesn't register.
+        _suppressUntil = DateTime.now().add(const Duration(milliseconds: 300));
+        _attachMicSubscription();
+      });
     }
   }
 
@@ -366,6 +421,8 @@ class TunerNotifier extends StateNotifier<TunerState> {
     } else {
       // Harp selected — always enable preferFlats (B♭ convention)
       state = state.copyWith(selectedHarp: harp, preferFlats: true);
+      // If already in reference mode, precompute tones for the new harp.
+      if (state.tunerMode == TunerMode.reference) _precomputeHarpTones(harp);
     }
     try {
       _prefs ??= await SharedPreferences.getInstance();
@@ -521,6 +578,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
 
   @override
   void dispose() {
+    _micRestartTimer?.cancel();
     _pitchSub?.cancel();
     _service.stop();
     _tonePlayer.dispose();
