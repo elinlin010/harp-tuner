@@ -23,6 +23,7 @@ class TunerState {
   final bool preferFlats;
   final bool showOctave;
   final int a4Hz;
+  final int leverStringCount;
   final HarpType? selectedHarp;
   final TunerMode tunerMode;
   final HarpStringModel? referenceString;
@@ -39,6 +40,7 @@ class TunerState {
     this.preferFlats = false,
     this.showOctave = false,
     this.a4Hz = 440,
+    this.leverStringCount = 34,
     this.selectedHarp,
     this.tunerMode = TunerMode.auto,
     this.referenceString,
@@ -56,6 +58,7 @@ class TunerState {
     bool? preferFlats,
     bool? showOctave,
     int? a4Hz,
+    int? leverStringCount,
     HarpType? selectedHarp,
     bool clearSelectedHarp = false,
     TunerMode? tunerMode,
@@ -76,6 +79,7 @@ class TunerState {
       preferFlats: preferFlats ?? this.preferFlats,
       showOctave: showOctave ?? this.showOctave,
       a4Hz: a4Hz ?? this.a4Hz,
+      leverStringCount: leverStringCount ?? this.leverStringCount,
       selectedHarp: clearSelectedHarp ? null : (selectedHarp ?? this.selectedHarp),
       tunerMode: tunerMode ?? this.tunerMode,
       referenceString: clearReferenceString ? null : (referenceString ?? this.referenceString),
@@ -106,12 +110,15 @@ class TunerNotifier extends StateNotifier<TunerState> {
   static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
   static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
-  static const _kA4HzKey       = 'tuner_a4_hz';
-  static const _kPreferFlatsKey = 'tuner_prefer_flats';
-  static const _kShowOctaveKey  = 'tuner_show_octave';
-  static const _kHarpTypeKey    = 'tuner_harp_type';
+  static const _kA4HzKey              = 'tuner_a4_hz';
+  static const _kPreferFlatsKey       = 'tuner_prefer_flats';
+  static const _kShowOctaveKey        = 'tuner_show_octave';
+  static const _kHarpTypeKey          = 'tuner_harp_type';
+  static const _kLeverStringCountKey  = 'tuner_lever_string_count';
   static const _kA4HzMin = 430;
   static const _kA4HzMax = 450;
+  static const _kLeverStringMin = 19;
+  static const _kLeverStringMax = 40;
 
   final _freqHistory = <double>[];
   int _silenceCount = 0;
@@ -130,10 +137,11 @@ class TunerNotifier extends StateNotifier<TunerState> {
   Future<void> _loadPrefs() async {
     try {
       _prefs = await SharedPreferences.getInstance();
-      final savedA4         = _prefs!.getInt(_kA4HzKey);
-      final savedFlats      = _prefs!.getBool(_kPreferFlatsKey);
-      final savedOctave     = _prefs!.getBool(_kShowOctaveKey);
-      final savedHarpType   = _prefs!.getString(_kHarpTypeKey);
+      final savedA4          = _prefs!.getInt(_kA4HzKey);
+      final savedFlats       = _prefs!.getBool(_kPreferFlatsKey);
+      final savedOctave      = _prefs!.getBool(_kShowOctaveKey);
+      final savedHarpType    = _prefs!.getString(_kHarpTypeKey);
+      final savedLeverCount  = _prefs!.getInt(_kLeverStringCountKey);
 
       HarpType? harpType;
       if (savedHarpType != null) {
@@ -147,6 +155,9 @@ class TunerNotifier extends StateNotifier<TunerState> {
         preferFlats: savedFlats ?? state.preferFlats,
         showOctave: savedOctave ?? state.showOctave,
         selectedHarp: harpType,
+        leverStringCount: savedLeverCount != null
+            ? savedLeverCount.clamp(_kLeverStringMin, _kLeverStringMax)
+            : state.leverStringCount,
       );
     } catch (e) {
       debugPrint('TunerNotifier: failed to load prefs: $e');
@@ -328,6 +339,17 @@ class TunerNotifier extends StateNotifier<TunerState> {
       await _prefs!.setInt(_kA4HzKey, clamped);
     } catch (e) {
       debugPrint('TunerNotifier: failed to save a4Hz: $e');
+    }
+  }
+
+  Future<void> setLeverStringCount(int count) async {
+    final clamped = count.clamp(_kLeverStringMin, _kLeverStringMax);
+    state = state.copyWith(leverStringCount: clamped);
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      await _prefs!.setInt(_kLeverStringCountKey, clamped);
+    } catch (e) {
+      debugPrint('TunerNotifier: failed to save leverStringCount: $e');
     }
   }
 
