@@ -57,7 +57,7 @@ lib/
 - Lever harp: 34 strings, A1–F6 diatonic
 - Pedal harp: 47 strings, C1–G7 diatonic (standard concert tuning)
 
-**Design system:** Dark walnut palette defined in `AppColors`. Fonts: Cormorant Garamond (display) + Cutive Mono (numbers/readouts). All colors/text styles come from `app_theme.dart` — do not use hard-coded colors.
+**Design system:** See `DESIGN.md` for the full design system. All colors/text styles come from `app_theme.dart` — do not use hard-coded colors. Use `TunerThemeData.sans()` and `TunerThemeData.label()` for all text; never hard-code `TextStyle` outside the theme.
 
 ## gstack Skills
 
@@ -91,6 +91,13 @@ Available skills:
 - `/gstack-upgrade` — Upgrade gstack to latest version
 
 If gstack skills aren't working, run `cd ~/.claude/skills/gstack && ./setup` to rebuild.
+
+## Design System
+
+Always read `DESIGN.md` before making any visual or UI decisions.
+All font choices, colors, spacing, and aesthetic direction are defined there.
+Do not deviate without explicit user approval.
+In QA mode, flag any code that doesn't match `DESIGN.md`.
 
 ## Implemented Features
 

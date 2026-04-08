@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.0.4+4] - 2026-04-07
+
+### Changed
+- App renamed from "Harp Tuner" to "Harpie" across Android manifest, iOS Info.plist, and app title
+
 ## [1.0.3+4] - 2026-03-26
 
 ### Fixed
