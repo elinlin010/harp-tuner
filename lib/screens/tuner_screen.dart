@@ -63,15 +63,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         ? l10n.reminderPedalSnack
         : l10n.reminderLeverSnack;
 
-    // Light themes (Linen, Milk): dark-inverted snackbar, sharp (amber) action.
-    //
-    // Dark themes: split by whether sharp achieves ≥ 3:1 on the inverted
-    // (textPrimary) background:
-    //   • Blueprint: textPrimary ≈ #E8F4FF, sharp ≈ #FF8050 → 3.44:1 ✓
-    //     → inverted snackbar + sharp (coral) action.
-    //   • Void/Phosphor: textPrimary too luminous (≥ 0.78), sharp only ~1.9–2.5:1 ✗
-    //     → keep dark snackbar (surfaceHi) + inTune accent; add inTune border ring
-    //     so the card reads against the pure-black/near-black screen.
+    // Light themes (Linen, Milk): inverted snackbar — textPrimary bg, sharp action.
+    // Dark themes (Blueprint, Void, Phosphor): dark surfaceHi bg, inTune action +
+    // inTune border ring so the card is legible against near-black screens.
     final Color bgColor;
     final Color contentColor;
     final Color actionColor;
@@ -82,21 +76,10 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
       contentColor = theme.bg;
       actionColor = theme.sharp;
     } else {
-      final invLum = theme.textPrimary.computeLuminance();
-      final sharpLum = theme.sharp.computeLuminance();
-      final sharpOnInv = (invLum + 0.05) / (sharpLum + 0.05);
-      if (sharpOnInv >= 3.0) {
-        // e.g. Blueprint — inverted light snackbar, coral action
-        bgColor = theme.textPrimary;
-        contentColor = theme.bg;
-        actionColor = theme.sharp;
-      } else {
-        // e.g. Void / Phosphor — dark snackbar, inTune accent + border ring
-        bgColor = theme.surfaceHi;
-        contentColor = theme.textPrimary;
-        actionColor = theme.inTune;
-        accentBorder = theme.inTune;
-      }
+      bgColor = theme.surfaceHi;
+      contentColor = theme.textPrimary;
+      actionColor = theme.inTune;
+      accentBorder = theme.inTune;
     }
 
     messenger.showSnackBar(
@@ -158,7 +141,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
           next.selectedHarp != null;
       final reminderTurnedOff =
           (prev?.showTuningReminder ?? true) && !next.showTuningReminder;
-      if ((startedListening || harpChangedWhileListening) &&
+      final reminderTurnedOn =
+          !(prev?.showTuningReminder ?? true) && next.showTuningReminder;
+      if ((startedListening || harpChangedWhileListening || reminderTurnedOn) &&
           next.showTuningReminder &&
           next.selectedHarp != null) {
         _showTuningReminderSnackBar(next.selectedHarp!, theme);
