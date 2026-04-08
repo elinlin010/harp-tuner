@@ -34,6 +34,7 @@ class TunerState {
   final String? closestNoteName;
   final String? micError;
   final bool isStale;
+  final bool showTuningReminder;
 
   const TunerState({
     this.isListening = false,
@@ -51,6 +52,7 @@ class TunerState {
     this.closestNoteName,
     this.micError,
     this.isStale = false,
+    this.showTuningReminder = true,
   });
 
   TunerState copyWith({
@@ -66,6 +68,7 @@ class TunerState {
     HarpStringModel? referenceString,
     bool clearReferenceString = false,
     bool? isPlayingTone,
+    bool? showTuningReminder,
     double? cents,
     double? detectedHz,
     String? closestNoteName,
@@ -85,6 +88,7 @@ class TunerState {
       tunerMode: tunerMode ?? this.tunerMode,
       referenceString: clearReferenceString ? null : (referenceString ?? this.referenceString),
       isPlayingTone: isPlayingTone ?? this.isPlayingTone,
+      showTuningReminder: showTuningReminder ?? this.showTuningReminder,
       cents: clearPitch ? null : (cents ?? this.cents),
       detectedHz: clearPitch ? null : (detectedHz ?? this.detectedHz),
       closestNoteName:
@@ -116,6 +120,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
   static const _kShowOctaveKey        = 'tuner_show_octave';
   static const _kHarpTypeKey          = 'tuner_harp_type';
   static const _kLeverStringCountKey  = 'tuner_lever_string_count';
+  static const _kShowTuningReminderKey = 'tuner_show_tuning_reminder';
   static const _kA4HzMin = 430;
   static const _kA4HzMax = 450;
   static const _kLeverStringMin = 19;
@@ -143,11 +148,12 @@ class TunerNotifier extends StateNotifier<TunerState> {
   Future<void> _loadPrefs() async {
     try {
       _prefs = await SharedPreferences.getInstance();
-      final savedA4          = _prefs!.getInt(_kA4HzKey);
-      final savedFlats       = _prefs!.getBool(_kPreferFlatsKey);
-      final savedOctave      = _prefs!.getBool(_kShowOctaveKey);
-      final savedHarpType    = _prefs!.getString(_kHarpTypeKey);
-      final savedLeverCount  = _prefs!.getInt(_kLeverStringCountKey);
+      final savedA4             = _prefs!.getInt(_kA4HzKey);
+      final savedFlats          = _prefs!.getBool(_kPreferFlatsKey);
+      final savedOctave         = _prefs!.getBool(_kShowOctaveKey);
+      final savedHarpType       = _prefs!.getString(_kHarpTypeKey);
+      final savedLeverCount     = _prefs!.getInt(_kLeverStringCountKey);
+      final savedShowReminder   = _prefs!.getBool(_kShowTuningReminderKey);
 
       HarpType? harpType;
       if (savedHarpType != null) {
@@ -161,6 +167,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
         preferFlats: savedFlats ?? state.preferFlats,
         showOctave: savedOctave ?? state.showOctave,
         selectedHarp: harpType,
+        showTuningReminder: savedShowReminder ?? state.showTuningReminder,
         leverStringCount: savedLeverCount != null
             ? savedLeverCount.clamp(_kLeverStringMin, _kLeverStringMax)
             : state.leverStringCount,
@@ -405,6 +412,17 @@ class TunerNotifier extends StateNotifier<TunerState> {
       await _prefs!.setInt(_kLeverStringCountKey, clamped);
     } catch (e) {
       debugPrint('TunerNotifier: failed to save leverStringCount: $e');
+    }
+  }
+
+  Future<void> toggleShowTuningReminder() async {
+    final newVal = !state.showTuningReminder;
+    state = state.copyWith(showTuningReminder: newVal);
+    try {
+      _prefs ??= await SharedPreferences.getInstance();
+      await _prefs!.setBool(_kShowTuningReminderKey, newVal);
+    } catch (e) {
+      debugPrint('TunerNotifier: failed to save showTuningReminder: $e');
     }
   }
 

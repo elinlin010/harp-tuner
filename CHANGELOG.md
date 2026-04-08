@@ -2,6 +2,17 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.0.5+5] - 2026-04-09
+
+### Added
+- Tuning reminder: when the tuner starts listening, a snackbar prompts pedal harp users to set all pedals to the flat position and lever harp users to disengage all levers before tuning. The reminder persists until dismissed with "Got it" or the tuner stops.
+- Settings toggle: "Show tuning reminder" — disabling it hides the snackbar immediately if it's active; re-enabling it while the tuner is running brings the reminder back.
+
+### Fixed
+- Reminder snackbar updates its text in real time when you switch harp type while the tuner is active.
+- Reminder snackbar colours are correct across all 5 themes: dark themes use the surfaceHi background with an inTune accent and border ring for clear visibility against near-black screens.
+- German translation typo: "obste Raste" corrected to "oberste Raste".
+
 ## [1.0.4+4] - 2026-04-07
 
 ### Changed

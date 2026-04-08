@@ -350,6 +350,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} strings'**
   String settingsLeverStringCountValue(int count);
+
+  /// No description provided for @settingsShowReminderToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show tuning reminder'**
+  String get settingsShowReminderToggle;
+
+  /// No description provided for @reminderPedalSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Set all pedals to the flat position (top notch) before tuning.'**
+  String get reminderPedalSnack;
+
+  /// No description provided for @reminderLeverSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Set all levers to disengaged (down) before tuning.'**
+  String get reminderLeverSnack;
+
+  /// No description provided for @reminderDismissBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get reminderDismissBtn;
 }
 
 class _AppLocalizationsDelegate

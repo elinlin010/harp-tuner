@@ -136,6 +136,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String settingsLeverStringCountValue(int count) {
     return '$count 弦';
   }
+
+  @override
+  String get settingsShowReminderToggle => '顯示調音提醒';
+
+  @override
+  String get reminderPedalSnack => '調音前請將所有踏板置於降音位置（最上格）。';
+
+  @override
+  String get reminderLeverSnack => '調音前請將所有升降桿放下（關閉狀態）。';
+
+  @override
+  String get reminderDismissBtn => '知道了';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -270,4 +282,16 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String settingsLeverStringCountValue(int count) {
     return '$count 弦';
   }
+
+  @override
+  String get settingsShowReminderToggle => '顯示調音提醒';
+
+  @override
+  String get reminderPedalSnack => '調音前請將所有踏板置於降音位置（最上格）。';
+
+  @override
+  String get reminderLeverSnack => '調音前請將所有升降桿放下（關閉狀態）。';
+
+  @override
+  String get reminderDismissBtn => '知道了';
 }

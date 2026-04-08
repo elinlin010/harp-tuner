@@ -55,6 +55,54 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     super.dispose();
   }
 
+  void _showTuningReminderSnackBar(HarpType harp, TunerThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    final text = harp == HarpType.pedalHarp
+        ? l10n.reminderPedalSnack
+        : l10n.reminderLeverSnack;
+
+    // Light themes (Linen, Milk): inverted snackbar — textPrimary bg, sharp action.
+    // Dark themes (Blueprint, Void, Phosphor): dark surfaceHi bg, inTune action +
+    // inTune border ring so the card is legible against near-black screens.
+    final Color bgColor;
+    final Color contentColor;
+    final Color actionColor;
+    Color? accentBorder;
+
+    if (theme.brightness == Brightness.light) {
+      bgColor = theme.textPrimary;
+      contentColor = theme.bg;
+      actionColor = theme.sharp;
+    } else {
+      bgColor = theme.surfaceHi;
+      contentColor = theme.textPrimary;
+      actionColor = theme.inTune;
+      accentBorder = theme.inTune;
+    }
+
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: bgColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          side: accentBorder != null
+              ? BorderSide(color: accentBorder, width: 1.5)
+              : BorderSide.none,
+        ),
+        content: Text(text, style: theme.sans(14, color: contentColor)),
+        duration: const Duration(days: 365),
+        action: SnackBarAction(
+          label: l10n.reminderDismissBtn,
+          textColor: actionColor,
+          onPressed: messenger.hideCurrentSnackBar,
+        ),
+      ),
+    );
+  }
+
   HarpStringModel? _closestString(
       List<HarpStringModel> strings, double? hz, int a4Hz) {
     if (hz == null || strings.isEmpty) return null;
@@ -84,6 +132,34 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   Widget build(BuildContext context) {
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
+
+    ref.listen<TunerState>(tunerProvider, (prev, next) {
+      final startedListening = !(prev?.isListening ?? false) && next.isListening;
+      final stoppedListening = (prev?.isListening ?? false) && !next.isListening;
+      final harpChangedWhileListening = next.isListening &&
+          prev?.selectedHarp != next.selectedHarp &&
+          next.selectedHarp != null;
+      final reminderTurnedOff =
+          (prev?.showTuningReminder ?? true) && !next.showTuningReminder;
+      final reminderTurnedOn =
+          !(prev?.showTuningReminder ?? true) && next.showTuningReminder;
+      if ((startedListening || harpChangedWhileListening || reminderTurnedOn) &&
+          next.showTuningReminder &&
+          next.selectedHarp != null) {
+        _showTuningReminderSnackBar(next.selectedHarp!, theme);
+      } else if (stoppedListening || (reminderTurnedOff && next.isListening)) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+    });
+
+    ref.listen<TunerThemeData>(tunerThemeProvider, (_, nextTheme) {
+      final tuner = ref.read(tunerProvider);
+      if (tuner.isListening &&
+          tuner.showTuningReminder &&
+          tuner.selectedHarp != null) {
+        _showTuningReminderSnackBar(tuner.selectedHarp!, nextTheme);
+      }
+    });
 
     final harpStrings = tuner.selectedHarp != null
         ? HarpPresets.stringsFor(tuner.selectedHarp!, leverStringCount: tuner.leverStringCount)
@@ -357,6 +433,18 @@ class _SettingsSheet extends ConsumerWidget {
                 theme: theme,
               ),
             ],
+          ],
+
+          if (tuner.selectedHarp != null) ...[
+            _SheetSwitchRow(
+              label: l10n.settingsShowReminderToggle,
+              value: tuner.showTuningReminder,
+              onToggle: () => ref
+                  .read(tunerProvider.notifier)
+                  .toggleShowTuningReminder(),
+              theme: theme,
+              animDuration: animDuration,
+            ),
           ],
 
           const SizedBox(height: 20),

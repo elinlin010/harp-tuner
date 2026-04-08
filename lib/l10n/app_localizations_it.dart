@@ -137,4 +137,18 @@ class AppLocalizationsIt extends AppLocalizations {
   String settingsLeverStringCountValue(int count) {
     return '$count corde';
   }
+
+  @override
+  String get settingsShowReminderToggle => 'Mostra promemoria accordatura';
+
+  @override
+  String get reminderPedalSnack =>
+      'Porta tutti i pedali in posizione bemolle (tacca superiore) prima di accordare.';
+
+  @override
+  String get reminderLeverSnack =>
+      'Disattiva tutte le leve (verso il basso) prima di accordare.';
+
+  @override
+  String get reminderDismissBtn => 'Capito';
 }

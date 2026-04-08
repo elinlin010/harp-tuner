@@ -1,5 +1,16 @@
 # TODOS
 
+## Chinese copywriting adjustment
+- Lever harp in Chinese is 撥鍵豎琴
+- lever is 撥鍵
+- The snackbar hint:
+1. 調音前把踏板放至最上格 (降音位)
+2. 調音前把撥鍵放下來
+
+## Note range when changing the string count:
+-the starting note will not be the same.
+-40 strings: A6 to E1
+
 ## Audio
 
 ### Real mic pitch detection

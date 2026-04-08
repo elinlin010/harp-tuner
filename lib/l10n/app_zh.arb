@@ -60,5 +60,9 @@
         "type": "int"
       }
     }
-  }
+  },
+  "settingsShowReminderToggle": "顯示調音提醒",
+  "reminderPedalSnack": "調音前請將所有踏板置於降音位置（最上格）。",
+  "reminderLeverSnack": "調音前請將所有升降桿放下（關閉狀態）。",
+  "reminderDismissBtn": "知道了"
 }
