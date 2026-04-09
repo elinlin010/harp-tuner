@@ -51,7 +51,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get harpTypeLapHarpSubtitle => '15 弦 · C4–C6';
 
   @override
-  String get harpTypeLeverHarp => '槓桿豎琴';
+  String get harpTypeLeverHarp => '撥鍵豎琴';
 
   @override
   String get harpTypeLeverHarpSubtitle => '34 弦 · A♭1–F6 · 降E大調';
@@ -125,8 +125,12 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
-    return '$count 弦 · A♭1–$topNote · 降E大調';
+  String harpTypeLeverHarpSubtitleFmt(
+    int count,
+    String bottomNote,
+    String topNote,
+  ) {
+    return '$count 弦 · $bottomNote–$topNote · 降E大調';
   }
 
   @override
@@ -141,10 +145,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsShowReminderToggle => '顯示調音提醒';
 
   @override
-  String get reminderPedalSnack => '調音前請將所有踏板置於降音位置（最上格）。';
+  String get reminderPedalSnack => '調音前把踏板放至最上格（降音位）。';
 
   @override
-  String get reminderLeverSnack => '調音前請將所有升降桿放下（關閉狀態）。';
+  String get reminderLeverSnack => '調音前把撥鍵放下來。';
 
   @override
   String get reminderDismissBtn => '知道了';
@@ -197,7 +201,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get harpTypeLapHarpSubtitle => '15 弦 · C4–C6';
 
   @override
-  String get harpTypeLeverHarp => '槓桿豎琴';
+  String get harpTypeLeverHarp => '撥鍵豎琴';
 
   @override
   String get harpTypeLeverHarpSubtitle => '34 弦 · A♭1–F6 · 降E大調';
@@ -271,8 +275,12 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
-    return '$count 弦 · A♭1–$topNote · 降E大調';
+  String harpTypeLeverHarpSubtitleFmt(
+    int count,
+    String bottomNote,
+    String topNote,
+  ) {
+    return '$count 弦 · $bottomNote–$topNote · 降E大調';
   }
 
   @override
@@ -287,10 +295,10 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get settingsShowReminderToggle => '顯示調音提醒';
 
   @override
-  String get reminderPedalSnack => '調音前請將所有踏板置於降音位置（最上格）。';
+  String get reminderPedalSnack => '調音前把踏板放至最上格（降音位）。';
 
   @override
-  String get reminderLeverSnack => '調音前請將所有升降桿放下（關閉狀態）。';
+  String get reminderLeverSnack => '調音前把撥鍵放下來。';
 
   @override
   String get reminderDismissBtn => '知道了';

@@ -126,8 +126,12 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String harpTypeLeverHarpSubtitleFmt(int count, String topNote) {
-    return '$count Saiten · A♭1–$topNote · Es-Dur';
+  String harpTypeLeverHarpSubtitleFmt(
+    int count,
+    String bottomNote,
+    String topNote,
+  ) {
+    return '$count Saiten · $bottomNote–$topNote · Es-Dur';
   }
 
   @override
@@ -143,11 +147,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reminderPedalSnack =>
-      'Alle Pedale vor dem Stimmen in die Flach-Position (oberste Raste) bringen.';
+      'Vor dem Stimmen alle Pedale in die Flach-Position (oberste Raste) bringen.';
 
   @override
   String get reminderLeverSnack =>
-      'Alle Haken vor dem Stimmen aushaken (nach unten) bringen.';
+      'Vor dem Stimmen alle Haken aushaken (nach unten).';
 
   @override
   String get reminderDismissBtn => 'Verstanden';

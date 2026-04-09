@@ -2,6 +2,13 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.0.6+6] - 2026-04-09
+
+### Changed
+- Lever harp string range is now treble-anchored: the top string is always E♭7 and the bass end varies with string count (40 strings → A♭1–E♭7, 34 strings → G2–E♭7, 19 strings → A♭4–E♭7). The subtitle in the harp selector and settings now shows the actual bottom note for the selected count.
+- Chinese name for lever harp corrected to 撥鍵豎琴 (was 槓桿豎琴) in zh and zh_TW.
+- Tuning reminder snackbar reworded in all 6 locales to lead with "Before tuning, …" structure for clearer action framing.
+
 ## [1.0.5+5] - 2026-04-09
 
 ### Added

@@ -49,6 +49,40 @@ void main() {
         }
       }
     });
+
+    test('treble end is always E♭7 regardless of count', () {
+      for (final count in [19, 25, 34, 40]) {
+        final strings = HarpPresets.leverHarpWithCount(count);
+        final top = strings.last;
+        expect(top.note, NoteName.e, reason: 'top note should be E (♭)');
+        expect(top.octave, 7, reason: 'top octave should be 7');
+        expect(top.semitoneAdjust, -1, reason: 'top note should be flat');
+      }
+    });
+
+    test('full range (40) starts at A♭1', () {
+      final strings = HarpPresets.leverHarpWithCount(40);
+      final bottom = strings.first;
+      expect(bottom.note, NoteName.a);
+      expect(bottom.octave, 1);
+      expect(bottom.semitoneAdjust, -1);
+    });
+
+    test('default range (34) starts at G2', () {
+      final strings = HarpPresets.leverHarpWithCount(34);
+      final bottom = strings.first;
+      expect(bottom.note, NoteName.g);
+      expect(bottom.octave, 2);
+      expect(bottom.semitoneAdjust, 0);
+    });
+
+    test('minimum range (19) starts at A♭4', () {
+      final strings = HarpPresets.leverHarpWithCount(19);
+      final bottom = strings.first;
+      expect(bottom.note, NoteName.a);
+      expect(bottom.octave, 4);
+      expect(bottom.semitoneAdjust, -1);
+    });
   });
 
   group('HarpPresets.stringsFor', () {

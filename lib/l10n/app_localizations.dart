@@ -336,8 +336,12 @@ abstract class AppLocalizations {
   /// No description provided for @harpTypeLeverHarpSubtitleFmt.
   ///
   /// In en, this message translates to:
-  /// **'{count} strings · A♭1–{topNote} · E♭ maj'**
-  String harpTypeLeverHarpSubtitleFmt(int count, String topNote);
+  /// **'{count} strings · {bottomNote}–{topNote} · E♭ maj'**
+  String harpTypeLeverHarpSubtitleFmt(
+    int count,
+    String bottomNote,
+    String topNote,
+  );
 
   /// No description provided for @settingsLeverStringCountLabel.
   ///
@@ -360,13 +364,13 @@ abstract class AppLocalizations {
   /// No description provided for @reminderPedalSnack.
   ///
   /// In en, this message translates to:
-  /// **'Set all pedals to the flat position (top notch) before tuning.'**
+  /// **'Before tuning, set all pedals to the flat position (top notch).'**
   String get reminderPedalSnack;
 
   /// No description provided for @reminderLeverSnack.
   ///
   /// In en, this message translates to:
-  /// **'Set all levers to disengaged (down) before tuning.'**
+  /// **'Before tuning, disengage all levers (push down).'**
   String get reminderLeverSnack;
 
   /// No description provided for @reminderDismissBtn.

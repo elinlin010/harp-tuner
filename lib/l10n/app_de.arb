@@ -45,10 +45,11 @@
       }
     }
   },
-  "harpTypeLeverHarpSubtitleFmt": "{count} Saiten · A♭1–{topNote} · Es-Dur",
+  "harpTypeLeverHarpSubtitleFmt": "{count} Saiten · {bottomNote}–{topNote} · Es-Dur",
   "@harpTypeLeverHarpSubtitleFmt": {
     "placeholders": {
       "count": { "type": "int" },
+      "bottomNote": { "type": "String" },
       "topNote": { "type": "String" }
     }
   },
@@ -62,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Stimmhinweis anzeigen",
-  "reminderPedalSnack": "Alle Pedale vor dem Stimmen in die Flach-Position (oberste Raste) bringen.",
-  "reminderLeverSnack": "Alle Haken vor dem Stimmen aushaken (nach unten) bringen.",
+  "reminderPedalSnack": "Vor dem Stimmen alle Pedale in die Flach-Position (oberste Raste) bringen.",
+  "reminderLeverSnack": "Vor dem Stimmen alle Haken aushaken (nach unten).",
   "reminderDismissBtn": "Verstanden"
 }

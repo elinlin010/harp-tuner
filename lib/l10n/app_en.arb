@@ -45,10 +45,11 @@
       }
     }
   },
-  "harpTypeLeverHarpSubtitleFmt": "{count} strings · A♭1–{topNote} · E♭ maj",
+  "harpTypeLeverHarpSubtitleFmt": "{count} strings · {bottomNote}–{topNote} · E♭ maj",
   "@harpTypeLeverHarpSubtitleFmt": {
     "placeholders": {
       "count": { "type": "int" },
+      "bottomNote": { "type": "String" },
       "topNote": { "type": "String" }
     }
   },
@@ -62,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Show tuning reminder",
-  "reminderPedalSnack": "Set all pedals to the flat position (top notch) before tuning.",
-  "reminderLeverSnack": "Set all levers to disengaged (down) before tuning.",
+  "reminderPedalSnack": "Before tuning, set all pedals to the flat position (top notch).",
+  "reminderLeverSnack": "Before tuning, disengage all levers (push down).",
   "reminderDismissBtn": "Got it"
 }

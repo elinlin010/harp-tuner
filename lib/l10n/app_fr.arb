@@ -45,10 +45,11 @@
       }
     }
   },
-  "harpTypeLeverHarpSubtitleFmt": "{count} cordes · A♭1–{topNote} · Mi♭ maj",
+  "harpTypeLeverHarpSubtitleFmt": "{count} cordes · {bottomNote}–{topNote} · Mi♭ maj",
   "@harpTypeLeverHarpSubtitleFmt": {
     "placeholders": {
       "count": { "type": "int" },
+      "bottomNote": { "type": "String" },
       "topNote": { "type": "String" }
     }
   },
@@ -62,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Afficher le rappel d'accord",
-  "reminderPedalSnack": "Mettez toutes les pédales en position bémol (cran supérieur) avant d'accorder.",
-  "reminderLeverSnack": "Désengagez tous les leviers (vers le bas) avant d'accorder.",
+  "reminderPedalSnack": "Avant d'accorder, mettez toutes les pédales en position bémol (cran supérieur).",
+  "reminderLeverSnack": "Avant d'accorder, désengagez tous les leviers (vers le bas).",
   "reminderDismissBtn": "Compris"
 }
