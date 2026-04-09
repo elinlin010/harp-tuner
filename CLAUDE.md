@@ -142,6 +142,22 @@ All core features are shipped:
 - **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language, showTuningReminder
 - **Tuning reminder**: on mic start, a floating snackbar prompts pedal harp users to set pedals to flat and lever harp users to disengage levers. Dismissed via "Got it" or mic stop. Toggle in settings (`showTuningReminder`, persisted via SharedPreferences key `tuner_show_tuning_reminder`).
 
+## Versioning
+
+VERSION file uses Flutter format `MAJOR.MINOR.PATCH+BUILD` (e.g. `1.0.6+6`), matching `pubspec.yaml`. The gstack `/ship` skill may write a 4-digit format — always verify and correct after a ship run. Both `VERSION` and `pubspec.yaml` must be kept in sync.
+
+## Lever Harp String Layout
+
+`HarpPresets.leverHarpWithCount` is treble-anchored: E♭7 is always the top string regardless of count. The bass note varies: 40 strings = A♭1, 34 strings (default) = G2, 19 strings = A♭4. The implementation uses `pool.sublist(pool.length - clamped)` — do not change to `pool.take(count)`, which would bass-anchor instead.
+
+## ARB Placeholder Changes
+
+When adding a new `{placeholder}` to an existing ARB key: update all 6 locale files (app_en.arb, app_de.arb, app_fr.arb, app_it.arb, app_zh.arb, app_zh_TW.arb) before running `flutter gen-l10n`. Missing even one locale causes inconsistent generated Dart method signatures.
+
+## ref.listen Side Effects
+
+When a `ref.listen<TunerState>` callback drives side effects (e.g. showing a snackbar), enumerate all state transitions that should trigger the effect — not just initial activation. Re-enabling a toggle while the relevant feature is already active is a valid state transition that won't fire unless handled explicitly (e.g. a `reminderTurnedOn` case alongside the `listeningStarted` case).
+
 ## Android Audio Notes
 
 On Android, `AudioRecord` (mic) and `MediaPlayer` (tone) conflict for audio routing: if both are active simultaneously, output is silently routed to the earpiece. The fix in `TunerNotifier.playReferenceString` pauses the mic subscription while the tone plays and restarts it automatically after 2.3 s via `_micRestartTimer`.
