@@ -155,7 +155,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
       final savedLeverCount     = _prefs!.getInt(_kLeverStringCountKey);
       final savedShowReminder   = _prefs!.getBool(_kShowTuningReminderKey);
 
-      HarpType? harpType;
+      HarpType? harpType = HarpType.leverHarp; // default on first launch
       if (savedHarpType != null) {
         try {
           harpType = HarpType.values.firstWhere((e) => e.name == savedHarpType);

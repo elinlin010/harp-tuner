@@ -1,4 +1,4 @@
-package com.harptuner.harp_tuner
+package com.career010.harpie
 
 import io.flutter.embedding.android.FlutterActivity
 
