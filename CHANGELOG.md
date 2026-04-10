@@ -2,6 +2,19 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.0.7+7] - 2026-04-10
+
+### Changed
+- App renamed to **Harpie** with a new terracotta harp icon across iOS and Android.
+- Bundle ID set to `com.career010.harpie` for both platforms.
+- Launch screen updated to terracotta background on iOS and Android.
+- App defaults to lever harp on first launch so the tuner is immediately usable without setup.
+
+### Fixed
+- Android adaptive icon now uses the correct per-density foreground layers with terracotta background.
+- Android launch background corrected to use `@color` reference (raw hex was invalid in `<item android:drawable>`).
+- Android `MainActivity` moved to `com.career010.harpie` package to match the updated namespace.
+
 ## [1.0.6+6] - 2026-04-09
 
 ### Changed
