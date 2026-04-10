@@ -26,6 +26,8 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Harpie does not use the camera. This key is required by a linked audio library.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Harpie needs microphone access to detect pitch and help you tune your strings.</string>
 	<key>UIApplicationSceneManifest</key>

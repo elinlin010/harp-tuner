@@ -53,6 +53,12 @@ Configurable 19 to 40 strings, treble-anchored at E♭7. Choose the layout that 
 CALIBRATION
 Set A4 anywhere from 430 Hz to 450 Hz in 1 Hz steps. Preference for flats or sharps. Octave display on or off.
 
+DARK MODE
+Full dark theme support — easy on the eyes in low-light rehearsal spaces and pit orchestras.
+
+TUNING REMINDER
+Before each session, Harpie reminds pedal harp players to set all pedals to flat and lever harp players to disengage all levers — so your starting point is always consistent.
+
 DESIGNED FOR HARPISTS
 Harpie is not a generic chromatic tuner with a harp mode bolted on. Every detail — the string list, the default layouts, the reference tone synthesis — was built around how harpists actually tune.
 
@@ -218,6 +224,12 @@ Configurable 19 to 40 strings, treble-anchored. Choose the layout that matches y
 
 CALIBRATION
 Set A4 anywhere from 430 Hz to 450 Hz in 1 Hz steps. Preference for flats or sharps. Octave display on or off.
+
+DARK MODE
+Full dark theme support — easy on the eyes in low-light rehearsal spaces and pit orchestras.
+
+TUNING REMINDER
+Before each session, Harpie reminds pedal harp players to set all pedals to flat and lever harp players to disengage all levers — so your starting point is always consistent.
 
 DESIGNED FOR HARPISTS
 Harpie is not a generic chromatic tuner with a harp mode bolted on. Every detail — the string list, the default layouts, the reference tone synthesis — was built around how harpists actually tune.
