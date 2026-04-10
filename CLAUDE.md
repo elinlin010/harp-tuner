@@ -161,3 +161,19 @@ When a `ref.listen<TunerState>` callback drives side effects (e.g. showing a sna
 ## Android Audio Notes
 
 On Android, `AudioRecord` (mic) and `MediaPlayer` (tone) conflict for audio routing: if both are active simultaneously, output is silently routed to the earpiece. The fix in `TunerNotifier.playReferenceString` pauses the mic subscription while the tone plays and restarts it automatically after 2.3 s via `_micRestartTimer`.
+
+## Android Resource Rules
+
+`android:drawable` on `<item>` in a `<layer-list>` does NOT accept raw hex colors — AAPT will reject it at build time. Always use a `@color/` reference. Define the color in `android/app/src/main/res/values/colors.xml` first. The splash screen (`launch_background`) and adaptive icon background (`ic_launcher_background`) are separate color entries even if they share the same value.
+
+## Android Package Rename
+
+Changing `namespace` / `applicationId` in `build.gradle.kts` requires three matching updates: (1) the Kotlin source directory path (`kotlin/com/career010/harpie/`), (2) the `package` declaration in `MainActivity.kt`, and (3) all `PRODUCT_BUNDLE_IDENTIFIER` entries in `ios/Runner.xcodeproj/project.pbxproj`. Missing any one causes a runtime `ClassNotFoundException` or a mismatched iOS bundle ID. Package ID changes also wipe SharedPreferences on existing installs (different sandbox) — always default-initialize critical state so the app is usable on first launch.
+
+## Android Adaptive Icon
+
+The adaptive icon requires per-density foreground PNGs in each `drawable-<density>/` folder (not a single file). `mipmap-anydpi-v26/ic_launcher.xml` references `@drawable/ic_launcher_foreground` (resolves by density) and `@color/ic_launcher_background`. If the foreground PNG already has safe-zone padding baked in, do NOT add an `<inset>` in the XML — double-padding shrinks the icon visually. Use designer-provided pre-sized files rather than programmatic background removal, which produces washed-out results.
+
+## iOS PrivacyInfo.xcprivacy
+
+The file at `ios/Runner/PrivacyInfo.xcprivacy` must be added to the Xcode project (drag into Xcode navigator with "Add to target: Runner" checked). Placing the file on disk alone is insufficient — Xcode will not include it in the build without a project reference. This step must be done manually in Xcode.
