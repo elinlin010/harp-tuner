@@ -18,6 +18,7 @@ export PATH="$PATH:$FLUTTER_DIR/bin"
 # Run from repo root (Xcode Cloud sets CI_PRIMARY_REPOSITORY_PATH)
 cd "$CI_PRIMARY_REPOSITORY_PATH"
 flutter pub get
+flutter precache --ios
 
 # ── CocoaPods ─────────────────────────────────────────────────────────────────
 cd ios
