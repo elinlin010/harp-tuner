@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgE" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c84b2f"/>
+      <stop offset="100%" stop-color="#9e3420"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="200" fill="url(#bgE)"/>
+
+  <!-- Musical quarter note: bold stem + chunky tilted notehead -->
+  <!-- Stem -->
+  <rect x="544" y="220" width="46" height="468" rx="23" fill="white"/>
+
+  <!-- Notehead: chunky, tilted filled ellipse -->
+  <ellipse cx="462" cy="700" rx="112" ry="82"
+           transform="rotate(-22, 462, 700)" fill="white"/>
+
+  <!-- Subtle vibration lines to the right of stem — suggesting resonance / pitch -->
+  <path d="M 610 320 Q 636 370 610 420" fill="none" stroke="white" stroke-width="22" stroke-linecap="round" opacity="0.50"/>
+  <path d="M 648 294 Q 686 370 648 446" fill="none" stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.28"/>
+</svg>

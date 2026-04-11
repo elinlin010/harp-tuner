@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgA" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2a1f14"/>
+      <stop offset="100%" stop-color="#1a1108"/>
+    </linearGradient>
+    <linearGradient id="goldA" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f0c060"/>
+      <stop offset="100%" stop-color="#c8883a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="200" fill="url(#bgA)"/>
+
+  <!-- Harp body: outer arch frame -->
+  <!-- Column (left pillar) -->
+  <rect x="268" y="240" width="44" height="560" rx="22" fill="url(#goldA)"/>
+  <!-- Neck (top arch from column to soundboard) -->
+  <path d="M 290 240 Q 290 148 400 130 Q 520 112 580 200" fill="none" stroke="url(#goldA)" stroke-width="40" stroke-linecap="round"/>
+  <!-- Soundboard (right diagonal) -->
+  <path d="M 580 200 L 628 780" fill="none" stroke="url(#goldA)" stroke-width="40" stroke-linecap="round"/>
+  <!-- Base foot (bottom) -->
+  <rect x="248" y="776" width="400" height="44" rx="22" fill="url(#goldA)"/>
+
+  <!-- Strings: 7 lines from neck to soundboard, graduated lengths -->
+  <g stroke="#f5d98a" stroke-width="5" stroke-linecap="round" opacity="0.9">
+    <line x1="336" y1="272" x2="336" y2="778"/>
+    <line x1="378" y1="255" x2="384" y2="778"/>
+    <line x1="420" y1="244" x2="432" y2="778"/>
+    <line x1="462" y1="237" x2="480" y2="778"/>
+    <line x1="504" y1="234" x2="528" y2="778"/>
+    <line x1="544" y1="235" x2="574" y2="778"/>
+    <line x1="580" y1="242" x2="616" y2="778"/>
+  </g>
+</svg>

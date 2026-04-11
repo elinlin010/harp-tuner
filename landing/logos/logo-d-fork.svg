@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgD" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c84b2f"/>
+      <stop offset="100%" stop-color="#9e3420"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="200" fill="url(#bgD)"/>
+
+  <!-- Tuning fork: two prongs + handle -->
+  <!-- Handle (bottom stem) -->
+  <rect x="488" y="570" width="48" height="270" rx="24" fill="white"/>
+
+  <!-- Cross-bar connecting prongs -->
+  <rect x="340" y="490" width="344" height="48" rx="24" fill="white"/>
+
+  <!-- Left prong -->
+  <rect x="340" y="230" width="48" height="308" rx="24" fill="white"/>
+
+  <!-- Right prong -->
+  <rect x="636" y="230" width="48" height="308" rx="24" fill="white"/>
+
+  <!-- Left prong rounded cap -->
+  <ellipse cx="364" cy="230" rx="24" ry="24" fill="white"/>
+
+  <!-- Right prong rounded cap -->
+  <ellipse cx="660" cy="230" rx="24" ry="24" fill="white"/>
+
+  <!-- Vibration lines: small arcs on either side of fork top, suggesting resonance -->
+  <!-- Left side waves -->
+  <path d="M 294 290 Q 274 330 294 370" fill="none" stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 252 266 Q 222 330 252 394" fill="none" stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.30"/>
+
+  <!-- Right side waves -->
+  <path d="M 730 290 Q 750 330 730 370" fill="none" stroke="white" stroke-width="20" stroke-linecap="round" opacity="0.55"/>
+  <path d="M 772 266 Q 802 330 772 394" fill="none" stroke="white" stroke-width="16" stroke-linecap="round" opacity="0.30"/>
+
+  <!-- Handle grip notch (subtle) -->
+  <rect x="488" y="680" width="48" height="10" rx="5" fill="#c84b2f" opacity="0.35"/>
+  <rect x="488" y="710" width="48" height="10" rx="5" fill="#c84b2f" opacity="0.35"/>
+  <rect x="488" y="740" width="48" height="10" rx="5" fill="#c84b2f" opacity="0.35"/>
+</svg>

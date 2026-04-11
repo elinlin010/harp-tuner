@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgH3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c84b2f"/>
+      <stop offset="100%" stop-color="#9e3420"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="200" fill="url(#bgH3)"/>
+
+  <!--
+    THE MAKER'S MARK
+    A craftsman's emblem: the harp frame (column + neck + soundboard) drawn as
+    open strokes with three fine strings inside, enclosed in a delicate ring.
+    Like a coin, a wax seal impression, or an instrument maker's colophon.
+    The ring gives it weight and authority without adding complexity.
+  -->
+
+  <!-- Outer ring — thin, sets the "seal" boundary -->
+  <circle cx="512" cy="512" r="420" fill="none" stroke="white" stroke-width="14" opacity="0.30"/>
+
+  <!-- Harp column — left pillar, near-vertical -->
+  <line x1="296" y1="826" x2="296" y2="354"
+        stroke="white" stroke-width="46" stroke-linecap="round"/>
+
+  <!-- Harp neck — the arch from column top to soundboard top -->
+  <path d="M 296,354 Q 296,162 512,158 Q 728,154 728,302"
+        fill="none" stroke="white" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- Harp soundboard — diagonal right side -->
+  <line x1="728" y1="302" x2="748" y2="826"
+        stroke="white" stroke-width="38" stroke-linecap="round"/>
+
+  <!-- Base — horizontal, connects column and soundboard at bottom -->
+  <rect x="258" y="808" width="526" height="36" rx="18" fill="white"/>
+
+  <!-- Three strings — graduated length, fine and quiet -->
+  <g stroke="white" stroke-linecap="round" opacity="0.62">
+    <line x1="404" y1="294" x2="404" y2="808" stroke-width="7"/>
+    <line x1="512" y1="236" x2="512" y2="808" stroke-width="6.5"/>
+    <line x1="620" y1="266" x2="620" y2="808" stroke-width="6"/>
+  </g>
+</svg>

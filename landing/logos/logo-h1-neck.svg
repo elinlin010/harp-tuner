@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgH1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c84b2f"/>
+      <stop offset="100%" stop-color="#9e3420"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="200" fill="url(#bgH1)"/>
+
+  <!--
+    THE NECK
+    The harp's defining feature — the curved neck — as a single confident stroke.
+    Left end hangs lower (where it meets the column), right end is higher
+    (where it meets the soundboard top). The arch peaks at the top.
+    Nothing else. The arch IS the mark.
+  -->
+  <path d="M 220,740 Q 220,160 512,152 Q 804,160 804,400"
+        fill="none" stroke="white" stroke-width="72" stroke-linecap="round"/>
+</svg>

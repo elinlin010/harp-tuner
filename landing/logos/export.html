@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Harpie — Icon Export</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: #F5F0E8;
+      color: #1C1810;
+      padding: 56px 48px;
+    }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .sub { font-size: 13px; color: #A89880; margin-bottom: 48px; }
+
+    .section { margin-bottom: 56px; }
+    .section-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.18em;
+      text-transform: uppercase; color: #A89880;
+      padding-bottom: 12px; border-bottom: 1px solid #C8BBAA;
+      margin-bottom: 28px;
+    }
+
+    .grid {
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-end;
+    }
+
+    .tile {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+
+    canvas {
+      display: block;
+      /* Checkerboard pattern behind canvas so transparency shows */
+      background-image: linear-gradient(45deg, #e0dbd3 25%, transparent 25%),
+                        linear-gradient(-45deg, #e0dbd3 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #e0dbd3 75%),
+                        linear-gradient(-45deg, transparent 75%, #e0dbd3 75%);
+      background-size: 10px 10px;
+      background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+      border-radius: 4px;
+    }
+
+    .tile-label {
+      font-size: 11px; font-weight: 600; color: #6B5D4A;
+      letter-spacing: 0.05em;
+    }
+    .tile-note {
+      font-size: 10px; color: #A89880; text-align: center;
+      max-width: 120px; line-height: 1.4;
+    }
+
+    button {
+      margin-top: 6px;
+      background: #c84b2f;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.15s;
+    }
+    button:hover { background: #9e3420; }
+
+    .download-all {
+      background: #1C1810;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 28px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.03em;
+      margin-bottom: 48px;
+    }
+    .download-all:hover { background: #2e2418; }
+
+    .preview-large {
+      display: flex; gap: 24px; align-items: flex-end; margin-bottom: 40px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Harpie — App Icon Export</h1>
+<p class="sub">Click any icon to download at that size, or use Download All to get every size at once.</p>
+
+<button class="download-all" onclick="downloadAll()">⬇ Download All Sizes</button>
+
+<!-- Live preview at large sizes -->
+<div class="section">
+  <p class="section-label">Preview</p>
+  <div class="preview-large" id="preview-row"></div>
+</div>
+
+<!-- iOS App Store sizes -->
+<div class="section">
+  <p class="section-label">iOS — App Store & Home Screen</p>
+  <div class="grid" id="ios-grid"></div>
+</div>
+
+<!-- Android / Google Play sizes -->
+<div class="section">
+  <p class="section-label">Android — Google Play Store</p>
+  <div class="grid" id="android-grid"></div>
+</div>
+
+<script>
+  const SVG_PATH = 'icon-production.svg';
+
+  // Sizes needed
+  const PREVIEW_SIZES = [
+    { px: 1024, label: '1024', note: 'Source' },
+    { px: 512,  label: '512',  note: '' },
+    { px: 256,  label: '256',  note: '' },
+  ];
+
+  const IOS_SIZES = [
+    { px: 1024, label: '1024', note: 'App Store Connect' },
+    { px: 180,  label: '180',  note: '@3x iPhone home' },
+    { px: 120,  label: '120',  note: '@2x iPhone home\n@3x spotlight' },
+    { px: 87,   label: '87',   note: '@3x settings' },
+    { px: 80,   label: '80',   note: '@2x spotlight' },
+    { px: 60,   label: '60',   note: '@3x notification' },
+    { px: 58,   label: '58',   note: '@2x settings' },
+    { px: 40,   label: '40',   note: '@2x notification\n@2x spotlight' },
+    { px: 29,   label: '29',   note: '@1x settings' },
+  ];
+
+  const ANDROID_SIZES = [
+    { px: 512,  label: '512',  note: 'Google Play Store' },
+    { px: 192,  label: '192',  note: 'xxxhdpi launcher' },
+    { px: 144,  label: '144',  note: 'xxhdpi launcher' },
+    { px: 96,   label: '96',   note: 'xhdpi launcher' },
+    { px: 72,   label: '72',   note: 'hdpi launcher' },
+    { px: 48,   label: '48',   note: 'mdpi launcher' },
+  ];
+
+  const allSizes = [...new Set([...IOS_SIZES, ...ANDROID_SIZES].map(s => s.px))];
+
+  // Load SVG once as an Image
+  let svgImg = null;
+  const img = new Image();
+  img.onload = () => {
+    svgImg = img;
+    buildGrid('preview-row', PREVIEW_SIZES, true);
+    buildGrid('ios-grid', IOS_SIZES, false);
+    buildGrid('android-grid', ANDROID_SIZES, false);
+  };
+  img.src = SVG_PATH;
+
+  function buildGrid(containerId, sizes, isPreview) {
+    const container = document.getElementById(containerId);
+    sizes.forEach(({ px, label, note }) => {
+      const displayPx = isPreview ? Math.min(px, 200) : Math.min(px, 160);
+      const tile = document.createElement('div');
+      tile.className = 'tile';
+
+      const canvas = document.createElement('canvas');
+      canvas.width  = displayPx;
+      canvas.height = displayPx;
+      canvas.style.width  = displayPx + 'px';
+      canvas.style.height = displayPx + 'px';
+      drawIcon(canvas, displayPx);
+
+      const lbl = document.createElement('div');
+      lbl.className = 'tile-label';
+      lbl.textContent = label + '×' + label;
+
+      const btn = document.createElement('button');
+      btn.textContent = 'Download';
+      btn.onclick = () => downloadSize(px, label);
+
+      tile.appendChild(canvas);
+      tile.appendChild(lbl);
+      if (note) {
+        const n = document.createElement('div');
+        n.className = 'tile-note';
+        n.textContent = note;
+        tile.appendChild(n);
+      }
+      tile.appendChild(btn);
+      container.appendChild(tile);
+    });
+  }
+
+  function drawIcon(canvas, size) {
+    if (!svgImg) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(svgImg, 0, 0, size, size);
+  }
+
+  function downloadSize(px, label) {
+    const canvas = document.createElement('canvas');
+    canvas.width  = px;
+    canvas.height = px;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(svgImg, 0, 0, px, px);
+
+    const link = document.createElement('a');
+    link.download = `harpie-icon-${label}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  function downloadAll() {
+    const uniqueSizes = [...IOS_SIZES, ...ANDROID_SIZES].reduce((acc, s) => {
+      if (!acc.find(x => x.px === s.px)) acc.push(s);
+      return acc;
+    }, []);
+
+    uniqueSizes.forEach(({ px, label }, i) => {
+      setTimeout(() => downloadSize(px, label), i * 120);
+    });
+  }
+</script>
+</body>
+</html>

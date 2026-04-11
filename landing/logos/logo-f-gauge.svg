@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bgF" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c84b2f"/>
+      <stop offset="100%" stop-color="#9e3420"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="200" fill="url(#bgF)"/>
+
+  <!-- Tuner arc gauge — semicircle from left to right going up over the top -->
+  <!-- Center at (512, 730), radius 310 -->
+  <!-- Arc endpoints: (202, 730) and (822, 730), top at (512, 420) -->
+  <path d="M 202 730 A 310 310 0 0 1 822 730"
+        fill="none" stroke="white" stroke-width="50" stroke-linecap="round" opacity="0.88"/>
+
+  <!-- Centre tick mark (top of arc = perfectly in tune) -->
+  <line x1="512" y1="365" x2="512" y2="420"
+        stroke="white" stroke-width="32" stroke-linecap="round"/>
+
+  <!-- Left minor tick — at ~55° left of top -->
+  <!-- arc point: (512 + 310·cos(145°), 730 − 310·sin(145°)) ≈ (258, 552) -->
+  <!-- outer:     (512 + 338·cos(145°), 730 − 338·sin(145°)) ≈ (235, 536) -->
+  <line x1="235" y1="536" x2="261" y2="555"
+        stroke="white" stroke-width="24" stroke-linecap="round" opacity="0.60"/>
+
+  <!-- Right minor tick — mirror at ~55° right of top -->
+  <!-- arc point: (512 + 310·cos(35°), 730 − 310·sin(35°)) ≈ (766, 552) -->
+  <line x1="789" y1="536" x2="763" y2="555"
+        stroke="white" stroke-width="24" stroke-linecap="round" opacity="0.60"/>
+
+  <!-- Needle pointing straight up — centred, in-tune position -->
+  <line x1="512" y1="730" x2="512" y2="428"
+        stroke="white" stroke-width="32" stroke-linecap="round"/>
+
+  <!-- Needle tip: small triangle / arrowhead -->
+  <polygon points="512,390 494,440 530,440" fill="white"/>
+
+  <!-- Pivot circle -->
+  <circle cx="512" cy="730" r="32" fill="white"/>
+  <circle cx="512" cy="730" r="18" fill="#b8401a"/>
+</svg>
