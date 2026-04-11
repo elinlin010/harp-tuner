@@ -57,7 +57,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+TC:wght@400;700;900&display=swap" rel="stylesheet">
 
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -175,8 +175,9 @@
 
     /* ── Hero ── */
     .hero-wrap {
-      background: var(--surface);
+      background: var(--bg-page);
       width: 100%;
+      padding-bottom: 56px;
     }
 
     .hero {
@@ -259,11 +260,13 @@
 
     .hero-title-line2 {
       display: block;
-      font-family: 'Instrument Serif', serif;
+      font-family: 'Instrument Serif', 'Noto Sans TC', sans-serif;
       font-style: italic;
       font-weight: 400;
+      font-size: 0.62em;
       color: #c84b2f;
       letter-spacing: -0.025em;
+      line-height: 1.05;
     }
 
     /* ── Hero card ── */
@@ -340,22 +343,35 @@
       display: flex;
       justify-content: center;
       align-items: flex-start;
-      padding-top: 16px;
+      padding-top: 8px;
     }
 
     .hero-phone {
-      width: 300px;
-      border-radius: 44px;
-      overflow: hidden;
-      box-shadow:
-        0 0 0 10px #1c1c1e,
-        0 40px 80px rgba(0,0,0,0.25),
-        0 8px 24px rgba(0,0,0,0.15);
+      position: relative;
+      width: 272px;
+      flex-shrink: 0;
+      transform: perspective(1200px) rotateY(-8deg) rotateX(2deg);
+      transform-origin: center top;
+      filter:
+        drop-shadow(-8px 40px 50px rgba(0,0,0,0.32))
+        drop-shadow(-4px 16px 24px rgba(0,0,0,0.2))
+        drop-shadow(-2px 4px 8px rgba(0,0,0,0.14));
     }
 
-    .hero-phone img {
-      width: 100%;
+    .hero-phone-screen-img {
       display: block;
+      width: 262px;
+      margin: 5px;
+      border-radius: 36px;
+    }
+
+    .hero-phone-frame {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: visible;
     }
 
     @media (max-width: 720px) {
@@ -404,7 +420,8 @@
 
     /* ── Social proof strip ── */
     .proof-strip {
-      background: #F5F0E8;
+      background: var(--bg-page);
+      border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
       padding: 18px 32px;
     }
@@ -1004,13 +1021,13 @@
 
           <h1 class="hero-title">
             <span class="hero-title-line1"><span class="en">Harpie</span><span class="zh">Harpie</span></span>
-            <span class="hero-title-line2"><span class="en">Tune your harp.</span><span class="zh">調你的豎琴。</span></span>
+            <span class="hero-title-line2"><span class="en">Tuner for harp.</span><span class="zh">豎琴調音器。</span></span>
           </h1>
 
           <div class="hero-card">
             <p class="hero-tagline">
-              <span class="en">Open the app, pluck a string — it does the rest. Built for harp players, not guitar players.</span>
-              <span class="zh">打開 App，撥一根弦，其他交給它。專為豎琴手設計，不是吉他。</span>
+              <span class="en">Built for harpists, by a musician. A tuner that actually understands your instrument.</span>
+              <span class="zh">由音樂人為豎琴手打造。一款真正懂你樂器的調音器。</span>
             </p>
 
             <button class="hero-cta-main" id="cta-main">
@@ -1037,7 +1054,42 @@
         <!-- Right: app screenshot -->
         <div class="hero-phone-wrap" aria-hidden="true">
           <div class="hero-phone">
-            <img src="screenshots/01_main_idle.png" alt="Harpie tuner screen">
+            <img class="hero-phone-screen-img" src="screenshots/05_gauge_active.png" alt="Harpie tuner screen">
+            <!-- iPhone 15 Pro SVG frame overlay (272×579, screen 262×569) -->
+            <svg class="hero-phone-frame" viewBox="0 0 272 579" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="fg1" x1="0%" y1="0%" x2="80%" y2="100%">
+                  <stop offset="0%" stop-color="#5a5a5e"/>
+                  <stop offset="25%" stop-color="#3a3a3c"/>
+                  <stop offset="70%" stop-color="#222224"/>
+                  <stop offset="100%" stop-color="#111113"/>
+                </linearGradient>
+                <mask id="sm1">
+                  <rect width="272" height="579" fill="white"/>
+                  <rect x="5" y="5" width="262" height="569" rx="36" fill="black"/>
+                </mask>
+              </defs>
+              <!-- Phone body with screen hole -->
+              <rect width="272" height="579" rx="42" fill="url(#fg1)" mask="url(#sm1)"/>
+              <!-- Outer highlight ring -->
+              <rect x="0.5" y="0.5" width="271" height="578" rx="41.5" fill="none" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+              <!-- Inner screen shadow -->
+              <rect x="4.5" y="4.5" width="263" height="570" rx="36.5" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1"/>
+              <!-- Dynamic Island -->
+              <rect x="86" y="11" width="100" height="26" rx="13" fill="#000"/>
+              <!-- Top-left glare (light source from top-left) -->
+              <path d="M5,42 Q5,5 42,5 L230,5 Q250,5 260,15 L267,25 Q267,5 245,5 L42,5 Q8,5 5,40 Z" fill="rgba(255,255,255,0.08)"/>
+              <!-- Left-edge rim light (sells the 3D tilt) -->
+              <rect x="0.5" y="42" width="1.5" height="495" rx="1" fill="rgba(255,255,255,0.18)"/>
+              <!-- Power button (right) -->
+              <rect x="270" y="150" width="4" height="65" rx="2" fill="#2c2c2e"/>
+              <!-- Silent switch (left) -->
+              <rect x="-2" y="90" width="4" height="22" rx="2" fill="#2c2c2e"/>
+              <!-- Vol+ (left) -->
+              <rect x="-2" y="125" width="4" height="40" rx="2" fill="#2c2c2e"/>
+              <!-- Vol- (left) -->
+              <rect x="-2" y="175" width="4" height="40" rx="2" fill="#2c2c2e"/>
+            </svg>
           </div>
         </div>
 
