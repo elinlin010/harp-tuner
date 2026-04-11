@@ -179,26 +179,34 @@
       position: relative;
     }
 
+    .hero-body {
+      display: grid;
+      grid-template-columns: 1fr 212px;
+      gap: 56px;
+      align-items: center;
+    }
+
     .hero-top {
       display: flex;
       align-items: flex-start;
-      justify-content: space-between;
-      gap: 16px;
+      gap: 14px;
       margin-bottom: 28px;
       flex-wrap: wrap;
     }
 
     .app-icon {
-      width: 72px;
-      height: 72px;
-      border-radius: 16px;
-      background: var(--bg);
-      border: 1px solid var(--border-md);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 36px;
+      width: 64px;
+      height: 64px;
+      border-radius: 14px;
+      overflow: hidden;
       flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+
+    .app-icon img {
+      width: 100%;
+      height: 100%;
+      display: block;
     }
 
     .status-badge {
@@ -213,7 +221,7 @@
       border-radius: 100px;
       background: rgba(212, 162, 10, 0.1);
       color: var(--amber);
-      margin-top: 4px;
+      margin-top: 6px;
     }
 
     .status-dot {
@@ -238,12 +246,90 @@
     }
 
     .hero-tagline {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 400;
       color: var(--text-secondary);
       line-height: 1.65;
-      max-width: 560px;
-      margin-top: 24px;
+      max-width: 480px;
+      margin-top: 20px;
+    }
+
+    /* ── Store CTAs ── */
+    .hero-ctas {
+      display: flex;
+      gap: 10px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+
+    .store-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      padding: 12px 18px;
+      background: var(--text);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      min-height: 52px;
+      transition: opacity 0.15s, transform 0.12s;
+      text-align: left;
+    }
+
+    .store-btn:hover    { opacity: 0.84; transform: translateY(-1px); }
+    .store-btn:active   { opacity: 0.7; transform: none; }
+    .store-btn:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
+
+    .store-btn-label {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .store-btn-sub {
+      font-size: 10px;
+      font-weight: 500;
+      opacity: 0.6;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .store-btn-name {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      margin-top: 3px;
+    }
+
+    /* ── Phone visual ── */
+    .hero-phone-wrap {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .hero-phone {
+      width: 212px;
+      border-radius: 36px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 10px #1c1c1e,
+        0 32px 72px rgba(0,0,0,0.22),
+        0 8px 20px rgba(0,0,0,0.12);
+      transform: rotate(2deg);
+    }
+
+    .hero-phone img {
+      width: 100%;
+      display: block;
+    }
+
+    @media (max-width: 700px) {
+      .hero-body { grid-template-columns: 1fr; }
+      .hero-phone-wrap { display: none; }
     }
 
     /* ── Doodles ── */
@@ -814,38 +900,77 @@
         <line x1="3.22" y1="3.22" x2="16.78" y2="16.78" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <line x1="16.78" y1="3.22" x2="3.22" y2="16.78" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
-
-      <svg class="doodle doodle-spiral" aria-hidden="true" viewBox="0 0 90 90" fill="none">
-        <path d="M45 10 C70 9 82 22 82 40 C82 58 66 78 44 80 C22 82 8 66 8 46 C8 26 22 12 45 10Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-        <path d="M45 22 C60 21 68 30 68 42 C68 54 57 64 44 64 C31 64 22 55 22 43 C22 31 31 23 45 22Z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" fill="none"/>
-      </svg>
-
       <svg class="doodle doodle-cross" aria-hidden="true" viewBox="0 0 14 14" fill="none">
         <line x1="7" y1="1" x2="7" y2="13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
         <line x1="1" y1="7" x2="13" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
       </svg>
 
-      <div class="hero-top">
-        <div class="app-icon" aria-hidden="true">🎵</div>
-        <span class="status-badge" style="background:rgba(45,125,70,0.10);color:#1f6b3a;">
-          <span class="status-dot"></span>
-          <span class="badge-text">
-            <span class="en">Available on iOS</span>
-            <span class="zh">iOS 現已上架</span>
-          </span>
-        </span>
+      <div class="hero-body">
+
+        <!-- Left: text + CTAs -->
+        <div class="hero-text">
+          <div class="hero-top">
+            <div class="app-icon" aria-hidden="true">
+              <img src="app-icon.png" alt="">
+            </div>
+            <span class="status-badge">
+              <span class="status-dot"></span>
+              <span class="badge-text">
+                <span class="en">Coming soon</span>
+                <span class="zh">即將推出</span>
+              </span>
+            </span>
+          </div>
+
+          <h1 class="hero-title">Harpi<em>e</em></h1>
+
+          <!-- squiggly underline (English only) -->
+          <svg class="doodle-squiggle" aria-hidden="true" width="108" height="9" viewBox="0 0 108 9" fill="none">
+            <path d="M2 6 C11 2 20 8 29 6 S47 2 56 6 S74 8 83 6 S101 2 106 5" stroke="#37352f" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+          </svg>
+
+          <p class="hero-tagline">
+            <span class="en">The tuner built for harpists. Auto pitch detection, reference tones, full pedal and lever layouts — built around how you actually tune.</span>
+            <span class="zh">專為豎琴手打造的調音師。自動音高偵測、參考音、完整踏板與槓桿豎琴配置，完全符合你的調音習慣。</span>
+          </p>
+
+          <div class="hero-ctas">
+            <button class="store-btn" id="cta-appstore">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M8.8086 14.9194l6.1107-11.0368c.0837-.1513.1682-.302.2437-.4584.0685-.142.1267-.2854.1646-.4403.0803-.3259.0588-.6656-.066-.9767-.1238-.3095-.3417-.5678-.6201-.7355a1.4175 1.4175 0 0 0-.921-.1924c-.3207.043-.6135.1935-.8443.4288-.1094.1118-.1996.2361-.2832.369-.092.1463-.175.2979-.259.4492l-.3864.6979-.3865-.6979c-.0837-.1515-.1667-.303-.2587-.4492-.0837-.1329-.1739-.2572-.2835-.369-.2305-.2353-.5233-.3857-.844-.429a1.4181 1.4181 0 0 0-.921.1926c-.2784.1677-.4964.426-.6203.7355-.1246.311-.1461.6508-.066.9767.038.155.0962.2984.1648.4403.0753.1564.1598.307.2437.4584l1.248 2.2543-4.8625 8.7825H2.0295c-.1676 0-.3351-.0007-.5026.0092-.1522.009-.3004.0284-.448.0714-.3108.0906-.5822.2798-.7783.548-.195.2665-.3006.5929-.3006.9279 0 .3352.1057.6612.3006.9277.196.2683.4675.4575.7782.548.1477.043.296.0623.4481.0715.1675.01.335.009.5026.009h13.0974c.0171-.0357.059-.1294.1-.2697.415-1.4151-.6156-2.843-2.0347-2.843zM3.113 18.5418l-.7922 1.5008c-.0818.1553-.1644.31-.2384.4705-.067.1458-.124.293-.1611.452-.0785.3346-.0576.6834.0645 1.0029.1212.3175.3346.583.607.7549.2727.172.5891.2416.9013.1975.3139-.044.6005-.1986.8263-.4402.1072-.1148.1954-.2424.2772-.3787.0902-.1503.1714-.3059.2535-.4612L6 19.4636c-.0896-.149-.9473-1.4704-2.887-.9218m20.5861-3.0056a1.4707 1.4707 0 0 0-.779-.5407c-.1476-.0425-.2961-.0616-.4483-.0705-.1678-.0099-.3352-.0091-.503-.0091H18.648l-4.3891-7.817c-.6655.7005-.9632 1.485-1.0773 2.1976-.1655 1.0333.0367 2.0934.546 3.0004l5.2741 9.3933c.084.1494.167.299.2591.4435.0837.131.1739.2537.2836.364.231.2323.5238.3809.8449.4232.3192.0424.643-.0244.9217-.1899.2784-.1653.4968-.4204.621-.7257.1246-.3072.146-.6425.0658-.9641-.0381-.1529-.0962-.2945-.165-.4346-.0753-.1543-.1598-.303-.2438-.4524l-1.216-2.1662h1.596c.1677 0 .3351.0009.5029-.009.1522-.009.3007-.028.4483-.0705a1.4707 1.4707 0 0 0 .779-.5407A1.5386 1.5386 0 0 0 24 16.452a1.539 1.539 0 0 0-.3009-.9158Z"/>
+              </svg>
+              <span class="store-btn-label">
+                <span class="store-btn-sub">
+                  <span class="en">Notify me —</span>
+                  <span class="zh">通知我上架</span>
+                </span>
+                <span class="store-btn-name">App Store</span>
+              </span>
+            </button>
+
+            <button class="store-btn" id="cta-playstore">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594zM1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924zm12.207 10.065l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973zm0 2.067l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z"/>
+              </svg>
+              <span class="store-btn-label">
+                <span class="store-btn-sub">
+                  <span class="en">Notify me —</span>
+                  <span class="zh">通知我上架</span>
+                </span>
+                <span class="store-btn-name">Google Play</span>
+              </span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: app screenshot -->
+        <div class="hero-phone-wrap" aria-hidden="true">
+          <div class="hero-phone">
+            <img src="screenshots/01_main_idle.png" alt="Harpie tuner screen">
+          </div>
+        </div>
+
       </div>
-      <h1 class="hero-title">Harpi<em>e</em></h1>
-
-      <!-- squiggly underline (English only) -->
-      <svg class="doodle-squiggle" aria-hidden="true" width="108" height="9" viewBox="0 0 108 9" fill="none">
-        <path d="M2 6 C11 2 20 8 29 6 S47 2 56 6 S74 8 83 6 S101 2 106 5" stroke="#37352f" stroke-width="1.8" stroke-linecap="round" fill="none"/>
-      </svg>
-
-      <p class="hero-tagline">
-        <span class="en">Tuning your harp has never been this simple. Auto pitch detection, reference tones, and a clear arc gauge — built around how harpists actually tune. Available on iOS now. Android coming soon.</span>
-        <span class="zh">調豎琴從來沒這麼簡單過。自動音高偵測、參考音、清晰弧形音準儀，專為豎琴手的調音習慣而設計。iOS 現已上架，Android 即將推出。</span>
-      </p>
     </section>
 
     <!-- About -->
@@ -1012,16 +1137,16 @@
     <section>
       <div class="waitlist-block">
         <p class="waitlist-eyebrow">
-          <span class="en">Android coming soon</span>
-          <span class="zh">Android 即將推出</span>
+          <span class="en">Coming soon on iOS &amp; Android</span>
+          <span class="zh">iOS 與 Android 即將推出</span>
         </p>
         <h3 class="waitlist-title">
-          <span class="en">Get notified when Harpie hits Android</span>
-          <span class="zh">Android 上架時第一時間通知我</span>
+          <span class="en">Join the waitlist</span>
+          <span class="zh">加入候補名單</span>
         </h3>
         <p class="waitlist-subtitle">
-          <span class="en">Harpie is live on iOS. Android is in progress — drop your email and we'll ping you the moment it's ready.</span>
-          <span class="zh">Harpie 已在 iOS 上架，Android 版本正在開發中。留下電子郵件，一上架就通知你。</span>
+          <span class="en">Be the first to know when Harpie launches. Drop your email and we'll notify you the moment it's ready.</span>
+          <span class="zh">搶先獲得上架通知。留下電子郵件，一上架就第一時間通知你。</span>
         </p>
         <div class="email-row">
           <input
@@ -1047,12 +1172,12 @@
         <button class="modal-close" id="modal-close-btn" aria-label="Close">✕</button>
 
         <h3 class="modal-title" id="modal-title">
-          <span class="en">Tell us a little about you 👋</span>
-          <span class="zh">讓我們多了解你一點 👋</span>
+          <span class="en">Join the waitlist 👋</span>
+          <span class="zh">加入候補名單 👋</span>
         </h3>
         <p class="modal-subtitle">
-          <span class="en">Takes 30 seconds — helps us build something you'll actually love. All questions are optional.</span>
-          <span class="zh">只需 30 秒 — 幫助我們為你打造更好的體驗。所有問題皆為選填。</span>
+          <span class="en">We'll notify you the moment Harpie launches on your platform. A few quick questions help us build something you'll love — all optional.</span>
+          <span class="zh">上架時我們會立即通知你。幾個簡單問題幫助我們打造更好的體驗，全部選填。</span>
         </p>
 
         <form id="survey-form" novalidate>
@@ -1365,11 +1490,23 @@
       var closeBtn  = document.getElementById('modal-close-btn');
       var inlineFb  = document.getElementById('waitlist-inline-feedback');
 
-      function openModal() {
+      function openModal(platform) {
         // pre-fill email from inline input
         var inlineEmail = (document.getElementById('waitlist-email-inline').value || '').trim();
         var surveyEmail = document.getElementById('survey-email');
         if (surveyEmail && inlineEmail) surveyEmail.value = inlineEmail;
+        // pre-select platform chip if specified
+        if (platform) {
+          var group = document.querySelector('[data-field="phone"]');
+          if (group) {
+            group.querySelectorAll('.chip').forEach(function(c) {
+              c.classList.remove('selected');
+              c.setAttribute('aria-pressed', 'false');
+            });
+            var target = group.querySelector('[data-value="' + platform + '"]');
+            if (target) { target.classList.add('selected'); target.setAttribute('aria-pressed', 'true'); }
+          }
+        }
         overlay.classList.add('open');
         document.body.style.overflow = 'hidden';
         if (surveyEmail) surveyEmail.focus();
@@ -1396,6 +1533,12 @@
       }
 
       if (closeBtn) closeBtn.addEventListener('click', closeModal);
+
+      // hero CTA buttons — open modal with platform pre-selected
+      var ctaAppStore = document.getElementById('cta-appstore');
+      var ctaPlayStore = document.getElementById('cta-playstore');
+      if (ctaAppStore) ctaAppStore.addEventListener('click', function() { openModal('ios'); });
+      if (ctaPlayStore) ctaPlayStore.addEventListener('click', function() { openModal('android'); });
 
       // close on backdrop click
       if (overlay) {
