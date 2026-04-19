@@ -108,10 +108,15 @@ class TunerNotifier extends StateNotifier<TunerState> {
   StreamSubscription<PitchResult?>? _pitchSub;
   SharedPreferences? _prefs;
 
-  static const _historyLen      = 8;
-  static const _stableNeeded    = 3;   // 3 stable frames (~280ms) to confirm a note
-  static const _stableCents     = 25.0;
-  static const _challengeNeeded = 3;   // 3 challenge frames before switching note
+  static const _historyLen      = 6;
+  static const _stableNeeded    = 2;   // 2 stable frames (~90ms) to confirm a note
+  // Frequency-adaptive stability: YIN's tau is integer-sampled, so one-sample
+  // drift is ~20¢ at 52 Hz but <2¢ at 440 Hz. A fixed gate rejects valid
+  // low-note readings. We loosen the gate below 150 Hz and clamp at 50¢ below
+  // 60 Hz, which is where C♭1..B♭1 live.
+  static const _stableCentsHi   = 25.0; // above 150 Hz
+  static const _stableCentsLo   = 50.0; // at/below 60 Hz
+  static const _challengeNeeded = 2;   // 2 challenge frames before switching note
   static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
   static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
@@ -505,11 +510,10 @@ class TunerNotifier extends StateNotifier<TunerState> {
       _addToHistory(hz);
     }
 
-    // Stability gate
+    // Stability gate — tolerance widens at low frequencies (see constants).
     if (_freqHistory.length < _stableNeeded) return;
-    if (_centSpread(_freqHistory) > _stableCents) return;
-
     final stableHz = _median(_freqHistory);
+    if (_centSpread(_freqHistory) > _stabilityTolerance(stableHz)) return;
 
     // ── Reference mode: measure cents relative to the pinned string ──────────
     // If no string has been tapped yet, suppress all updates — the gauge should
@@ -583,6 +587,13 @@ class TunerNotifier extends StateNotifier<TunerState> {
   double _centSpread(List<double> list) {
     final s = List<double>.from(list)..sort();
     return 1200 * log(s.last / s.first) / ln2;
+  }
+
+  double _stabilityTolerance(double hz) {
+    if (hz >= 150) return _stableCentsHi;
+    if (hz <= 60) return _stableCentsLo;
+    final t = (150 - hz) / (150 - 60); // 0 at 150 Hz, 1 at 60 Hz
+    return _stableCentsHi + (_stableCentsLo - _stableCentsHi) * t;
   }
 
   double? _octaveCorrect(double hz, double reference) {
