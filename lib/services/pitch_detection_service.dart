@@ -7,52 +7,6 @@ import 'package:mic_stream/mic_stream.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pitch_detector_dart/pitch_detector.dart';
 
-// Ring buffer backed by Float64List. Avoids O(n) List<double> ops per chunk.
-class _RingBuffer {
-  final Float64List _data;
-  int _head = 0; // next write index
-  int _len = 0;
-
-  _RingBuffer(int capacity) : _data = Float64List(capacity);
-
-  int get length => _len;
-  int get capacity => _data.length;
-
-  void add(double v) {
-    _data[_head] = v;
-    _head = (_head + 1) % _data.length;
-    if (_len < _data.length) _len++;
-  }
-
-  /// Read the most recent [n] samples into [out] in chronological order.
-  /// Requires [_len] >= n.
-  void readLast(int n, Float64List out) {
-    assert(n <= _len && out.length >= n);
-    final start = (_head - n + _data.length) % _data.length;
-    if (start + n <= _data.length) {
-      out.setRange(0, n, _data, start);
-    } else {
-      final first = _data.length - start;
-      out.setRange(0, first, _data, start);
-      out.setRange(first, n, _data, 0);
-    }
-  }
-
-  /// Drop the oldest [n] samples (advances the virtual read pointer).
-  void advance(int n) {
-    if (n >= _len) {
-      _len = 0;
-    } else {
-      _len -= n;
-    }
-  }
-
-  void clear() {
-    _head = 0;
-    _len = 0;
-  }
-}
-
 class PitchResult {
   final double frequency; // Hz
   PitchResult(this.frequency);
@@ -84,24 +38,16 @@ class PitchDetectionService {
   static const _iosPermChannel =
       MethodChannel('com.harptuner/mic_permission');
 
-  // 8192 samples ≈ 186 ms @ 44.1 kHz — ≈ 5.7 periods of C♭1 (30.87 Hz).
-  // YIN needs ≥4 periods to reliably lock the lowest pedal-harp string;
-  // 4096 was borderline and failed on ~31 Hz. O(n²) CPU cost is manageable
-  // on modern phones (~25 ms/frame mid-tier Android); we compensate for the
-  // larger window with 75 % overlap so detections still arrive every ~46 ms.
-  static const int _bufferSize = 8192;
-  static const int _hopSize = _bufferSize ~/ 4; // 75% overlap
+  // 4096 samples ≈ 93 ms — covers down to ~21 Hz (below all harp strings).
+  // Halved from 8192: YIN is O(n²), so 2048²=4M ops vs 4096²=16M ops per frame.
+  static const int _bufferSize = 4096;
 
   StreamSubscription<Uint8List>? _micSub;
   StreamController<PitchResult?>? _ctrl;
   PitchDetector? _detector;
 
-  // Ring buffer of normalised float samples. Capacity = 2 buffers so a brief
-  // processing stall can drain without allocating.
-  final _RingBuffer _accumulator = _RingBuffer(_bufferSize * 2);
-
-  // Reusable working buffer handed to YIN — avoids per-frame allocation.
-  final Float64List _workBuf = Float64List(_bufferSize);
+  // Running accumulator of normalised float samples
+  final List<double> _accumulator = [];
 
   // Guard: skip incoming chunk if previous detection is still running
   bool _processing = false;
@@ -202,32 +148,32 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
-    // Ingest samples into the ring buffer on every chunk (cheap).
+    if (_processing) return; // drop frame — detector still running
+    _processing = true;
+    try {
     // mic_stream delivers 16-bit signed PCM, little-endian.
     // Pass offsetInBytes so we read the correct slice of the underlying buffer
     // (bytes may be a sub-view with a non-zero offset into its ByteBuffer).
-    final data =
-        bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes);
-    final end = bytes.length & ~1;
-    for (int i = 0; i < end; i += 2) {
+    final data = bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes);
+    for (int i = 0; i + 1 < bytes.length; i += 2) {
       final raw = data.getInt16(i, Endian.little);
       _accumulator.add(raw / 32768.0); // normalise to -1.0..1.0
     }
 
-    if (_processing) return; // detector busy — next chunk will re-enter
+    // Discard stale audio to stay real-time: if the accumulator has grown
+    // beyond two buffers (YIN lagging in debug mode), skip ahead.
+    if (_accumulator.length > _bufferSize * 2) {
+      _accumulator.removeRange(0, _accumulator.length - _bufferSize);
+    }
+
     if (_accumulator.length < _bufferSize) return;
 
-    _processing = true;
-    try {
-      // Read the most recent buffer window. The ring already discards older
-      // samples once capacity is hit, so we always analyse the freshest audio.
-      _accumulator.readLast(_bufferSize, _workBuf);
-      _accumulator.advance(_hopSize); // 75% overlap → detect every ~46 ms
+    final chunk = _accumulator.sublist(0, _bufferSize);
+    _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
 
-      final result = await _detector!.getPitchFromFloatBuffer(_workBuf);
+    final result = await _detector!.getPitchFromFloatBuffer(chunk);
 
-      // Allow down to 27 Hz — below lowest harp string (C♭1 ≈ 30.87 Hz).
-      if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
+    if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
         _ctrl?.add(PitchResult(result.pitch));
       } else {
         _ctrl?.add(null);
