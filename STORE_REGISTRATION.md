@@ -34,21 +34,22 @@ Tune Lever & Pedal Harps
 
 #### Description *(4000 chars max)*
 ```
-Harpie is a chromatic tuner built for harpists — lever harp and pedal harp players alike.
+DESIGNED FOR HARPISTS
+Harpie is not a generic chromatic tuner with a harp mode bolted on. Every detail — the lever and pedal harp string list, the reference tone synthesis, all-flats note display, the A4 calibration — was built around how harpists actually tune.
 
 Whether you're tuning up before a rehearsal or dialing in precise calibration before a performance, Harpie gives you the clean, responsive feedback you need.
 
 TUNER
-The arc gauge shows exactly how sharp or flat each string is, with a clear indicator and ♭ / ✓ / ♯ traffic-light display so you know at a glance whether to tighten or loosen.
+The arc gauge shows exactly how sharp or flat each string is, with a clear indicator so you know at a glance whether to tighten or loosen.
 
 REFERENCE MODE
-Tap any string in the list to play back a pure harp reference tone. Tune by ear or let the gauge guide you — your choice.
+Tap any string in the list to play back a pure harp reference tone. Tune by ear or let the gauge guide you - your choice.
 
 PEDAL HARP
-Full 47-string layout covering C♭1 to G♭7, with all pedals set to flat as a starting point.
+Full 47-string layout, with all pedals set to flat as a starting point.
 
 LEVER HARP
-Configurable 19 to 40 strings, treble-anchored at E♭7. Choose the layout that matches your instrument.
+Configurable 19 to 40 strings. Choose the layout that matches your instrument.
 
 CALIBRATION
 Set A4 anywhere from 430 Hz to 450 Hz in 1 Hz steps. Preference for flats or sharps. Octave display on or off.
@@ -58,9 +59,6 @@ Full dark theme support — easy on the eyes in low-light rehearsal spaces and p
 
 TUNING REMINDER
 Before each session, Harpie reminds pedal harp players to set all pedals to flat and lever harp players to disengage all levers — so your starting point is always consistent.
-
-DESIGNED FOR HARPISTS
-Harpie is not a generic chromatic tuner with a harp mode bolted on. Every detail — the string list, the default layouts, the reference tone synthesis — was built around how harpists actually tune.
 
 Supports English, German, French, Italian, Simplified Chinese, and Traditional Chinese.
 ```
@@ -138,7 +136,7 @@ Contact: [your email]
 
 | Field | Value |
 |-------|-------|
-| **Privacy Policy URL** | https://[your-domain]/harpie-privacy |
+| **Privacy Policy URL** | https://elinlin010.github.io/harp-tuner/privacy.html |
 
 ---
 
