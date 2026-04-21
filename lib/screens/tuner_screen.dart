@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/mode_toggle.dart';
 import '../widgets/pitch_light_indicator.dart';
+import '../widgets/settings_display.dart';
 import '../widgets/string_visualizer.dart';
 import '../widgets/tuner_gauge.dart';
 
@@ -119,12 +120,12 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     return best;
   }
 
-  void _showSettings(BuildContext context) {
+  void _showSettings(BuildContext context, {SettingsSection? focus}) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => const _SettingsSheet(),
+      builder: (_) => _SettingsSheet(focus: focus),
     );
   }
 
@@ -181,6 +182,12 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // ── Current-settings mini cards (tap → jump into settings) ────
+              SettingsDisplay(
+                onTap: (section) =>
+                    _showSettings(context, focus: section),
+              ),
+
               // ── Nav bar: mode toggle (left) + settings (right) ────────────
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -363,11 +370,76 @@ const _kLeverTopNote = 'E♭7';
 
 // ── Settings bottom sheet ─────────────────────────────────────────────────────
 
-class _SettingsSheet extends ConsumerWidget {
-  const _SettingsSheet();
+class _SettingsSheet extends ConsumerStatefulWidget {
+  final SettingsSection? focus;
+  const _SettingsSheet({this.focus});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_SettingsSheet> createState() => _SettingsSheetState();
+}
+
+class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
+  final _instrumentKey = GlobalKey();
+  final _a4Key = GlobalKey();
+  final _stringCountKey = GlobalKey();
+  SettingsSection? _pulseSection;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focus != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _scrollToAndPulse(widget.focus!);
+      });
+    }
+  }
+
+  GlobalKey _keyFor(SettingsSection section) {
+    switch (section) {
+      case SettingsSection.instrument:
+        return _instrumentKey;
+      case SettingsSection.a4:
+        return _a4Key;
+      case SettingsSection.stringCount:
+        return _stringCountKey;
+    }
+  }
+
+  Future<void> _scrollToAndPulse(SettingsSection section) async {
+    final ctx = _keyFor(section).currentContext;
+    if (ctx != null) {
+      await Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+        alignment: 0.15,
+      );
+    }
+    if (!mounted) return;
+    setState(() => _pulseSection = section);
+  }
+
+  Widget _pulseWrap(SettingsSection section, TunerThemeData theme, Widget child) {
+    if (_pulseSection != section) return child;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey('pulse-$section'),
+      tween: Tween(begin: 1.0, end: 0.0),
+      duration: const Duration(milliseconds: 1400),
+      curve: Curves.easeOutCubic,
+      builder: (context, t, c) => Container(
+        decoration: BoxDecoration(
+          color: Color.lerp(Colors.transparent, theme.surfaceHi, t),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: c,
+      ),
+      child: child,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final tuner = ref.watch(tunerProvider);
     final theme = ref.watch(tunerThemeProvider);
@@ -411,35 +483,51 @@ class _SettingsSheet extends ConsumerWidget {
           const SizedBox(height: 24),
 
           // ── Instrument ────────────────────────────────────────────────────
-          _SectionHeader(label: l10n.settingsInstrumentLabel, icon: Icons.piano_rounded, theme: theme),
-          const SizedBox(height: 4),
-          _InstrumentRow(
-            label: l10n.settingsInstrumentNone,
-            selected: tuner.selectedHarp == null,
-            onTap: () =>
-                ref.read(tunerProvider.notifier).setSelectedHarp(null),
-            theme: theme,
-          ),
-          for (final type in HarpType.values) ...[
-            _InstrumentRow(
-              label: _harpName(type, l10n),
-              subtitle: _harpSubtitle(type, l10n,
-                  leverStringCount: tuner.leverStringCount),
-              selected: tuner.selectedHarp == type,
-              onTap: () =>
-                  ref.read(tunerProvider.notifier).setSelectedHarp(type),
-              theme: theme,
+          _pulseWrap(
+            SettingsSection.instrument,
+            theme,
+            Column(
+              key: _instrumentKey,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _SectionHeader(label: l10n.settingsInstrumentLabel, icon: Icons.piano_rounded, theme: theme),
+                const SizedBox(height: 4),
+                _InstrumentRow(
+                  label: l10n.settingsInstrumentNone,
+                  selected: tuner.selectedHarp == null,
+                  onTap: () =>
+                      ref.read(tunerProvider.notifier).setSelectedHarp(null),
+                  theme: theme,
+                ),
+                for (final type in HarpType.values)
+                  _InstrumentRow(
+                    label: _harpName(type, l10n),
+                    subtitle: _harpSubtitle(type, l10n,
+                        leverStringCount: tuner.leverStringCount),
+                    selected: tuner.selectedHarp == type,
+                    onTap: () =>
+                        ref.read(tunerProvider.notifier).setSelectedHarp(type),
+                    theme: theme,
+                  ),
+              ],
             ),
-            if (type == HarpType.leverHarp && tuner.selectedHarp == HarpType.leverHarp) ...[
-              const SizedBox(height: 4),
-              _LeverStringCountRow(
-                count: tuner.leverStringCount,
-                onChanged: (v) => ref
-                    .read(tunerProvider.notifier)
-                    .setLeverStringCount(v),
-                theme: theme,
+          ),
+          if (tuner.selectedHarp == HarpType.leverHarp) ...[
+            const SizedBox(height: 4),
+            _pulseWrap(
+              SettingsSection.stringCount,
+              theme,
+              Container(
+                key: _stringCountKey,
+                child: _LeverStringCountRow(
+                  count: tuner.leverStringCount,
+                  onChanged: (v) => ref
+                      .read(tunerProvider.notifier)
+                      .setLeverStringCount(v),
+                  theme: theme,
+                ),
               ),
-            ],
+            ),
           ],
 
           if (tuner.selectedHarp != null) ...[
@@ -469,16 +557,23 @@ class _SettingsSheet extends ConsumerWidget {
             theme: theme,
             animDuration: animDuration,
           ),
-          _A4StepperRow(
-            a4Hz: tuner.a4Hz,
-            onDecrement: () =>
-                ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
-            onIncrement: () =>
-                ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
-            onReset: tuner.a4Hz != 440
-                ? () => ref.read(tunerProvider.notifier).setA4Hz(440)
-                : null,
-            theme: theme,
+          _pulseWrap(
+            SettingsSection.a4,
+            theme,
+            Container(
+              key: _a4Key,
+              child: _A4StepperRow(
+                a4Hz: tuner.a4Hz,
+                onDecrement: () =>
+                    ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
+                onIncrement: () =>
+                    ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
+                onReset: tuner.a4Hz != 440
+                    ? () => ref.read(tunerProvider.notifier).setA4Hz(440)
+                    : null,
+                theme: theme,
+              ),
+            ),
           ),
 
           const SizedBox(height: 20),

@@ -65,5 +65,10 @@
   "settingsShowReminderToggle": "顯示調音提醒",
   "reminderPedalSnack": "調音前把踏板放至最上格（降音位）。",
   "reminderLeverSnack": "調音前把撥鍵放下來。",
-  "reminderDismissBtn": "知道了"
+  "reminderDismissBtn": "知道了",
+  "settingsDisplayLabelInstrument": "豎琴",
+  "settingsDisplayLabelA4": "A4",
+  "settingsDisplayLabelStrings": "弦數",
+  "settingsDisplayHarpLever": "撥鍵",
+  "settingsDisplayHarpPedal": "踏板"
 }
