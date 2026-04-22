@@ -152,6 +152,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get reminderDismissBtn => '知道了';
+
+  @override
+  String get settingsDisplayLabelInstrument => '豎琴';
+
+  @override
+  String get settingsDisplayLabelA4 => 'A4';
+
+  @override
+  String get settingsDisplayLabelStrings => '弦數';
+
+  @override
+  String get settingsDisplayHarpLever => '撥鍵';
+
+  @override
+  String get settingsDisplayHarpPedal => '踏板';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -302,4 +317,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get reminderDismissBtn => '知道了';
+
+  @override
+  String get settingsDisplayLabelInstrument => '豎琴';
+
+  @override
+  String get settingsDisplayLabelA4 => 'A4';
+
+  @override
+  String get settingsDisplayLabelStrings => '弦數';
+
+  @override
+  String get settingsDisplayHarpLever => '撥鍵';
+
+  @override
+  String get settingsDisplayHarpPedal => '踏板';
 }

@@ -65,5 +65,10 @@
   "settingsShowReminderToggle": "Mostra promemoria accordatura",
   "reminderPedalSnack": "Prima di accordare, porta tutti i pedali in posizione bemolle (tacca superiore).",
   "reminderLeverSnack": "Prima di accordare, disattiva tutte le leve (verso il basso).",
-  "reminderDismissBtn": "Capito"
+  "reminderDismissBtn": "Capito",
+  "settingsDisplayLabelInstrument": "ARPA",
+  "settingsDisplayLabelA4": "A4",
+  "settingsDisplayLabelStrings": "CORDE",
+  "settingsDisplayHarpLever": "Celtica",
+  "settingsDisplayHarpPedal": "A pedali"
 }

@@ -155,4 +155,19 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reminderDismissBtn => 'Verstanden';
+
+  @override
+  String get settingsDisplayLabelInstrument => 'HARFE';
+
+  @override
+  String get settingsDisplayLabelA4 => 'A4';
+
+  @override
+  String get settingsDisplayLabelStrings => 'SAITEN';
+
+  @override
+  String get settingsDisplayHarpLever => 'Haken';
+
+  @override
+  String get settingsDisplayHarpPedal => 'Pedal';
 }

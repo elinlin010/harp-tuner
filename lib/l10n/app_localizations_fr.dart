@@ -156,4 +156,19 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get reminderDismissBtn => 'Compris';
+
+  @override
+  String get settingsDisplayLabelInstrument => 'HARPE';
+
+  @override
+  String get settingsDisplayLabelA4 => 'A4';
+
+  @override
+  String get settingsDisplayLabelStrings => 'CORDES';
+
+  @override
+  String get settingsDisplayHarpLever => 'Celtique';
+
+  @override
+  String get settingsDisplayHarpPedal => 'Pédales';
 }

@@ -378,6 +378,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Got it'**
   String get reminderDismissBtn;
+
+  /// No description provided for @settingsDisplayLabelInstrument.
+  ///
+  /// In en, this message translates to:
+  /// **'HARP'**
+  String get settingsDisplayLabelInstrument;
+
+  /// No description provided for @settingsDisplayLabelA4.
+  ///
+  /// In en, this message translates to:
+  /// **'A4'**
+  String get settingsDisplayLabelA4;
+
+  /// No description provided for @settingsDisplayLabelStrings.
+  ///
+  /// In en, this message translates to:
+  /// **'STRINGS'**
+  String get settingsDisplayLabelStrings;
+
+  /// No description provided for @settingsDisplayHarpLever.
+  ///
+  /// In en, this message translates to:
+  /// **'Lever'**
+  String get settingsDisplayHarpLever;
+
+  /// No description provided for @settingsDisplayHarpPedal.
+  ///
+  /// In en, this message translates to:
+  /// **'Pedal'**
+  String get settingsDisplayHarpPedal;
 }
 
 class _AppLocalizationsDelegate
