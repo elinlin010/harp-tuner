@@ -420,18 +420,26 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
     setState(() => _pulseSection = section);
   }
 
+  // Sheet content padding is applied per-child so pulse backgrounds can
+  // still span the full sheet width.
+  Widget _hPad(Widget child) =>
+      Padding(padding: const EdgeInsets.symmetric(horizontal: 24), child: child);
+
   Widget _pulseWrap(SettingsSection section, TunerThemeData theme, Widget child) {
     if (_pulseSection != section) return child;
+    // Dark rims are low-chroma gray on near-black — fades to invisible fast.
+    // Use a white surface-tint with linear decay so the peak actually holds.
+    final isDark = theme.brightness == Brightness.dark;
+    final peak = isDark
+        ? Colors.white.withValues(alpha: 0.14)
+        : theme.surfaceRim.withValues(alpha: 0.55);
     return TweenAnimationBuilder<double>(
       key: ValueKey('pulse-$section'),
       tween: Tween(begin: 1.0, end: 0.0),
-      duration: const Duration(milliseconds: 1400),
-      curve: Curves.easeOutCubic,
-      builder: (context, t, c) => Container(
-        decoration: BoxDecoration(
-          color: Color.lerp(Colors.transparent, theme.surfaceHi, t),
-          borderRadius: BorderRadius.circular(12),
-        ),
+      duration: Duration(milliseconds: isDark ? 2400 : 1400),
+      curve: isDark ? Curves.linear : Curves.easeOutCubic,
+      builder: (context, t, c) => ColoredBox(
+        color: Color.lerp(Colors.transparent, peak, t)!,
         child: c,
       ),
       child: child,
@@ -456,7 +464,7 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         border: Border(top: BorderSide(color: theme.surfaceRim, width: 1)),
       ),
-      padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottomPad),
+      padding: EdgeInsets.fromLTRB(0, 12, 0, 24 + bottomPad),
       child: ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(context).size.height * 0.72,
@@ -479,14 +487,14 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
           ),
           const SizedBox(height: 20),
 
-          Text(l10n.settingsTitle, style: theme.sans(22, weight: FontWeight.w600)),
+          _hPad(Text(l10n.settingsTitle, style: theme.sans(22, weight: FontWeight.w600))),
           const SizedBox(height: 24),
 
           // ── Instrument ────────────────────────────────────────────────────
           _pulseWrap(
             SettingsSection.instrument,
             theme,
-            Column(
+            _hPad(Column(
               key: _instrumentKey,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -510,28 +518,26 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                     theme: theme,
                   ),
               ],
-            ),
+            )),
           ),
           if (tuner.selectedHarp == HarpType.leverHarp) ...[
             const SizedBox(height: 4),
             _pulseWrap(
               SettingsSection.stringCount,
               theme,
-              Container(
+              _hPad(_LeverStringCountRow(
                 key: _stringCountKey,
-                child: _LeverStringCountRow(
-                  count: tuner.leverStringCount,
-                  onChanged: (v) => ref
-                      .read(tunerProvider.notifier)
-                      .setLeverStringCount(v),
-                  theme: theme,
-                ),
-              ),
+                count: tuner.leverStringCount,
+                onChanged: (v) => ref
+                    .read(tunerProvider.notifier)
+                    .setLeverStringCount(v),
+                theme: theme,
+              )),
             ),
           ],
 
           if (tuner.selectedHarp != null) ...[
-            _SheetSwitchRow(
+            _hPad(_SheetSwitchRow(
               label: l10n.settingsShowReminderToggle,
               value: tuner.showTuningReminder,
               onToggle: () => ref
@@ -539,7 +545,7 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                   .toggleShowTuningReminder(),
               theme: theme,
               animDuration: animDuration,
-            ),
+            )),
           ],
 
           const SizedBox(height: 20),
@@ -547,33 +553,31 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
           const SizedBox(height: 20),
 
           // ── Note display + A4 calibration ────────────────────────────────
-          _SectionHeader(label: l10n.settingsNoteDisplayLabel, icon: Icons.music_note_rounded, theme: theme),
+          _hPad(_SectionHeader(label: l10n.settingsNoteDisplayLabel, icon: Icons.music_note_rounded, theme: theme)),
           const SizedBox(height: 12),
-          _SheetSwitchRow(
+          _hPad(_SheetSwitchRow(
             label: l10n.settingsAlwaysShowFlatsToggle,
             subtitle: l10n.settingsAlwaysShowFlatsHint,
             value: tuner.preferFlats,
             onToggle: () => ref.read(tunerProvider.notifier).togglePreferFlats(),
             theme: theme,
             animDuration: animDuration,
-          ),
+          )),
           _pulseWrap(
             SettingsSection.a4,
             theme,
-            Container(
+            _hPad(_A4StepperRow(
               key: _a4Key,
-              child: _A4StepperRow(
-                a4Hz: tuner.a4Hz,
-                onDecrement: () =>
-                    ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
-                onIncrement: () =>
-                    ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
-                onReset: tuner.a4Hz != 440
-                    ? () => ref.read(tunerProvider.notifier).setA4Hz(440)
-                    : null,
-                theme: theme,
-              ),
-            ),
+              a4Hz: tuner.a4Hz,
+              onDecrement: () =>
+                  ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz - 1),
+              onIncrement: () =>
+                  ref.read(tunerProvider.notifier).setA4Hz(tuner.a4Hz + 1),
+              onReset: tuner.a4Hz != 440
+                  ? () => ref.read(tunerProvider.notifier).setA4Hz(440)
+                  : null,
+              theme: theme,
+            )),
           ),
 
           const SizedBox(height: 20),
@@ -581,37 +585,37 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
           const SizedBox(height: 20),
 
           // ── Appearance ────────────────────────────────────────────────────
-          _SectionHeader(label: l10n.settingsThemeLabel, icon: Icons.palette_outlined, theme: theme),
+          _hPad(_SectionHeader(label: l10n.settingsThemeLabel, icon: Icons.palette_outlined, theme: theme)),
           const SizedBox(height: 4),
-          _SheetSwitchRow(
+          _hPad(_SheetSwitchRow(
             label: l10n.settingsDarkModeToggle,
             value: theme.brightness == Brightness.dark,
             onToggle: () =>
                 ref.read(tunerThemeProvider.notifier).toggleDarkMode(),
             theme: theme,
             animDuration: animDuration,
-          ),
+          )),
           const SizedBox(height: 8),
-          _ThemePickerRow(
+          _hPad(_ThemePickerRow(
             currentTheme: theme,
             onSelect: (t) =>
                 ref.read(tunerThemeProvider.notifier).setTheme(t),
-          ),
+          )),
 
           const SizedBox(height: 20),
           Divider(color: theme.surfaceRim, height: 1),
           const SizedBox(height: 20),
 
           // ── Language ──────────────────────────────────────────────────────
-          _SectionHeader(label: l10n.settingsLanguageLabel, icon: Icons.language_rounded, theme: theme),
+          _hPad(_SectionHeader(label: l10n.settingsLanguageLabel, icon: Icons.language_rounded, theme: theme)),
           const SizedBox(height: 4),
-          _LanguageDropdownRow(
+          _hPad(_LanguageDropdownRow(
             languages: _languages,
             currentLocale: currentLocale,
             onSelect: (locale) =>
                 ref.read(localeProvider.notifier).setLocale(locale),
             theme: theme,
-          ),
+          )),
           ],
         ),
       ),
@@ -932,6 +936,7 @@ class _A4StepperRow extends StatelessWidget {
   final TunerThemeData theme;
 
   const _A4StepperRow({
+    super.key,
     required this.a4Hz,
     required this.onDecrement,
     required this.onIncrement,
@@ -1107,6 +1112,7 @@ class _LeverStringCountRow extends StatelessWidget {
   final TunerThemeData theme;
 
   const _LeverStringCountRow({
+    super.key,
     required this.count,
     required this.onChanged,
     required this.theme,

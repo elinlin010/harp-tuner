@@ -74,6 +74,8 @@ class SettingsDisplay extends ConsumerWidget {
 }
 
 class _SettingsDisplayCard extends StatelessWidget {
+  static const _radius = BorderRadius.all(Radius.circular(10));
+
   final String label;
   final String value;
   final VoidCallback onTap;
@@ -92,9 +94,9 @@ class _SettingsDisplayCard extends StatelessWidget {
       button: true,
       label: '$label, $value',
       child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: const [
+        decoration: const BoxDecoration(
+          borderRadius: _radius,
+          boxShadow: [
             BoxShadow(
               color: Color(0x14000000),
               offset: Offset(0, 1),
@@ -114,9 +116,9 @@ class _SettingsDisplayCard extends StatelessWidget {
         ),
         child: Material(
           color: theme.surface,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: _radius,
           child: InkWell(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: _radius,
             onTap: onTap,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
