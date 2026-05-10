@@ -558,7 +558,11 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
           _hPad(_SheetSwitchRow(
             label: l10n.settingsAlwaysShowFlatsToggle,
             subtitle: l10n.settingsAlwaysShowFlatsHint,
-            value: tuner.preferFlats,
+            // Harps are conventionally notated in flats — when a harp is
+            // selected, the displayed note must match the string visualizer
+            // (which uses flats), so the user can't toggle this off.
+            value: tuner.selectedHarp != null ? true : tuner.preferFlats,
+            disabled: tuner.selectedHarp != null,
             onToggle: () => ref.read(tunerProvider.notifier).togglePreferFlats(),
             theme: theme,
             animDuration: animDuration,
@@ -632,6 +636,7 @@ class _SheetSwitchRow extends StatelessWidget {
   final VoidCallback onToggle;
   final TunerThemeData theme;
   final Duration animDuration;
+  final bool disabled;
 
   const _SheetSwitchRow({
     required this.label,
@@ -640,6 +645,7 @@ class _SheetSwitchRow extends StatelessWidget {
     required this.onToggle,
     required this.theme,
     required this.animDuration,
+    this.disabled = false,
   });
 
   @override
@@ -647,10 +653,13 @@ class _SheetSwitchRow extends StatelessWidget {
     return Semantics(
       label: label,
       toggled: value,
+      enabled: !disabled,
       child: GestureDetector(
-        onTap: onToggle,
+        onTap: disabled ? null : onToggle,
         behavior: HitTestBehavior.opaque,
-        child: Padding(
+        child: Opacity(
+          opacity: disabled ? 0.4 : 1.0,
+          child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 14),
           child: Row(
             children: [
@@ -707,6 +716,7 @@ class _SheetSwitchRow extends StatelessWidget {
               ),
             ],
           ),
+        ),
         ),
       ),
     );
