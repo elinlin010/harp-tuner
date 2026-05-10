@@ -93,7 +93,11 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
               ? BorderSide(color: accentBorder, width: 1.5)
               : BorderSide.none,
         ),
-        content: Text(text, style: theme.sans(14, color: contentColor)),
+        content: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: messenger.hideCurrentSnackBar,
+          child: Text(text, style: theme.sans(16, color: contentColor)),
+        ),
         duration: const Duration(days: 365),
         action: SnackBarAction(
           label: l10n.reminderDismissBtn,
@@ -539,6 +543,7 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
           if (tuner.selectedHarp != null) ...[
             _hPad(_SheetSwitchRow(
               label: l10n.settingsShowReminderToggle,
+              subtitle: l10n.settingsShowReminderToggleHint,
               value: tuner.showTuningReminder,
               onToggle: () => ref
                   .read(tunerProvider.notifier)

@@ -62,9 +62,10 @@
       }
     }
   },
-  "settingsShowReminderToggle": "Show tuning reminder",
-  "reminderPedalSnack": "Before tuning, set all pedals to the flat position (top notch).",
-  "reminderLeverSnack": "Before tuning, disengage all levers (push down).",
+  "settingsShowReminderToggle": "Tuning Reminder",
+  "settingsShowReminderToggleHint": "Reminds you to set pedals/levers before tuning",
+  "reminderPedalSnack": "Set all pedals to ♭ before tuning",
+  "reminderLeverSnack": "Disengage all levers before tuning",
   "reminderDismissBtn": "Got it",
   "settingsDisplayLabelInstrument": "HARP",
   "settingsDisplayLabelA4": "A4",
