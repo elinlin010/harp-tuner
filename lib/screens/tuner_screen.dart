@@ -64,22 +64,22 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         ? l10n.reminderPedalSnack
         : l10n.reminderLeverSnack;
 
-    // Light themes (Linen, Milk): inverted snackbar — textPrimary bg, sharp action.
-    // Dark themes (Blueprint, Void, Phosphor): dark surfaceHi bg, inTune action +
-    // inTune border ring so the card is legible against near-black screens.
+    // Light themes (Linen, Milk): inverted snackbar — textPrimary bg.
+    // Dark themes (Blueprint, Void, Phosphor): dark surfaceHi bg, inTune border ring.
+    // OK button: bold + larger; light mode uses muted white (softer against dark bg).
     final Color bgColor;
     final Color contentColor;
-    final Color actionColor;
+    final Color okColor;
     Color? accentBorder;
 
     if (theme.brightness == Brightness.light) {
       bgColor = theme.textPrimary;
       contentColor = theme.bg;
-      actionColor = theme.sharp;
+      okColor = theme.bg.withValues(alpha: 0.5);
     } else {
       bgColor = theme.surfaceHi;
       contentColor = theme.textPrimary;
-      actionColor = theme.inTune;
+      okColor = theme.inTune;
       accentBorder = theme.inTune;
     }
 
@@ -96,14 +96,21 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         content: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: messenger.hideCurrentSnackBar,
-          child: Text(text, style: theme.sans(16, color: contentColor)),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(text, style: theme.sans(16, color: contentColor)),
+              ),
+              const SizedBox(width: 16),
+              Text(
+                l10n.reminderDismissBtn,
+                style: theme.sans(18,
+                    weight: FontWeight.w700, color: okColor),
+              ),
+            ],
+          ),
         ),
         duration: const Duration(days: 365),
-        action: SnackBarAction(
-          label: l10n.reminderDismissBtn,
-          textColor: actionColor,
-          onPressed: messenger.hideCurrentSnackBar,
-        ),
       ),
     );
   }
