@@ -63,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Rappel d'accord",
-  "settingsShowReminderToggleHint": "Rappelle de mettre toutes les pédales/leviers en ♭",
+  "settingsShowReminderToggleHint": "Rappel pour mettre toutes les pédales/leviers en ♭",
   "reminderPedalSnack": "Pédales en ♭ avant d'accorder",
   "reminderLeverSnack": "Désengager les leviers avant d'accorder",
   "reminderDismissBtn": "OK",

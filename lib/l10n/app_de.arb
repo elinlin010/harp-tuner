@@ -63,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Stimmhinweis",
-  "settingsShowReminderToggleHint": "Erinnert daran, alle Pedale/Haken auf ♭ zu stellen",
+  "settingsShowReminderToggleHint": "Erinnerung, alle Pedale/Haken auf ♭ zu stellen",
   "reminderPedalSnack": "Alle Pedale auf ♭ stellen vor dem Stimmen",
   "reminderLeverSnack": "Alle Haken aushaken vor dem Stimmen",
   "reminderDismissBtn": "OK",

@@ -63,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Promemoria accordatura",
-  "settingsShowReminderToggleHint": "Ricorda di mettere tutti i pedali/leve in ♭",
+  "settingsShowReminderToggleHint": "Promemoria per mettere tutti i pedali/leve in ♭",
   "reminderPedalSnack": "Pedali in ♭ prima di accordare",
   "reminderLeverSnack": "Disattiva le leve prima di accordare",
   "reminderDismissBtn": "OK",
