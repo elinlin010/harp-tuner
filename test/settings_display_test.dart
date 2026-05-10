@@ -26,7 +26,8 @@ ProviderContainer _containerFrom(WidgetTester tester) {
 
 void main() {
   group('SettingsDisplay card visibility', () {
-    testWidgets('shows 3 cards when lever harp selected', (tester) async {
+    testWidgets('shows combined harp + string count when lever harp selected',
+        (tester) async {
       SharedPreferences.setMockInitialValues({
         'tuner_harp_type': 'leverHarp',
         'tuner_lever_string_count': 34,
@@ -38,13 +39,14 @@ void main() {
 
       expect(find.text('HARP'), findsOneWidget);
       expect(find.text('A4'), findsOneWidget);
-      expect(find.text('STRINGS'), findsOneWidget);
-      expect(find.text('Lever'), findsOneWidget);
-      expect(find.text('34'), findsOneWidget);
+      expect(find.text('Lever · 34'), findsOneWidget);
       expect(find.text('440 Hz'), findsOneWidget);
+      // No separate STRINGS card.
+      expect(find.text('STRINGS'), findsNothing);
     });
 
-    testWidgets('hides STRINGS card when pedal harp selected', (tester) async {
+    testWidgets('shows pedal harp label when pedal harp selected',
+        (tester) async {
       SharedPreferences.setMockInitialValues({
         'tuner_harp_type': 'pedalHarp',
         'tuner_a4_hz': 440,
@@ -55,8 +57,8 @@ void main() {
 
       expect(find.text('HARP'), findsOneWidget);
       expect(find.text('A4'), findsOneWidget);
-      expect(find.text('STRINGS'), findsNothing);
       expect(find.text('Pedal'), findsOneWidget);
+      expect(find.text('STRINGS'), findsNothing);
     });
 
     testWidgets('shows None when no harp selected', (tester) async {
@@ -68,16 +70,15 @@ void main() {
       await tester.pumpWidget(_harness());
       await tester.pump();
 
-      // Clear the harp selection via the real notifier.
       await _containerFrom(tester)
           .read(tunerProvider.notifier)
           .setSelectedHarp(null);
       await tester.pump();
 
       expect(find.text('None'), findsOneWidget);
-      expect(find.text('STRINGS'), findsNothing);
       expect(find.text('HARP'), findsOneWidget);
       expect(find.text('A4'), findsOneWidget);
+      expect(find.text('STRINGS'), findsNothing);
     });
   });
 
@@ -94,7 +95,8 @@ void main() {
       expect(find.text('442 Hz'), findsOneWidget);
     });
 
-    testWidgets('STRINGS card reflects lever string count', (tester) async {
+    testWidgets('instrument card includes lever string count in its value',
+        (tester) async {
       SharedPreferences.setMockInitialValues({
         'tuner_harp_type': 'leverHarp',
         'tuner_lever_string_count': 26,
@@ -103,7 +105,7 @@ void main() {
       await tester.pumpWidget(_harness());
       await tester.pump();
 
-      expect(find.text('26'), findsOneWidget);
+      expect(find.text('Lever · 26'), findsOneWidget);
     });
   });
 
@@ -116,7 +118,7 @@ void main() {
       await tester.pumpWidget(_harness(onTap: (s) => tapped = s));
       await tester.pump();
 
-      await tester.tap(find.text('Lever'));
+      await tester.tap(find.text('HARP'));
       expect(tapped, SettingsSection.instrument);
     });
 
@@ -130,21 +132,6 @@ void main() {
 
       await tester.tap(find.text('440 Hz'));
       expect(tapped, SettingsSection.a4);
-    });
-
-    testWidgets('tapping strings card fires callback with stringCount section',
-        (tester) async {
-      SharedPreferences.setMockInitialValues({
-        'tuner_harp_type': 'leverHarp',
-        'tuner_lever_string_count': 34,
-      });
-      SettingsSection? tapped;
-
-      await tester.pumpWidget(_harness(onTap: (s) => tapped = s));
-      await tester.pump();
-
-      await tester.tap(find.text('34'));
-      expect(tapped, SettingsSection.stringCount);
     });
   });
 }
