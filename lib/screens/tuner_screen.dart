@@ -507,7 +507,7 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                       ref.read(tunerProvider.notifier).setSelectedHarp(null),
                   theme: theme,
                 ),
-                for (final type in HarpType.values)
+                for (final type in HarpType.values) ...[
                   _InstrumentRow(
                     label: _harpName(type, l10n),
                     subtitle: _harpSubtitle(type, l10n,
@@ -517,24 +517,24 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                         ref.read(tunerProvider.notifier).setSelectedHarp(type),
                     theme: theme,
                   ),
+                  if (type == HarpType.leverHarp &&
+                      tuner.selectedHarp == HarpType.leverHarp)
+                    _pulseWrap(
+                      SettingsSection.stringCount,
+                      theme,
+                      _LeverStringCountRow(
+                        key: _stringCountKey,
+                        count: tuner.leverStringCount,
+                        onChanged: (v) => ref
+                            .read(tunerProvider.notifier)
+                            .setLeverStringCount(v),
+                        theme: theme,
+                      ),
+                    ),
+                ],
               ],
             )),
           ),
-          if (tuner.selectedHarp == HarpType.leverHarp) ...[
-            const SizedBox(height: 4),
-            _pulseWrap(
-              SettingsSection.stringCount,
-              theme,
-              _hPad(_LeverStringCountRow(
-                key: _stringCountKey,
-                count: tuner.leverStringCount,
-                onChanged: (v) => ref
-                    .read(tunerProvider.notifier)
-                    .setLeverStringCount(v),
-                theme: theme,
-              )),
-            ),
-          ],
 
           if (tuner.selectedHarp != null) ...[
             _hPad(_SheetSwitchRow(
