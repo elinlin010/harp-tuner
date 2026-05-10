@@ -75,7 +75,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     if (theme.brightness == Brightness.light) {
       bgColor = theme.textPrimary;
       contentColor = theme.bg;
-      okColor = theme.bg.withValues(alpha: 0.5);
+      okColor = theme.bg.withValues(alpha: 0.75);
     } else {
       bgColor = theme.surfaceHi;
       contentColor = theme.textPrimary;
