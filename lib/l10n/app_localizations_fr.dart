@@ -144,18 +144,20 @@ class AppLocalizationsFr extends AppLocalizations {
   }
 
   @override
-  String get settingsShowReminderToggle => 'Afficher le rappel d\'accord';
+  String get settingsShowReminderToggle => 'Rappel d\'accord';
 
   @override
-  String get reminderPedalSnack =>
-      'Avant d\'accorder, mettez toutes les pédales en position bémol (cran supérieur).';
+  String get settingsShowReminderToggleHint =>
+      'Rappel pour mettre toutes les pédales/leviers en ♭';
 
   @override
-  String get reminderLeverSnack =>
-      'Avant d\'accorder, désengagez tous les leviers (vers le bas).';
+  String get reminderPedalSnack => 'Pédales en ♭ avant d\'accorder';
 
   @override
-  String get reminderDismissBtn => 'Compris';
+  String get reminderLeverSnack => 'Désengager les leviers avant d\'accorder';
+
+  @override
+  String get reminderDismissBtn => 'OK';
 
   @override
   String get settingsDisplayLabelInstrument => 'HARPE';

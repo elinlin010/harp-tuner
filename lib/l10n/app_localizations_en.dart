@@ -143,18 +143,20 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get settingsShowReminderToggle => 'Show tuning reminder';
+  String get settingsShowReminderToggle => 'Tuning Reminder';
 
   @override
-  String get reminderPedalSnack =>
-      'Before tuning, set all pedals to the flat position (top notch).';
+  String get settingsShowReminderToggleHint =>
+      'Reminder to set all pedals/levers to flat';
 
   @override
-  String get reminderLeverSnack =>
-      'Before tuning, disengage all levers (push down).';
+  String get reminderPedalSnack => 'Set all pedals to ♭ before tuning';
 
   @override
-  String get reminderDismissBtn => 'Got it';
+  String get reminderLeverSnack => 'Disengage all levers before tuning';
+
+  @override
+  String get reminderDismissBtn => 'OK';
 
   @override
   String get settingsDisplayLabelInstrument => 'HARP';

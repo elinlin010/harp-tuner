@@ -358,25 +358,31 @@ abstract class AppLocalizations {
   /// No description provided for @settingsShowReminderToggle.
   ///
   /// In en, this message translates to:
-  /// **'Show tuning reminder'**
+  /// **'Tuning Reminder'**
   String get settingsShowReminderToggle;
+
+  /// No description provided for @settingsShowReminderToggleHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder to set all pedals/levers to flat'**
+  String get settingsShowReminderToggleHint;
 
   /// No description provided for @reminderPedalSnack.
   ///
   /// In en, this message translates to:
-  /// **'Before tuning, set all pedals to the flat position (top notch).'**
+  /// **'Set all pedals to ♭ before tuning'**
   String get reminderPedalSnack;
 
   /// No description provided for @reminderLeverSnack.
   ///
   /// In en, this message translates to:
-  /// **'Before tuning, disengage all levers (push down).'**
+  /// **'Disengage all levers before tuning'**
   String get reminderLeverSnack;
 
   /// No description provided for @reminderDismissBtn.
   ///
   /// In en, this message translates to:
-  /// **'Got it'**
+  /// **'OK'**
   String get reminderDismissBtn;
 
   /// No description provided for @settingsDisplayLabelInstrument.
