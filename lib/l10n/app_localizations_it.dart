@@ -155,4 +155,19 @@ class AppLocalizationsIt extends AppLocalizations {
 
   @override
   String get reminderDismissBtn => 'Capito';
+
+  @override
+  String get settingsDisplayLabelInstrument => 'ARPA';
+
+  @override
+  String get settingsDisplayLabelA4 => 'A4';
+
+  @override
+  String get settingsDisplayLabelStrings => 'CORDE';
+
+  @override
+  String get settingsDisplayHarpLever => 'Celtica';
+
+  @override
+  String get settingsDisplayHarpPedal => 'A pedali';
 }

@@ -65,5 +65,10 @@
   "settingsShowReminderToggle": "Afficher le rappel d'accord",
   "reminderPedalSnack": "Avant d'accorder, mettez toutes les pédales en position bémol (cran supérieur).",
   "reminderLeverSnack": "Avant d'accorder, désengagez tous les leviers (vers le bas).",
-  "reminderDismissBtn": "Compris"
+  "reminderDismissBtn": "Compris",
+  "settingsDisplayLabelInstrument": "HARPE",
+  "settingsDisplayLabelA4": "A4",
+  "settingsDisplayLabelStrings": "CORDES",
+  "settingsDisplayHarpLever": "Celtique",
+  "settingsDisplayHarpPedal": "Pédales"
 }
