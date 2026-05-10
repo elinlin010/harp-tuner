@@ -2,6 +2,13 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.0.8+8] - 2026-04-24
+
+### Changed
+- When a harp is selected, the "Always show flats" toggle is now locked ON and visually dimmed — harps are conventionally notated in flats, so the setting is not user-configurable while a harp type is active.
+- Lever harp string count is now shown inline directly below the Lever Harp option in the instrument settings, making the connection between instrument type and string count clearer.
+- The instrument display card on the main screen now combines the harp type and string count into a single card ("Lever · 34") instead of two separate cards. The A4 calibration card remains alongside it.
+
 ## [1.0.7+7] - 2026-04-10
 
 ### Changed

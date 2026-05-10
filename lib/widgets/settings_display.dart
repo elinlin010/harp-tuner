@@ -23,7 +23,8 @@ class SettingsDisplay extends ConsumerWidget {
     final String instrumentValue;
     switch (tuner.selectedHarp) {
       case HarpType.leverHarp:
-        instrumentValue = l10n.settingsDisplayHarpLever;
+        instrumentValue =
+            '${l10n.settingsDisplayHarpLever} · ${tuner.leverStringCount}';
         break;
       case HarpType.pedalHarp:
         instrumentValue = l10n.settingsDisplayHarpPedal;
@@ -32,8 +33,6 @@ class SettingsDisplay extends ConsumerWidget {
         instrumentValue = l10n.settingsInstrumentNone;
         break;
     }
-
-    final showStrings = tuner.selectedHarp == HarpType.leverHarp;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
@@ -56,17 +55,6 @@ class SettingsDisplay extends ConsumerWidget {
               theme: theme,
             ),
           ),
-          if (showStrings) ...[
-            const SizedBox(width: 6),
-            Expanded(
-              child: _SettingsDisplayCard(
-                label: l10n.settingsDisplayLabelStrings,
-                value: tuner.leverStringCount.toString(),
-                onTap: () => onTap(SettingsSection.stringCount),
-                theme: theme,
-              ),
-            ),
-          ],
         ],
       ),
     );
