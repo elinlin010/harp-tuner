@@ -63,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "調音提醒",
-  "settingsShowReminderToggleHint": "開始調音前提醒設定踏板或撥鍵",
+  "settingsShowReminderToggleHint": "提醒把所有踏板/撥鍵調至 ♭ 位",
   "reminderPedalSnack": "調音前把踏板放至 ♭ 位。",
   "reminderLeverSnack": "調音前把所有撥鍵放下。",
   "reminderDismissBtn": "OK",

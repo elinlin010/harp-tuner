@@ -63,7 +63,7 @@
     }
   },
   "settingsShowReminderToggle": "Tuning Reminder",
-  "settingsShowReminderToggleHint": "Reminds you to set pedals/levers before tuning",
+  "settingsShowReminderToggleHint": "Reminds setting all pedals/levers to flat",
   "reminderPedalSnack": "Set all pedals to ♭ before tuning",
   "reminderLeverSnack": "Disengage all levers before tuning",
   "reminderDismissBtn": "OK",
