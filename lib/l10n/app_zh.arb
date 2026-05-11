@@ -62,10 +62,11 @@
       }
     }
   },
-  "settingsShowReminderToggle": "顯示調音提醒",
-  "reminderPedalSnack": "調音前把踏板放至最上格（降音位）。",
-  "reminderLeverSnack": "調音前把撥鍵放下來。",
-  "reminderDismissBtn": "知道了",
+  "settingsShowReminderToggle": "調音提醒",
+  "settingsShowReminderToggleHint": "提醒把所有踏板/撥鍵調至 ♭ 位",
+  "reminderPedalSnack": "調音前把踏板放至 ♭ 位。",
+  "reminderLeverSnack": "調音前把所有撥鍵放下。",
+  "reminderDismissBtn": "OK",
   "settingsDisplayLabelInstrument": "豎琴",
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "弦數",

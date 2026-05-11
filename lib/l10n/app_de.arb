@@ -62,10 +62,11 @@
       }
     }
   },
-  "settingsShowReminderToggle": "Stimmhinweis anzeigen",
-  "reminderPedalSnack": "Vor dem Stimmen alle Pedale in die Flach-Position (oberste Raste) bringen.",
-  "reminderLeverSnack": "Vor dem Stimmen alle Haken aushaken (nach unten).",
-  "reminderDismissBtn": "Verstanden",
+  "settingsShowReminderToggle": "Stimmhinweis",
+  "settingsShowReminderToggleHint": "Erinnerung, alle Pedale/Haken auf ♭ zu stellen",
+  "reminderPedalSnack": "Alle Pedale auf ♭ stellen vor dem Stimmen",
+  "reminderLeverSnack": "Alle Haken aushaken vor dem Stimmen",
+  "reminderDismissBtn": "OK",
   "settingsDisplayLabelInstrument": "HARFE",
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "SAITEN",

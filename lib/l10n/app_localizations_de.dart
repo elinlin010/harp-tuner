@@ -143,18 +143,20 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get settingsShowReminderToggle => 'Stimmhinweis anzeigen';
+  String get settingsShowReminderToggle => 'Stimmhinweis';
 
   @override
-  String get reminderPedalSnack =>
-      'Vor dem Stimmen alle Pedale in die Flach-Position (oberste Raste) bringen.';
+  String get settingsShowReminderToggleHint =>
+      'Erinnerung, alle Pedale/Haken auf ♭ zu stellen';
 
   @override
-  String get reminderLeverSnack =>
-      'Vor dem Stimmen alle Haken aushaken (nach unten).';
+  String get reminderPedalSnack => 'Alle Pedale auf ♭ stellen vor dem Stimmen';
 
   @override
-  String get reminderDismissBtn => 'Verstanden';
+  String get reminderLeverSnack => 'Alle Haken aushaken vor dem Stimmen';
+
+  @override
+  String get reminderDismissBtn => 'OK';
 
   @override
   String get settingsDisplayLabelInstrument => 'HARFE';

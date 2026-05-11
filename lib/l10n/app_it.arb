@@ -62,10 +62,11 @@
       }
     }
   },
-  "settingsShowReminderToggle": "Mostra promemoria accordatura",
-  "reminderPedalSnack": "Prima di accordare, porta tutti i pedali in posizione bemolle (tacca superiore).",
-  "reminderLeverSnack": "Prima di accordare, disattiva tutte le leve (verso il basso).",
-  "reminderDismissBtn": "Capito",
+  "settingsShowReminderToggle": "Promemoria accordatura",
+  "settingsShowReminderToggleHint": "Promemoria per mettere tutti i pedali/leve in ♭",
+  "reminderPedalSnack": "Pedali in ♭ prima di accordare",
+  "reminderLeverSnack": "Disattiva le leve prima di accordare",
+  "reminderDismissBtn": "OK",
   "settingsDisplayLabelInstrument": "ARPA",
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "CORDE",

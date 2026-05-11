@@ -142,16 +142,19 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get settingsShowReminderToggle => '顯示調音提醒';
+  String get settingsShowReminderToggle => '調音提醒';
 
   @override
-  String get reminderPedalSnack => '調音前把踏板放至最上格（降音位）。';
+  String get settingsShowReminderToggleHint => '提醒把所有踏板/撥鍵調至 ♭ 位';
 
   @override
-  String get reminderLeverSnack => '調音前把撥鍵放下來。';
+  String get reminderPedalSnack => '調音前把踏板放至 ♭ 位。';
 
   @override
-  String get reminderDismissBtn => '知道了';
+  String get reminderLeverSnack => '調音前把所有撥鍵放下。';
+
+  @override
+  String get reminderDismissBtn => 'OK';
 
   @override
   String get settingsDisplayLabelInstrument => '豎琴';
@@ -307,16 +310,19 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   }
 
   @override
-  String get settingsShowReminderToggle => '顯示調音提醒';
+  String get settingsShowReminderToggle => '調音提醒';
 
   @override
-  String get reminderPedalSnack => '調音前把踏板放至最上格（降音位）。';
+  String get settingsShowReminderToggleHint => '提醒把所有踏板/撥鍵調至 ♭ 位';
 
   @override
-  String get reminderLeverSnack => '調音前把撥鍵放下來。';
+  String get reminderPedalSnack => '調音前把踏板放至 ♭ 位。';
 
   @override
-  String get reminderDismissBtn => '知道了';
+  String get reminderLeverSnack => '調音前把所有撥鍵放下。';
+
+  @override
+  String get reminderDismissBtn => 'OK';
 
   @override
   String get settingsDisplayLabelInstrument => '豎琴';

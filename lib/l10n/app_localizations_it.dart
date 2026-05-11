@@ -143,18 +143,20 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get settingsShowReminderToggle => 'Mostra promemoria accordatura';
+  String get settingsShowReminderToggle => 'Promemoria accordatura';
 
   @override
-  String get reminderPedalSnack =>
-      'Prima di accordare, porta tutti i pedali in posizione bemolle (tacca superiore).';
+  String get settingsShowReminderToggleHint =>
+      'Promemoria per mettere tutti i pedali/leve in ♭';
 
   @override
-  String get reminderLeverSnack =>
-      'Prima di accordare, disattiva tutte le leve (verso il basso).';
+  String get reminderPedalSnack => 'Pedali in ♭ prima di accordare';
 
   @override
-  String get reminderDismissBtn => 'Capito';
+  String get reminderLeverSnack => 'Disattiva le leve prima di accordare';
+
+  @override
+  String get reminderDismissBtn => 'OK';
 
   @override
   String get settingsDisplayLabelInstrument => 'ARPA';

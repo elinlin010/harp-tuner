@@ -2,6 +2,14 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.0.9+9] - 2026-05-10
+
+### Changed
+- Tuning reminder setting renamed from "Show tuning reminder" to "Tuning Reminder" with a short description underneath explaining what it reminds you to do.
+- Tuning reminder snackbar is now tappable anywhere to dismiss — no longer requires tapping a small "Got it" button. The dismiss button is now a larger, bold "OK" label for quicker reading.
+- Snackbar message text is larger (16px) and more concise, making it easier to read at a glance before you start tuning.
+- Swipe-to-dismiss on the tuning reminder snackbar is intentionally disabled — the reminder is safety-critical and should not be accidentally swiped away.
+
 ## [1.0.8+8] - 2026-04-24
 
 ### Changed
