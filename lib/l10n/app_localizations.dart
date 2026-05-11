@@ -370,7 +370,7 @@ abstract class AppLocalizations {
   /// No description provided for @reminderPedalSnack.
   ///
   /// In en, this message translates to:
-  /// **'Set all pedals to ♭ before tuning'**
+  /// **'Set all pedals to flat before tuning'**
   String get reminderPedalSnack;
 
   /// No description provided for @reminderLeverSnack.
