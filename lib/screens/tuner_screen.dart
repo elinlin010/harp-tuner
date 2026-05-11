@@ -65,7 +65,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         : l10n.reminderLeverSnack;
 
     // Light themes (Linen, Milk): inverted snackbar — textPrimary bg.
-    // Dark themes (Blueprint, Void, Phosphor): dark surfaceHi bg, inTune border ring.
+    // Dark themes (Blueprint, Void): dark surfaceHi bg, inTune border ring.
     // OK button: bold + larger; light mode uses muted white (softer against dark bg).
     final Color bgColor;
     final Color contentColor;
@@ -87,6 +87,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
       SnackBar(
         backgroundColor: bgColor,
         behavior: SnackBarBehavior.floating,
+        dismissDirection: DismissDirection.none,
         shape: RoundedRectangleBorder(
           borderRadius: const BorderRadius.all(Radius.circular(10)),
           side: accentBorder != null
@@ -102,10 +103,14 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 child: Text(text, style: theme.sans(16, color: contentColor)),
               ),
               const SizedBox(width: 16),
-              Text(
-                l10n.reminderDismissBtn,
-                style: theme.sans(18,
-                    weight: FontWeight.w700, color: okColor),
+              Semantics(
+                button: true,
+                label: l10n.reminderDismissBtn,
+                child: Text(
+                  l10n.reminderDismissBtn,
+                  style: theme.sans(18,
+                      weight: FontWeight.w700, color: okColor),
+                ),
               ),
             ],
           ),
