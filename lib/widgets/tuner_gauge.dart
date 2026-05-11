@@ -8,6 +8,8 @@ import '../theme/app_theme.dart';
 const _kGaugeSweep = 1.4; // ~80° — flat meter look matching reference
 // Horizontal margin so edge labels/ticks don't clip
 const _kGaugeChordInset = 100.0;
+// Cents window for "in tune" — used by needle color and section glow
+const _kInTuneCents = 15.0;
 
 class TunerGauge extends StatefulWidget {
   final double? cents;
@@ -134,7 +136,7 @@ class _TunerGaugeState extends State<TunerGauge>
   Color get _stateColor {
     if (widget.cents == null) return widget.theme.textDim;
     final c = _needleCtrl.value;
-    if (c.abs() <= 15) return widget.theme.inTune;
+    if (c.abs() <= _kInTuneCents) return widget.theme.inTune;
     if (c > 0) return widget.theme.sharp;
     return widget.theme.flat;
   }
@@ -145,6 +147,8 @@ class _TunerGaugeState extends State<TunerGauge>
     final needlePos = _needleCtrl.value;
     // Show needle whenever signal present OR it's still animating back
     final showNeedle = hasSignal || needlePos.abs() > 1.0;
+    // Derived from animated needle so the glow tracks the spring, not raw cents
+    final isInTune = hasSignal && needlePos.abs() <= _kInTuneCents;
 
     final animDur = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -160,10 +164,14 @@ class _TunerGaugeState extends State<TunerGauge>
       builder: (ctx, constraints) {
         final maxH = constraints.maxHeight;
         final maxW = constraints.maxWidth;
-        // r is fully width-derived so the arc always spans the screen.
+        // Horizontal padding for the section background card.
+        // Arc radius is derived from paintW so the arc fits inside the padded area.
+        const hPad = 12.0;
+        final paintW = maxW - 2 * hPad;
+        // r is fully width-derived so the arc always spans the content area.
         // arcH is independent — we only show the upper portion of the arc by
         // placing cy (the geometric pivot) below the canvas bottom in the painter.
-        final r = (maxW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
+        final r = (paintW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
         // Show from arc top down to just below the anchor/needle-tail dot.
         // anchor is at r*0.50 above cy; cy = r+30 → anchorY = r*0.50+30 from top.
         // Arc takes its natural size (r*0.50+64), capped at 65% of available
@@ -180,7 +188,20 @@ class _TunerGaugeState extends State<TunerGauge>
         // filling all Flexible space. Excess space falls below the button.
         final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 80.0);
 
-        return Column(
+        final sectionBg = isInTune
+            ? widget.theme.inTune.withValues(alpha: 0.30)
+            : Colors.transparent;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
+          child: AnimatedContainer(
+          duration: animDur,
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: sectionBg,
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -190,7 +211,7 @@ class _TunerGaugeState extends State<TunerGauge>
                 child: AnimatedBuilder(
                   animation: Listenable.merge([_pulseCtrl, _needleCtrl]),
                   builder: (ctx, child) => CustomPaint(
-                    size: Size(maxW, arcH),
+                    size: Size(paintW, arcH),
                     painter: _ArcPainter(
                       radius: r,
                       needlePos: needlePos,
@@ -245,6 +266,7 @@ class _TunerGaugeState extends State<TunerGauge>
                             child: _SignalReadout(
                               noteName: widget.noteName ?? '—',
                               theme: widget.theme,
+                              isInTune: isInTune,
                             ),
                           ),
                         ),
@@ -254,7 +276,9 @@ class _TunerGaugeState extends State<TunerGauge>
                 ),
               ),
             ],
-        );
+          ),
+          ),  // AnimatedContainer
+        );    // Padding
       },
     ),  // LayoutBuilder
     ),  // AnimatedOpacity
@@ -539,48 +563,77 @@ class _IdleReadout extends StatelessWidget {
 class _SignalReadout extends StatelessWidget {
   final String noteName;
   final TunerThemeData theme;
+  final bool isInTune;
 
   const _SignalReadout({
     required this.noteName,
     required this.theme,
+    required this.isInTune,
   });
+
+  static final _noteRe = RegExp(r'^([A-G])(♭|♯)?(\d+)?$');
 
   @override
   Widget build(BuildContext context) {
-    // Parse e.g. "B♭4" → letter "B", accidental "♭", octave "4"
-    final match = RegExp(r'^([A-G])(♭|♯)?(\d+)?$').firstMatch(noteName);
+    final match = _noteRe.firstMatch(noteName);
     final noteLetter = match?.group(1) ?? noteName;
     final noteAcc    = match?.group(2) ?? '';
     final noteOctave = match?.group(3) ?? '';
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          noteLetter,
-          style: theme.sans(100, weight: FontWeight.w400).copyWith(height: 1),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (noteAcc.isNotEmpty)
-                Text(
-                  noteAcc,
-                  style: theme.sans(42, weight: FontWeight.w400).copyWith(height: 1),
-                ),
-              if (noteOctave.isNotEmpty)
-                Text(
-                  noteOctave,
-                  style: theme.sans(30, weight: FontWeight.w400, color: theme.textSecondary).copyWith(height: 1),
-                ),
-            ],
+    final Color letterColor;
+    final Color accColor;
+    final Color octaveColor;
+    if (isInTune) {
+      letterColor = theme.inTune;
+      accColor    = theme.inTune;
+      octaveColor = theme.inTune.withValues(alpha: 0.7);
+    } else {
+      letterColor = theme.textPrimary;
+      accColor    = theme.textPrimary;
+      octaveColor = theme.textSecondary;
+    }
+
+    final animDur = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AnimatedDefaultTextStyle(
+            duration: animDur,
+            curve: Curves.easeOut,
+            style: theme.sans(100, weight: FontWeight.w400, color: letterColor).copyWith(height: 1),
+            child: Text(noteLetter),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (noteAcc.isNotEmpty)
+                  AnimatedDefaultTextStyle(
+                    duration: animDur,
+                    curve: Curves.easeOut,
+                    style: theme.sans(42, weight: FontWeight.w400, color: accColor).copyWith(height: 1),
+                    child: Text(noteAcc),
+                  ),
+                if (noteOctave.isNotEmpty)
+                  AnimatedDefaultTextStyle(
+                    duration: animDur,
+                    curve: Curves.easeOut,
+                    style: theme.sans(30, weight: FontWeight.w400, color: octaveColor).copyWith(height: 1),
+                    child: Text(noteOctave),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

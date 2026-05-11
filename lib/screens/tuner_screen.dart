@@ -249,7 +249,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 ),
               ),
 
-              // ── Gauge + readout (full width, no horizontal padding) ────────
+              // ── Gauge + readout ────────────────────────────────────────────
               Expanded(
                 child: TunerGauge(
                   cents: tuner.cents,
