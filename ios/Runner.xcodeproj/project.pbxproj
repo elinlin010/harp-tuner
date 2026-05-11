@@ -201,6 +201,7 @@
 				9705A1C41CF9048500538489 /* Embed Frameworks */,
 				3B06AD1E1E4923F5004D2608 /* Thin Binary */,
 				753B7447429A24B5E93891BC /* [CP] Embed Pods Frameworks */,
+				D4A1B2C3E5F6789012345678 /* Strip Simulator Slices */,
 				BE754B298B472F1B3CC63840 /* [CP] Copy Pods Resources */,
 			);
 			buildRules = (
@@ -381,6 +382,21 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-resources.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		D4A1B2C3E5F6789012345678 /* Strip Simulator Slices */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Strip Simulator Slices";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Strip simulator platform slices from embedded frameworks.\n# Fixes App Store validation error: 'references an unsupported platform in the arm64 slice'\n# CODESIGNING_FOLDER_PATH is the .app bundle path set by Xcode during archive.\nfind \"${CODESIGNING_FOLDER_PATH}/Frameworks\" -name '*.framework' -type d 2>/dev/null | while read -r fw; do\n  binary=\"$fw/$(basename \"$fw\" .framework)\"\n  [ -f \"$binary\" ] || continue\n  if xcrun vtool -show-build \"$binary\" 2>/dev/null | grep -qE 'IOSSIMULATOR|MACCATALYST'; then\n    echo \"Strip Simulator Slices: re-tagging $binary as iOS\"\n    xcrun vtool -set-build-version ios 13.0 13.0 -replace -output \"$binary\" \"$binary\"\n  fi\ndone\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -697,7 +713,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = 8C85MM7JK3;
 				ENABLE_BITCODE = NO;
@@ -708,6 +725,7 @@
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.career010.harpie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "Harpie App Store";
 				SWIFT_OBJC_BRIDGING_HEADER = "Runner/Runner-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
