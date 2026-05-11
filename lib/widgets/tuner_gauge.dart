@@ -190,7 +190,7 @@ class _TunerGaugeState extends State<TunerGauge>
 
         final sectionBg = isInTune
             ? widget.theme.inTune.withValues(alpha: 0.30)
-            : Colors.transparent;
+            : widget.theme.surfaceHi;
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: hPad, vertical: 8),
