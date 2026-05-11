@@ -150,7 +150,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Reminder to set all pedals/levers to flat';
 
   @override
-  String get reminderPedalSnack => 'Set all pedals to ♭ before tuning';
+  String get reminderPedalSnack => 'Set all pedals to flat before tuning';
 
   @override
   String get reminderLeverSnack => 'Disengage all levers before tuning';

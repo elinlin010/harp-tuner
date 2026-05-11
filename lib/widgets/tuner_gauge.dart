@@ -8,6 +8,8 @@ import '../theme/app_theme.dart';
 const _kGaugeSweep = 1.4; // ~80° — flat meter look matching reference
 // Horizontal margin so edge labels/ticks don't clip
 const _kGaugeChordInset = 100.0;
+// Cents window for "in tune" — used by needle color and section glow
+const _kInTuneCents = 15.0;
 
 class TunerGauge extends StatefulWidget {
   final double? cents;
@@ -29,15 +31,14 @@ class TunerGauge extends StatefulWidget {
   State<TunerGauge> createState() => _TunerGaugeState();
 }
 
-class _TunerGaugeState extends State<TunerGauge>
-    with TickerProviderStateMixin {
+class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
   late AnimationController _pulseCtrl;
   late AnimationController _needleCtrl;
 
   static const _spring = SpringDescription(
     mass: 1.0,
     stiffness: 180.0,
-    damping: 20.0,  // ratio ≈ 0.74 — near-critically damped, minimal overshoot
+    damping: 20.0, // ratio ≈ 0.74 — near-critically damped, minimal overshoot
   );
 
   // EMA smoothing for the spring target — reduces micro-wobble from noisy pitch
@@ -47,7 +48,7 @@ class _TunerGaugeState extends State<TunerGauge>
   // Velocity tracking for smooth spring hand-offs (no abrupt momentum reset)
   double _needleVelocity = 0.0;
   double _prevNeedleValue = 0.0;
-  double _prevListenTime  = 0.0;
+  double _prevListenTime = 0.0;
 
   @override
   void initState() {
@@ -66,12 +67,12 @@ class _TunerGaugeState extends State<TunerGauge>
     );
     _needleCtrl.addListener(() {
       final now = DateTime.now().microsecondsSinceEpoch / 1e6;
-      final dt  = now - _prevListenTime;
+      final dt = now - _prevListenTime;
       if (dt > 0.001 && dt < 0.2) {
         _needleVelocity = (_needleCtrl.value - _prevNeedleValue) / dt;
       }
       _prevNeedleValue = _needleCtrl.value;
-      _prevListenTime  = now;
+      _prevListenTime = now;
       setState(() {});
     });
   }
@@ -112,7 +113,12 @@ class _TunerGaugeState extends State<TunerGauge>
             ? raw
             : _kSmoothAlpha * raw + (1 - _kSmoothAlpha) * _smoothedTarget!;
         _needleCtrl.animateWith(
-          SpringSimulation(_spring, _needleCtrl.value, _smoothedTarget!, _needleVelocity),
+          SpringSimulation(
+            _spring,
+            _needleCtrl.value,
+            _smoothedTarget!,
+            _needleVelocity,
+          ),
         );
       } else {
         // clearPitch fired (stop button) — spring needle back to center
@@ -134,7 +140,7 @@ class _TunerGaugeState extends State<TunerGauge>
   Color get _stateColor {
     if (widget.cents == null) return widget.theme.textDim;
     final c = _needleCtrl.value;
-    if (c.abs() <= 15) return widget.theme.inTune;
+    if (c.abs() <= _kInTuneCents) return widget.theme.inTune;
     if (c > 0) return widget.theme.sharp;
     return widget.theme.flat;
   }
@@ -145,6 +151,9 @@ class _TunerGaugeState extends State<TunerGauge>
     final needlePos = _needleCtrl.value;
     // Show needle whenever signal present OR it's still animating back
     final showNeedle = hasSignal || needlePos.abs() > 1.0;
+    // Use raw cents (same source as pitch lights) so glow and bulbs stay in sync.
+    // _needleCtrl.value causes flicker when the spring oscillates across the threshold.
+    final isInTune = hasSignal && widget.cents!.abs() <= _kInTuneCents;
 
     final animDur = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -154,111 +163,142 @@ class _TunerGaugeState extends State<TunerGauge>
     return Semantics(
       label: widget.isStale ? l10n.gaugeStaleSemantics : null,
       child: AnimatedOpacity(
-      opacity: widget.isStale ? 0.40 : 1.0,
-      duration: animDur,
-      child: LayoutBuilder(
-      builder: (ctx, constraints) {
-        final maxH = constraints.maxHeight;
-        final maxW = constraints.maxWidth;
-        // r is fully width-derived so the arc always spans the screen.
-        // arcH is independent — we only show the upper portion of the arc by
-        // placing cy (the geometric pivot) below the canvas bottom in the painter.
-        final r = (maxW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
-        // Show from arc top down to just below the anchor/needle-tail dot.
-        // anchor is at r*0.50 above cy; cy = r+30 → anchorY = r*0.50+30 from top.
-        // Arc takes its natural size (r*0.50+64), capped at 65% of available
-        // height so the readout below always gets room. Floor is 100px.
-        // Using a proportional cap instead of a fixed 150px floor prevents
-        // `clamp(lower, upper)` from throwing when maxH is small (e.g. reference
-        // mode on iPhone SE where 150 > maxH*0.48 caused `Invalid arguments`).
-        final double arcHMax = maxH * 0.65 > 100.0 ? maxH * 0.65 : 100.0;
-        final double arcH = (r * 0.50 + 64).clamp(100.0, arcHMax);
+        opacity: widget.isStale ? 0.40 : 1.0,
+        duration: animDur,
+        child: LayoutBuilder(
+          builder: (ctx, constraints) {
+            final maxH = constraints.maxHeight;
+            final maxW = constraints.maxWidth;
+            // Horizontal and vertical padding for the section background card.
+            // Arc geometry is derived from the inner (padded) dimensions so the
+            // arc and readout always fit inside the card without overflowing.
+            const hPad = 12.0;
+            const vPad = 8.0;
+            final paintW = maxW - 2 * hPad;
+            // Subtract vertical padding so arcH/readoutH are budgeted against the
+            // space actually available inside the card, not the full LayoutBuilder height.
+            final availH = maxH - 2 * vPad;
+            // r is fully width-derived so the arc always spans the content area.
+            // arcH is independent — we only show the upper portion of the arc by
+            // placing cy (the geometric pivot) below the canvas bottom in the painter.
+            final r =
+                (paintW - _kGaugeChordInset) / (2 * sin(_kGaugeSweep / 2));
+            // Show from arc top down to just below the anchor/needle-tail dot.
+            // anchor is at r*0.50 above cy; cy = r+30 → anchorY = r*0.50+30 from top.
+            // Arc takes its natural size (r*0.50+64), capped at 65% of available
+            // height so the readout below always gets room. Floor is 100px.
+            // Using a proportional cap instead of a fixed 150px floor prevents
+            // `clamp(lower, upper)` from throwing when maxH is small (e.g. reference
+            // mode on iPhone SE where 150 > maxH*0.48 caused `Invalid arguments`).
+            final double arcHMax = availH * 0.65 > 100.0
+                ? availH * 0.65
+                : 100.0;
+            final double arcH = (r * 0.50 + 64).clamp(100.0, arcHMax);
 
-        // Readout is capped at 80px — enough for the note name.
-        // The Column uses mainAxisSize.min so the gauge reports only
-        // arcH + 16 + readoutH (~266px) as its natural height, rather than
-        // filling all Flexible space. Excess space falls below the button.
-        final double readoutH = (maxH - arcH - 16.0).clamp(0.0, 80.0);
+            // Readout is capped at 80px — enough for the note name.
+            // The Column uses mainAxisSize.min so the gauge reports only
+            // arcH + 16 + readoutH (~266px) as its natural height, rather than
+            // filling all Flexible space. Excess space falls below the button.
+            final double readoutH = (availH - arcH - 16.0).clamp(0.0, 80.0);
 
-        return Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // ── Arc ─────────────────────────────────────────────────────
-              SizedBox(
-                height: arcH,
-                child: AnimatedBuilder(
-                  animation: Listenable.merge([_pulseCtrl, _needleCtrl]),
-                  builder: (ctx, child) => CustomPaint(
-                    size: Size(maxW, arcH),
-                    painter: _ArcPainter(
-                      radius: r,
-                      needlePos: needlePos,
-                      showNeedle: showNeedle,
-                      stateColor: _stateColor,
-                      isListening: widget.isListening,
-                      hasSignal: hasSignal,
-                      pulse: _pulseCtrl.value,
-                      theme: widget.theme,
-                    ),
-                  ),
-                ),
+            final sectionBg = isInTune
+                ? widget.theme.inTune.withValues(alpha: 0.30)
+                : widget.theme.surfaceHi;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: hPad,
+                vertical: 8,
               ),
-
-              const SizedBox(height: 16),
-
-              // ── Readout (fixed height so mainAxisAlignment.center works) ─
-              SizedBox(
-                height: readoutH,
-                child: Stack(
+              child: AnimatedContainer(
+                duration: animDur,
+                curve: Curves.easeOut,
+                decoration: BoxDecoration(
+                  color: sectionBg,
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Positioned.fill(
-                      child: AnimatedOpacity(
-                        opacity: hasSignal ? 0.0 : 1.0,
-                        duration: const Duration(milliseconds: 200),
-                        child: Align(
-                          alignment: Alignment.center,
-                          // FittedBox scales the idle readout down when the
-                          // available readoutH is smaller than the content's
-                          // intrinsic height (icon 48 + gap 16 + text ~28 = 92px).
-                          // This prevents the overflow that occurs on small screens
-                          // when a harp is selected and the gauge has limited space.
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: _IdleReadout(
-                              isListening: widget.isListening,
-                              pulse: _pulseCtrl,
-                              theme: widget.theme,
-                            ),
+                    // ── Arc ─────────────────────────────────────────────────────
+                    SizedBox(
+                      height: arcH,
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge([_pulseCtrl, _needleCtrl]),
+                        builder: (ctx, child) => CustomPaint(
+                          size: Size(paintW, arcH),
+                          painter: _ArcPainter(
+                            radius: r,
+                            needlePos: needlePos,
+                            showNeedle: showNeedle,
+                            stateColor: _stateColor,
+                            isListening: widget.isListening,
+                            hasSignal: hasSignal,
+                            pulse: _pulseCtrl.value,
+                            theme: widget.theme,
                           ),
                         ),
                       ),
                     ),
-                    Positioned.fill(
-                      child: AnimatedOpacity(
-                        opacity: hasSignal ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 200),
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: _SignalReadout(
-                              noteName: widget.noteName ?? '—',
-                              theme: widget.theme,
+
+                    const SizedBox(height: 16),
+
+                    // ── Readout (fixed height so mainAxisAlignment.center works) ─
+                    SizedBox(
+                      height: readoutH,
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: AnimatedOpacity(
+                              opacity: hasSignal ? 0.0 : 1.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Align(
+                                alignment: Alignment.center,
+                                // FittedBox scales the idle readout down when the
+                                // available readoutH is smaller than the content's
+                                // intrinsic height (icon 48 + gap 16 + text ~28 = 92px).
+                                // This prevents the overflow that occurs on small screens
+                                // when a harp is selected and the gauge has limited space.
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: _IdleReadout(
+                                    isListening: widget.isListening,
+                                    pulse: _pulseCtrl,
+                                    theme: widget.theme,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                          Positioned.fill(
+                            child: AnimatedOpacity(
+                              opacity: hasSignal ? 1.0 : 0.0,
+                              duration: const Duration(milliseconds: 200),
+                              child: Align(
+                                alignment: Alignment.center,
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: _SignalReadout(
+                                    noteName: widget.noteName ?? '—',
+                                    theme: widget.theme,
+                                    isInTune: isInTune,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-            ],
-        );
-      },
-    ),  // LayoutBuilder
-    ),  // AnimatedOpacity
-    );  // Semantics
+              ), // AnimatedContainer
+            ); // Padding
+          },
+        ), // LayoutBuilder
+      ), // AnimatedOpacity
+    ); // Semantics
   }
 }
 
@@ -288,8 +328,7 @@ class _ArcPainter extends CustomPainter {
   static const _sweep = _kGaugeSweep;
   static const _startAngle = pi + (pi - _sweep) / 2;
 
-  double _centsToAngle(double c) =>
-      _startAngle + _sweep * ((c + 50) / 100);
+  double _centsToAngle(double c) => _startAngle + _sweep * ((c + 50) / 100);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -338,7 +377,7 @@ class _ArcPainter extends CustomPainter {
     // Every 1¢: short (4px), every 5¢: medium (9px), every 10¢: tall (16px)
     for (int c = -50; c <= 50; c += 1) {
       if (c == 0) continue; // 0 gets a special centerline
-      final isMajor  = c % 10 == 0;
+      final isMajor = c % 10 == 0;
       final isMedium = c % 5 == 0;
       final angle = _centsToAngle(c.toDouble());
 
@@ -346,11 +385,17 @@ class _ArcPainter extends CustomPainter {
       final double tickWidth;
       final double tickAlpha;
       if (isMajor) {
-        tickLen = 16; tickWidth = 1.6; tickAlpha = 0.9;
+        tickLen = 16;
+        tickWidth = 1.6;
+        tickAlpha = 0.9;
       } else if (isMedium) {
-        tickLen = 9; tickWidth = 1.2; tickAlpha = 0.7;
+        tickLen = 9;
+        tickWidth = 1.2;
+        tickAlpha = 0.7;
       } else {
-        tickLen = 4; tickWidth = 0.8; tickAlpha = 0.45;
+        tickLen = 4;
+        tickWidth = 0.8;
+        tickAlpha = 0.45;
       }
 
       // Ticks radiate outward: from the arc line (r) to r + tickLen
@@ -369,8 +414,11 @@ class _ArcPainter extends CustomPainter {
     // ── Center "0" reference line — matches needle span (tail → just above arc)
     final zeroAngle = _centsToAngle(0);
     canvas.drawLine(
-      Offset(cx + needleTailR * cos(zeroAngle), cy + needleTailR * sin(zeroAngle)),
-      Offset(cx + (r + 16) * cos(zeroAngle),    cy + (r + 16) * sin(zeroAngle)),
+      Offset(
+        cx + needleTailR * cos(zeroAngle),
+        cy + needleTailR * sin(zeroAngle),
+      ),
+      Offset(cx + (r + 16) * cos(zeroAngle), cy + (r + 16) * sin(zeroAngle)),
       Paint()
         ..color = tickColor.withValues(alpha: showNeedle ? 0.18 : 0.55)
         ..strokeWidth = 1.5
@@ -380,10 +428,10 @@ class _ArcPainter extends CustomPainter {
     // ── In-tune triangles (▼ at ±15¢, above ticks, pointing toward arc) ─
     for (final c in [-15.0, 15.0]) {
       final a = _centsToAngle(c);
-      final tipR  = r + 16;
+      final tipR = r + 16;
       final baseR = r + 24;
-      final tipX  = cx + tipR * cos(a);
-      final tipY  = cy + tipR * sin(a);
+      final tipX = cx + tipR * cos(a);
+      final tipY = cy + tipR * sin(a);
       // Perpendicular direction for the base width
       final perpX = -sin(a);
       final perpY = cos(a);
@@ -404,15 +452,15 @@ class _ArcPainter extends CustomPainter {
 
     // ── Scale labels (outside ticks) ─────────────────────────────────────
     _drawLabel(canvas, '−50', _centsToAngle(-47), cx, cy, r + 24, labelColor);
-    _drawLabel(canvas, '0',   _centsToAngle(0),   cx, cy, r + 28, labelColor);
-    _drawLabel(canvas, '+50', _centsToAngle(47),  cx, cy, r + 24, labelColor);
+    _drawLabel(canvas, '0', _centsToAngle(0), cx, cy, r + 28, labelColor);
+    _drawLabel(canvas, '+50', _centsToAngle(47), cx, cy, r + 24, labelColor);
 
     // ── Needle ────────────────────────────────────────────────────────────
     final angle = _centsToAngle(needlePos.clamp(-50.0, 50.0));
-    final needleTip = r - 4;   // tip just below the arc line
+    final needleTip = r - 4; // tip just below the arc line
     // needleTailR defined above (r * 0.50) — shared with center line & pivot
-    final tipNX  = cx + needleTip  * cos(angle);
-    final tipNY  = cy + needleTip  * sin(angle);
+    final tipNX = cx + needleTip * cos(angle);
+    final tipNY = cy + needleTip * sin(angle);
     final tailNX = cx + needleTailR * cos(angle);
     final tailNY = cy + needleTailR * sin(angle);
 
@@ -446,9 +494,7 @@ class _ArcPainter extends CustomPainter {
       Offset(anchorX, anchorY),
       showNeedle ? 5.0 : 4.0,
       Paint()
-        ..color = showNeedle
-            ? stateColor
-            : tickColor.withValues(alpha: 0.55)
+        ..color = showNeedle ? stateColor : tickColor.withValues(alpha: 0.55)
         ..style = PaintingStyle.fill,
     );
 
@@ -465,8 +511,15 @@ class _ArcPainter extends CustomPainter {
     }
   }
 
-  void _drawLabel(Canvas canvas, String text, double angle,
-      double cx, double cy, double labelR, Color color) {
+  void _drawLabel(
+    Canvas canvas,
+    String text,
+    double angle,
+    double cx,
+    double cy,
+    double labelR,
+    Color color,
+  ) {
     final tp = TextPainter(
       text: TextSpan(
         text: text,
@@ -524,8 +577,11 @@ class _IdleReadout extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             isListening ? l10n.gaugeListeningMsg : l10n.gaugeTapToBeginMsg,
-            style: theme.sans(22,
-                weight: FontWeight.w500, color: theme.textSecondary),
+            style: theme.sans(
+              22,
+              weight: FontWeight.w500,
+              color: theme.textSecondary,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
@@ -539,48 +595,83 @@ class _IdleReadout extends StatelessWidget {
 class _SignalReadout extends StatelessWidget {
   final String noteName;
   final TunerThemeData theme;
+  final bool isInTune;
 
   const _SignalReadout({
     required this.noteName,
     required this.theme,
+    required this.isInTune,
   });
+
+  static final _noteRe = RegExp(r'^([A-G])(♭|♯)?(\d+)?$');
 
   @override
   Widget build(BuildContext context) {
-    // Parse e.g. "B♭4" → letter "B", accidental "♭", octave "4"
-    final match = RegExp(r'^([A-G])(♭|♯)?(\d+)?$').firstMatch(noteName);
+    final match = _noteRe.firstMatch(noteName);
     final noteLetter = match?.group(1) ?? noteName;
-    final noteAcc    = match?.group(2) ?? '';
+    final noteAcc = match?.group(2) ?? '';
     final noteOctave = match?.group(3) ?? '';
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          noteLetter,
-          style: theme.sans(100, weight: FontWeight.w400).copyWith(height: 1),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (noteAcc.isNotEmpty)
-                Text(
-                  noteAcc,
-                  style: theme.sans(42, weight: FontWeight.w400).copyWith(height: 1),
-                ),
-              if (noteOctave.isNotEmpty)
-                Text(
-                  noteOctave,
-                  style: theme.sans(30, weight: FontWeight.w400, color: theme.textSecondary).copyWith(height: 1),
-                ),
-            ],
+    final Color letterColor;
+    final Color accColor;
+    final Color octaveColor;
+    if (isInTune) {
+      letterColor = theme.inTune;
+      accColor = theme.inTune;
+      octaveColor = theme.inTune.withValues(alpha: 0.7);
+    } else {
+      letterColor = theme.textPrimary;
+      accColor = theme.textPrimary;
+      octaveColor = theme.textSecondary;
+    }
+
+    final animDur = MediaQuery.disableAnimationsOf(context)
+        ? Duration.zero
+        : const Duration(milliseconds: 300);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AnimatedDefaultTextStyle(
+            duration: animDur,
+            curve: Curves.easeOut,
+            style: theme
+                .sans(100, weight: FontWeight.w400, color: letterColor)
+                .copyWith(height: 1),
+            child: Text(noteLetter),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (noteAcc.isNotEmpty)
+                  AnimatedDefaultTextStyle(
+                    duration: animDur,
+                    curve: Curves.easeOut,
+                    style: theme
+                        .sans(42, weight: FontWeight.w400, color: accColor)
+                        .copyWith(height: 1),
+                    child: Text(noteAcc),
+                  ),
+                if (noteOctave.isNotEmpty)
+                  AnimatedDefaultTextStyle(
+                    duration: animDur,
+                    curve: Curves.easeOut,
+                    style: theme
+                        .sans(30, weight: FontWeight.w400, color: octaveColor)
+                        .copyWith(height: 1),
+                    child: Text(noteOctave),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
