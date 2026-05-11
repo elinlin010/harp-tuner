@@ -2,6 +2,15 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.0+10] - 2026-05-11
+
+### Added
+- In-tune glow: the gauge section background and note readout text animate to the accent color when the needle is within ±15¢ of the target pitch. Matches the same stability-gated signal used by the pitch light bulbs, so all three indicators agree.
+
+### Fixed
+- Gauge card background is now always visible (uses surfaceHi base color) so the card padding is not invisible in idle or out-of-tune states.
+- Reminder snackbar English copy: "Set all pedals to ♭ before tuning" → "Set all pedals to flat before tuning".
+
 ## [1.0.9+9] - 2026-05-10
 
 ### Changed
