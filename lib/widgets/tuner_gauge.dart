@@ -147,8 +147,9 @@ class _TunerGaugeState extends State<TunerGauge>
     final needlePos = _needleCtrl.value;
     // Show needle whenever signal present OR it's still animating back
     final showNeedle = hasSignal || needlePos.abs() > 1.0;
-    // Derived from animated needle so the glow tracks the spring, not raw cents
-    final isInTune = hasSignal && needlePos.abs() <= _kInTuneCents;
+    // Use raw cents (same source as pitch lights) so glow and bulbs stay in sync.
+    // _needleCtrl.value causes flicker when the spring oscillates across the threshold.
+    final isInTune = hasSignal && widget.cents!.abs() <= _kInTuneCents;
 
     final animDur = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
