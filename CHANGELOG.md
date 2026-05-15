@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.1+11] - 2026-05-15
+
+### Changed
+- CocoaPods updated from 1.12.0 to 1.16.2 (iOS dependency manager maintenance update).
+
 ## [1.1.0+10] - 2026-05-11
 
 ### Added
