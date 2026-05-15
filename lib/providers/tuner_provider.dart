@@ -102,7 +102,7 @@ class TunerState {
 
 // ── Tuner notifier ────────────────────────────────────────────────────────────
 
-class TunerNotifier extends StateNotifier<TunerState> {
+class TunerNotifier extends Notifier<TunerState> {
   final PitchDetectionService _service    = PitchDetectionService();
   final TonePlayerService     _tonePlayer = TonePlayerService();
   StreamSubscription<PitchResult?>? _pitchSub;
@@ -141,8 +141,19 @@ class TunerNotifier extends StateNotifier<TunerState> {
   // the speaker bleed doesn't confuse the pitch detector.
   DateTime? _suppressUntil;
 
-  TunerNotifier() : super(const TunerState()) {
+  bool _disposed = false;
+
+  @override
+  TunerState build() {
+    ref.onDispose(() {
+      _disposed = true;
+      _micRestartTimer?.cancel();
+      _pitchSub?.cancel();
+      _service.stop();
+      _tonePlayer.dispose();
+    });
     _loadPrefs();
+    return const TunerState();
   }
 
   Future<void> _loadPrefs() async {
@@ -320,7 +331,7 @@ class TunerNotifier extends StateNotifier<TunerState> {
     } catch (e) {
       debugPrint('TunerNotifier: failed to play reference tone: $e');
     } finally {
-      if (mounted) state = state.copyWith(isPlayingTone: false);
+      if (!_disposed) state = state.copyWith(isPlayingTone: false);
     }
 
     // Restart mic 2.3 s after playback begins (tone is 2 s; small buffer for
@@ -330,10 +341,10 @@ class TunerNotifier extends StateNotifier<TunerState> {
     // Use state.isListening (intent) not wasMicActive (actual) — on rapid double-tap
     // the second call sees _pitchSub == null (already stopped by first tap), so
     // wasMicActive would be false and no restart would ever be scheduled.
-    if (state.isListening && mounted) {
+    if (state.isListening && !_disposed) {
       _micRestartTimer = Timer(const Duration(milliseconds: 2300), () {
         _micRestartTimer = null;
-        if (!mounted || !state.isListening || _pitchSub != null) return;
+        if (_disposed || !state.isListening || _pitchSub != null) return;
         // Brief suppression so speaker bleed at end of tone doesn't register.
         _suppressUntil = DateTime.now().add(const Duration(milliseconds: 300));
         _attachMicSubscription();
@@ -594,16 +605,8 @@ class TunerNotifier extends StateNotifier<TunerState> {
     return null;
   }
 
-  @override
-  void dispose() {
-    _micRestartTimer?.cancel();
-    _pitchSub?.cancel();
-    _service.stop();
-    _tonePlayer.dispose();
-    super.dispose();
-  }
 }
 
-final tunerProvider = StateNotifierProvider<TunerNotifier, TunerState>(
-  (ref) => TunerNotifier(),
+final tunerProvider = NotifierProvider<TunerNotifier, TunerState>(
+  TunerNotifier.new,
 );

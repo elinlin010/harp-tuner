@@ -1,19 +1,20 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 const _kLocaleKey = 'app_locale';
 
-final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>(
-  (ref) => LocaleNotifier(),
+final localeProvider = NotifierProvider<LocaleNotifier, Locale>(
+  LocaleNotifier.new,
 );
 
-class LocaleNotifier extends StateNotifier<Locale> {
+class LocaleNotifier extends Notifier<Locale> {
   SharedPreferences? _prefs;
 
-  LocaleNotifier() : super(const Locale('en')) {
+  @override
+  Locale build() {
     _load();
+    return const Locale('en');
   }
 
   Future<void> _load() async {
