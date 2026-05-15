@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -6,15 +7,17 @@ import 'app_theme.dart';
 
 const _kThemeKey = 'theme_id';
 
-final tunerThemeProvider = StateNotifierProvider<ThemeNotifier, TunerThemeData>(
-  (ref) => ThemeNotifier(),
+final tunerThemeProvider = NotifierProvider<ThemeNotifier, TunerThemeData>(
+  ThemeNotifier.new,
 );
 
-class ThemeNotifier extends StateNotifier<TunerThemeData> {
+class ThemeNotifier extends Notifier<TunerThemeData> {
   SharedPreferences? _prefs;
 
-  ThemeNotifier() : super(TunerThemes.linen) {
+  @override
+  TunerThemeData build() {
     _load();
+    return TunerThemes.linen;
   }
 
   Future<void> _load() async {
@@ -45,7 +48,6 @@ class ThemeNotifier extends StateNotifier<TunerThemeData> {
     final goingDark = state.brightness != Brightness.dark;
     final targetBrightness =
         goingDark ? Brightness.dark : Brightness.light;
-    // Try to keep a same-brightness equivalent; otherwise pick the default.
     final next = TunerThemes.all.firstWhere(
       (t) => t.brightness == targetBrightness,
       orElse: () => goingDark ? TunerThemes.blueprint : TunerThemes.linen,

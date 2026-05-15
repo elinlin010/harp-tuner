@@ -34,14 +34,14 @@ dependencies:
     sdk: flutter
   intl: any
 
-  cupertino_icons: ^1.0.8
-  shared_preferences: ^2.3.0
-  google_fonts: ^6.2.1
-  flutter_riverpod: ^2.6.1
+  cupertino_icons: ^1.0.9
+  shared_preferences: ^2.5.5
+  google_fonts: ^8.1.0
+  flutter_riverpod: ^3.3.1
   audioplayers: ^6.0.0
   mic_stream: ^0.7.0
   pitch_detector_dart: any
-  permission_handler: ^10.4.0
+  permission_handler: ^12.0.1
 
 dependency_overrides:
   # Force permission_handler to 12.x for iOS 26 compatibility.
