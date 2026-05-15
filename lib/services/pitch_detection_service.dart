@@ -2,10 +2,29 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart';
 import 'package:mic_stream/mic_stream.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pitch_detector_dart/pitch_detector.dart';
+import 'package:pitch_detector_dart/pitch_detector_result.dart';
+
+// Passed to a compute isolate — YIN is O(n²) and blocks the main thread if run inline.
+class _YinInput {
+  final double sampleRate;
+  final int bufferSize;
+  final List<double> buffer;
+  const _YinInput(this.sampleRate, this.bufferSize, this.buffer);
+}
+
+// Top-level function required by compute().
+Future<PitchDetectorResult> _runYin(_YinInput input) {
+  final detector = PitchDetector(
+    audioSampleRate: input.sampleRate,
+    bufferSize: input.bufferSize,
+  );
+  return detector.getPitchFromFloatBuffer(input.buffer);
+}
 
 class PitchResult {
   final double frequency; // Hz
@@ -44,7 +63,7 @@ class PitchDetectionService {
 
   StreamSubscription<Uint8List>? _micSub;
   StreamController<PitchResult?>? _ctrl;
-  PitchDetector? _detector;
+  double _actualSampleRate = _targetSampleRate.toDouble();
 
   // Running accumulator of normalised float samples
   final List<double> _accumulator = [];
@@ -95,6 +114,7 @@ class PitchDetectionService {
     _ctrl = null;
     _accumulator.clear();
     _processing = false;
+    _actualSampleRate = _targetSampleRate.toDouble();
   }
 
   // ── Internal ───────────────────────────────────────────────────────────────
@@ -120,14 +140,6 @@ class PitchDetectionService {
       return;
     }
 
-    // In 0.7+, the stream only starts when listened to, so subscribe first.
-    // Initialize detector with target rate; update it once the stream is running
-    // and the actual sample rate is known.
-    _detector = PitchDetector(
-      audioSampleRate: _targetSampleRate.toDouble(),
-      bufferSize: _bufferSize,
-    );
-
     _micSub = rawStream.listen(
       (bytes) => _onAudioChunk(bytes),
       onError: (e) => _ctrl?.addError(e is PitchServiceError
@@ -136,14 +148,10 @@ class PitchDetectionService {
       cancelOnError: false,
     );
 
-    // sampleRate completes once the stream has started; recreate detector if needed.
+    // sampleRate completes once the stream has started; update if the device
+    // rate differs from our target so the compute isolate uses the right value.
     MicStream.sampleRate.then((actualRate) {
-      if (actualRate != _targetSampleRate) {
-        _detector = PitchDetector(
-          audioSampleRate: actualRate.toDouble(),
-          bufferSize: _bufferSize,
-        );
-      }
+      _actualSampleRate = actualRate.toDouble();
     });
   }
 
@@ -171,7 +179,10 @@ class PitchDetectionService {
     final chunk = _accumulator.sublist(0, _bufferSize);
     _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
 
-    final result = await _detector!.getPitchFromFloatBuffer(chunk);
+    final result = await compute(
+      _runYin,
+      _YinInput(_actualSampleRate, _bufferSize, chunk),
+    );
 
     if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
         _ctrl?.add(PitchResult(result.pitch));
