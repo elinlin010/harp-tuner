@@ -2,6 +2,15 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.2+12] - 2026-05-26
+
+### Changed
+- Pitch state is now shown directly in the note name area: ♭ and ♯ indicators flank the detected note as glowing circular bulbs, and the note lights up inside a large green circle when you're in tune.
+- Note name is larger and bolder when in tune for instant recognition at a glance.
+- In dark themes (Blueprint, Void, Phosphor), the note name uses a softer colour to reduce eye strain at display size.
+- Flat/sharp bulbs have a transparent background when inactive, matching the clean look of the gauge.
+- Removed the separate pitch indicator row below the gauge — pitch feedback is now integrated into the note display.
+
 ## [1.1.1+11] - 2026-05-15
 
 ### Changed
