@@ -630,6 +630,7 @@ class _SignalReadout extends StatelessWidget {
     final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.90) : baseNoteColor;
     final Color octaveColor = isInTune ? Colors.white.withValues(alpha: 0.70) : theme.textSecondary;
 
+    final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 300);
@@ -662,6 +663,7 @@ class _SignalReadout extends StatelessWidget {
             symbolSize: 22,
             theme: theme,
             animDuration: animDur,
+            semanticsLabel: l10n.pitchLightFlatLabel,
           ),
           const SizedBox(width: 36),
 
@@ -741,6 +743,7 @@ class _SignalReadout extends StatelessWidget {
             symbolSize: 22,
             theme: theme,
             animDuration: animDur,
+            semanticsLabel: l10n.pitchLightSharpLabel,
           ),
         ],
       ),
@@ -758,6 +761,7 @@ class _InlineBulb extends StatelessWidget {
   final double symbolSize;
   final TunerThemeData theme;
   final Duration animDuration;
+  final String semanticsLabel;
 
   const _InlineBulb({
     required this.symbol,
@@ -767,20 +771,25 @@ class _InlineBulb extends StatelessWidget {
     required this.symbolSize,
     required this.theme,
     required this.animDuration,
+    required this.semanticsLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
+    return Semantics(
+      label: semanticsLabel,
+      value: active ? 'active' : 'inactive',
+      child: AnimatedContainer(
       duration: animDuration,
       width: size,
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: active ? color : Colors.transparent,
-        border: Border.all(
-          color: active ? color : theme.surfaceRim.withValues(alpha: 0.6),
-          width: active ? 0 : 1.5,
+        // null border when active — Border.all(width:0) can render a hairline on some canvases
+        border: active ? null : Border.all(
+          color: theme.surfaceRim.withValues(alpha: 0.6),
+          width: 1.5,
         ),
         boxShadow: active
             ? [
@@ -817,6 +826,7 @@ class _InlineBulb extends StatelessWidget {
           child: Text(symbol),
         ),
       ),
-    );
+    ), // AnimatedContainer
+    ); // Semantics
   }
 }
