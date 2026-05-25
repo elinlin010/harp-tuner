@@ -685,6 +685,8 @@ class _SignalReadout extends StatelessWidget {
               // Font ascender space makes the glyph sit slightly above the
               // bounding-box centre — nudge down to optically centre it.
               alignment: const Alignment(0, 0.4),
+              child: FittedBox(
+              fit: BoxFit.scaleDown,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -732,6 +734,7 @@ class _SignalReadout extends StatelessWidget {
               ),
             ),
           ),
+        ),
 
           const SizedBox(width: 36),
           // ♯ bulb — right
