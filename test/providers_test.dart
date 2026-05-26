@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:harp_tuner/providers/locale_provider.dart';
 import 'package:harp_tuner/theme/app_theme.dart';
 import 'package:harp_tuner/theme/theme_provider.dart';
@@ -13,6 +14,8 @@ ProviderContainer _container() {
 }
 
 void main() {
+  setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
+
   // ── AppColors ────────────────────────────────────────────────────────────────
 
   group('AppColors.octaveColor', () {
@@ -97,6 +100,30 @@ void main() {
       final c = _container();
       await c.read(localeProvider.notifier).setLocale(const Locale('zh', 'TW'));
       expect(c.read(localeProvider), equals(const Locale('zh', 'TW')));
+    });
+  });
+
+  // ── AppTextStyles ─────────────────────────────────────────────────────────────
+  // Use testWidgets so the Flutter binding manages google_fonts' async font loads.
+
+  group('AppTextStyles', () {
+    testWidgets('sans() returns a non-null TextStyle', (tester) async {
+      expect(AppTextStyles.sans(16), isNotNull);
+    });
+
+    testWidgets('sans() with weight and color returns TextStyle', (tester) async {
+      expect(
+        AppTextStyles.sans(14, weight: FontWeight.w700, color: Colors.black),
+        isNotNull,
+      );
+    });
+
+    testWidgets('label() returns a non-null TextStyle', (tester) async {
+      expect(AppTextStyles.label(12), isNotNull);
+    });
+
+    testWidgets('label() with custom color returns TextStyle', (tester) async {
+      expect(AppTextStyles.label(12, color: Colors.red), isNotNull);
     });
   });
 }

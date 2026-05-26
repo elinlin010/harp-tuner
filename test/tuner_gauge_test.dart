@@ -278,6 +278,21 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('three-step update hits EMA smoothing branch (line 114)',
+        (tester) async {
+      // null → 10 sets _smoothedTarget; 10 → -30 with non-null target hits EMA
+      await tester.pumpWidget(_gauge(cents: null, noteName: null));
+      await tester.pump();
+
+      await tester.pumpWidget(_gauge(cents: 10, noteName: 'C4'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.pumpWidget(_gauge(cents: -30, noteName: 'B3'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('stale flag with cents renders correctly', (tester) async {
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,

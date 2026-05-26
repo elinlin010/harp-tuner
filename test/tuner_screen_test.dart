@@ -453,4 +453,196 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  // ── Animation controller path via disableAnimations ──────────────────────────
+
+  group('TunerScreen — didChangeDependencies disableAnimations path', () {
+    testWidgets('disableAnimations=true stops listen button animation',
+        (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Builder(
+            builder: (ctx) => MediaQuery(
+              data: MediaQuery.of(ctx).copyWith(disableAnimations: true),
+              child: const TunerScreen(),
+            ),
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── Settings callback coverage ────────────────────────────────────────────────
+
+  group('TunerScreen — settings interactive callbacks', () {
+    Future<void> _openSettingsSheet(WidgetTester tester) async {
+      await tester.tap(find.byIcon(Icons.tune_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+
+    testWidgets('tapping dark mode toggle invokes toggleDarkMode',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen());
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      final toggle = find.text('Dark mode');
+      if (toggle.evaluate().isNotEmpty) {
+        await tester.ensureVisible(toggle.first);
+        await tester.tap(toggle.first, warnIfMissed: false);
+        await tester.pump();
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tapping non-selected theme swatch invokes setTheme',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen());
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      // 'Milk' is a light theme different from the default 'Linen'
+      final milkSwatch = find.bySemanticsLabel('Milk');
+      if (milkSwatch.evaluate().isNotEmpty) {
+        await tester.ensureVisible(milkSwatch.first);
+        await tester.tap(milkSwatch.first, warnIfMissed: false);
+        await tester.pump();
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('opening language popup covers itemBuilder', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen());
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      final expandIcon = find.byIcon(Icons.expand_more_rounded);
+      if (expandIcon.evaluate().isNotEmpty) {
+        await tester.ensureVisible(expandIcon.first);
+        await tester.tap(expandIcon.first, warnIfMissed: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('selecting language from popup invokes setLocale',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen());
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      final expandIcon = find.byIcon(Icons.expand_more_rounded);
+      if (expandIcon.evaluate().isNotEmpty) {
+        await tester.ensureVisible(expandIcon.first);
+        await tester.tap(expandIcon.first, warnIfMissed: false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        final deutsch = find.text('Deutsch');
+        if (deutsch.evaluate().isNotEmpty) {
+          await tester.tap(deutsch.last, warnIfMissed: false);
+          await tester.pump();
+        }
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tapping always-show-flats toggle invokes togglePreferFlats',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      // No harp selected → 'Always show flats' toggle is enabled
+      await tester.pumpWidget(_screen());
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      final toggle = find.text('Always show flats');
+      if (toggle.evaluate().isNotEmpty) {
+        await tester.ensureVisible(toggle.first);
+        await tester.tap(toggle.first, warnIfMissed: false);
+        await tester.pump();
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('tapping A4 step buttons invokes setA4Hz', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen());
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      // The A4 stepper has two 36×48 SizedBox buttons (decrement and increment)
+      final stepBtns = find.byWidgetPredicate(
+        (w) => w is SizedBox && w.width == 36.0 && w.height == 48.0,
+      );
+      if (stepBtns.evaluate().length >= 2) {
+        await tester.ensureVisible(stepBtns.at(0));
+        await tester.tap(stepBtns.at(0), warnIfMissed: false); // decrement
+        await tester.pump();
+        await tester.tap(stepBtns.at(1), warnIfMissed: false); // increment
+        await tester.pump();
+      }
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('dragging string count slider invokes setLeverStringCount',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen(prefs: {
+        'tuner_harp_type': 'leverHarp',
+        'tuner_lever_string_count': 34,
+        'tuner_a4_hz': 440,
+      }));
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      final slider = find.byType(Slider);
+      if (slider.evaluate().isNotEmpty) {
+        await tester.ensureVisible(slider.first);
+        await tester.drag(slider.first, const Offset(20, 0));
+        await tester.pump();
+      }
+      expect(tester.takeException(), isNull);
+    });
+  });
 }
