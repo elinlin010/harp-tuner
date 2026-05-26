@@ -13,7 +13,6 @@ import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/mode_toggle.dart';
-import '../widgets/pitch_light_indicator.dart';
 import '../widgets/settings_display.dart';
 import '../widgets/string_visualizer.dart';
 import '../widgets/tuner_gauge.dart';
@@ -274,16 +273,6 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                   theme: theme,
                 ),
               ],
-
-              // ── Pitch light indicator ──────────────────────────────────────
-              const SizedBox(height: 14),
-              PitchLightIndicator(
-                cents: tuner.cents,
-                isListening: tuner.isListening,
-                isStale: tuner.isStale,
-                theme: theme,
-              ),
-              const SizedBox(height: 14),
 
               // ── Listen button ──────────────────────────────────────────────
               Padding(

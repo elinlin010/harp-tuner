@@ -151,9 +151,11 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
     final needlePos = _needleCtrl.value;
     // Show needle whenever signal present OR it's still animating back
     final showNeedle = hasSignal || needlePos.abs() > 1.0;
-    // Use raw cents (same source as pitch lights) so glow and bulbs stay in sync.
-    // _needleCtrl.value causes flicker when the spring oscillates across the threshold.
-    final isInTune = hasSignal && widget.cents!.abs() <= _kInTuneCents;
+    // Use rounded cents (same as old PitchLightIndicator) to prevent flicker at ±15 boundary.
+    final cRound = widget.cents?.round() ?? 0;
+    final isInTune = hasSignal && cRound.abs() <= _kInTuneCents.toInt();
+    final isFlat = hasSignal && cRound < -_kInTuneCents.toInt();
+    final isSharp = hasSignal && cRound > _kInTuneCents.toInt();
 
     final animDur = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -195,11 +197,11 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
                 : 100.0;
             final double arcH = (r * 0.50 + 64).clamp(100.0, arcHMax);
 
-            // Readout is capped at 80px — enough for the note name.
+            // Readout capped at 180px — accommodates in-tune circle + flanking bulbs.
             // The Column uses mainAxisSize.min so the gauge reports only
-            // arcH + 16 + readoutH (~266px) as its natural height, rather than
+            // arcH + 16 + readoutH as its natural height, rather than
             // filling all Flexible space. Excess space falls below the button.
-            final double readoutH = (availH - arcH - 16.0).clamp(0.0, 80.0);
+            final double readoutH = (availH - arcH - 16.0).clamp(0.0, 180.0);
 
             final sectionBg = isInTune
                 ? widget.theme.inTune.withValues(alpha: 0.30)
@@ -283,6 +285,8 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
                                     noteName: widget.noteName ?? '—',
                                     theme: widget.theme,
                                     isInTune: isInTune,
+                                    isFlat: isFlat,
+                                    isSharp: isSharp,
                                   ),
                                 ),
                               ),
@@ -591,16 +595,21 @@ class _IdleReadout extends StatelessWidget {
 }
 
 // ── Signal readout ────────────────────────────────────────────────────────────
+// Layout: [♭ bulb] — [Big note name (= in-tune indicator)] — [♯ bulb]
 
 class _SignalReadout extends StatelessWidget {
   final String noteName;
   final TunerThemeData theme;
   final bool isInTune;
+  final bool isFlat;
+  final bool isSharp;
 
   const _SignalReadout({
     required this.noteName,
     required this.theme,
     required this.isInTune,
+    required this.isFlat,
+    required this.isSharp,
   });
 
   static final _noteRe = RegExp(r'^([A-G])(♭|♯)?(\d+)?$');
@@ -612,66 +621,215 @@ class _SignalReadout extends StatelessWidget {
     final noteAcc = match?.group(2) ?? '';
     final noteOctave = match?.group(3) ?? '';
 
-    final Color letterColor;
-    final Color accColor;
-    final Color octaveColor;
-    if (isInTune) {
-      letterColor = theme.inTune;
-      accColor = theme.inTune;
-      octaveColor = theme.inTune.withValues(alpha: 0.7);
-    } else {
-      letterColor = theme.textPrimary;
-      accColor = theme.textPrimary;
-      octaveColor = theme.textSecondary;
-    }
+    // On dark themes, textPrimary at 120px is too intense — use textSecondary.
+    final Color baseNoteColor = theme.brightness == Brightness.dark
+        ? theme.textSecondary
+        : theme.textPrimary;
+    // White text inside the green circle when in-tune; softer color otherwise.
+    final Color letterColor = isInTune ? Colors.white.withValues(alpha: 0.95) : baseNoteColor;
+    final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.90) : baseNoteColor;
+    final Color octaveColor = isInTune ? Colors.white.withValues(alpha: 0.70) : theme.textSecondary;
 
+    final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 300);
+
+    final inTuneGlow = [
+      BoxShadow(
+        color: theme.inTune.withValues(alpha: 0.45),
+        blurRadius: 16,
+        spreadRadius: 4,
+      ),
+      BoxShadow(
+        color: theme.inTune.withValues(alpha: 0.22),
+        blurRadius: 32,
+        spreadRadius: 10,
+      ),
+    ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          AnimatedDefaultTextStyle(
+          // ♭ bulb — left
+          _InlineBulb(
+            symbol: '♭',
+            active: isFlat,
+            color: theme.flat,
+            size: 52,
+            symbolSize: 22,
+            theme: theme,
+            animDuration: animDur,
+            semanticsLabel: l10n.pitchLightFlatLabel,
+          ),
+          const SizedBox(width: 36),
+
+          // Note name wrapped in animated in-tune circle
+          AnimatedContainer(
             duration: animDur,
             curve: Curves.easeOut,
-            style: theme
-                .sans(100, weight: FontWeight.w400, color: letterColor)
-                .copyWith(height: 1),
-            child: Text(noteLetter),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (noteAcc.isNotEmpty)
-                  AnimatedDefaultTextStyle(
-                    duration: animDur,
-                    curve: Curves.easeOut,
-                    style: theme
-                        .sans(42, weight: FontWeight.w400, color: accColor)
-                        .copyWith(height: 1),
-                    child: Text(noteAcc),
-                  ),
-                if (noteOctave.isNotEmpty)
-                  AnimatedDefaultTextStyle(
-                    duration: animDur,
-                    curve: Curves.easeOut,
-                    style: theme
-                        .sans(30, weight: FontWeight.w400, color: octaveColor)
-                        .copyWith(height: 1),
-                    child: Text(noteOctave),
-                  ),
-              ],
+            width: 160,
+            height: 160,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              // alpha 0 → smooth transition without colour shift
+              color: isInTune
+                  ? theme.inTune
+                  : theme.inTune.withValues(alpha: 0.0),
+              boxShadow: isInTune ? inTuneGlow : [],
             ),
+            child: Align(
+              // Font ascender space makes the glyph sit slightly above the
+              // bounding-box centre — nudge down to optically centre it.
+              alignment: const Alignment(0, 0.4),
+              child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AnimatedDefaultTextStyle(
+                    duration: animDur,
+                    curve: Curves.easeOut,
+                    style: theme
+                        .sans(120,
+                            weight: isInTune ? FontWeight.w700 : FontWeight.w400,
+                            color: letterColor)
+                        .copyWith(height: 1),
+                    child: Text(noteLetter),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (noteAcc.isNotEmpty)
+                          AnimatedDefaultTextStyle(
+                            duration: animDur,
+                            curve: Curves.easeOut,
+                            style: theme
+                                .sans(52,
+                                    weight: isInTune ? FontWeight.w700 : FontWeight.w400,
+                                    color: accColor)
+                                .copyWith(height: 1),
+                            child: Text(noteAcc),
+                          ),
+                        if (noteOctave.isNotEmpty)
+                          AnimatedDefaultTextStyle(
+                            duration: animDur,
+                            curve: Curves.easeOut,
+                            style: theme
+                                .sans(36, weight: FontWeight.w400, color: octaveColor)
+                                .copyWith(height: 1),
+                            child: Text(noteOctave),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+          const SizedBox(width: 36),
+          // ♯ bulb — right
+          _InlineBulb(
+            symbol: '♯',
+            active: isSharp,
+            color: theme.sharp,
+            size: 52,
+            symbolSize: 22,
+            theme: theme,
+            animDuration: animDur,
+            semanticsLabel: l10n.pitchLightSharpLabel,
           ),
         ],
       ),
     );
+  }
+}
+
+// ── Inline pitch bulb (♭ / ♯) used inside the gauge readout ──────────────────
+
+class _InlineBulb extends StatelessWidget {
+  final String symbol;
+  final bool active;
+  final Color color;
+  final double size;
+  final double symbolSize;
+  final TunerThemeData theme;
+  final Duration animDuration;
+  final String semanticsLabel;
+
+  const _InlineBulb({
+    required this.symbol,
+    required this.active,
+    required this.color,
+    required this.size,
+    required this.symbolSize,
+    required this.theme,
+    required this.animDuration,
+    required this.semanticsLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: semanticsLabel,
+      value: active ? 'active' : 'inactive',
+      child: AnimatedContainer(
+      duration: animDuration,
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: active ? color : Colors.transparent,
+        // null border when active — Border.all(width:0) can render a hairline on some canvases
+        border: active ? null : Border.all(
+          color: theme.surfaceRim.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+        boxShadow: active
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.55),
+                  blurRadius: 8,
+                  spreadRadius: 1,
+                ),
+                BoxShadow(
+                  color: color.withValues(alpha: 0.28),
+                  blurRadius: 18,
+                  spreadRadius: 5,
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 3,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 1),
+                ),
+              ],
+      ),
+      child: Center(
+        child: AnimatedDefaultTextStyle(
+          duration: animDuration,
+          style: theme.sans(
+            symbolSize,
+            weight: FontWeight.w700,
+            color: active
+                ? Colors.white.withValues(alpha: 0.95)
+                : theme.textSecondary,
+          ),
+          child: Text(symbol),
+        ),
+      ),
+    ), // AnimatedContainer
+    ); // Semantics
   }
 }
