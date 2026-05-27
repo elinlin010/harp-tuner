@@ -203,9 +203,7 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
             // filling all Flexible space. Excess space falls below the button.
             final double readoutH = (availH - arcH - 16.0).clamp(0.0, 180.0);
 
-            final sectionBg = isInTune
-                ? widget.theme.inTune.withValues(alpha: 0.30)
-                : widget.theme.surfaceHi;
+            final sectionBg = widget.theme.surfaceHi;
 
             return Padding(
               padding: const EdgeInsets.symmetric(
@@ -625,10 +623,10 @@ class _SignalReadout extends StatelessWidget {
     final Color baseNoteColor = theme.brightness == Brightness.dark
         ? theme.textSecondary
         : theme.textPrimary;
-    // White text inside the green circle when in-tune; softer color otherwise.
-    final Color letterColor = isInTune ? Colors.white.withValues(alpha: 0.95) : baseNoteColor;
-    final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.90) : baseNoteColor;
-    final Color octaveColor = isInTune ? Colors.white.withValues(alpha: 0.70) : theme.textSecondary;
+    // On the light in-tune circle, use the inTune color for strong contrast.
+    final Color letterColor = isInTune ? theme.inTune : baseNoteColor;
+    final Color accColor    = isInTune ? theme.inTune : baseNoteColor;
+    final Color octaveColor = isInTune ? theme.inTune.withValues(alpha: 0.70) : theme.textSecondary;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
@@ -682,7 +680,7 @@ class _SignalReadout extends StatelessWidget {
               shape: BoxShape.circle,
               // alpha 0 → smooth transition without colour shift
               color: isInTune
-                  ? theme.inTune
+                  ? theme.inTune.withValues(alpha: 0.30)
                   : theme.inTune.withValues(alpha: 0.0),
               boxShadow: isInTune ? inTuneGlow : [],
             ),
