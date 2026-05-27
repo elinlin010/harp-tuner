@@ -673,6 +673,11 @@ class _SignalReadout extends StatelessWidget {
             curve: Curves.easeOut,
             width: 160,
             height: 160,
+            // Clip to circle on all platforms — BoxDecoration paints the
+            // circle but doesn't clip children by default, which lets the
+            // letter overflow on iOS (CoreText measures Outfit glyphs slightly
+            // larger than Android/Skia at the same font size).
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               // alpha 0 → smooth transition without colour shift
@@ -681,12 +686,13 @@ class _SignalReadout extends StatelessWidget {
                   : theme.inTune.withValues(alpha: 0.0),
               boxShadow: isInTune ? inTuneGlow : [],
             ),
-            child: Align(
-              // Font ascender space makes the glyph sit slightly above the
-              // bounding-box centre — nudge down to optically centre it.
-              alignment: const Alignment(0, 0.4),
-              child: FittedBox(
+            child: FittedBox(
               fit: BoxFit.scaleDown,
+              // FittedBox directly inside the container gets tight 160×160
+              // constraints, so scaleDown always fires when content overflows —
+              // unlike Align which passes loose constraints and lets overflow
+              // through. Slight y shift optically centres the cap-height glyph.
+              alignment: const Alignment(0, 0.15),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -734,7 +740,6 @@ class _SignalReadout extends StatelessWidget {
               ),
             ),
           ),
-        ),
 
           const SizedBox(width: 36),
           // ♯ bulb — right
