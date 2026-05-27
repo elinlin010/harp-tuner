@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.3+13] - 2026-05-27
+
+### Changed
+- Test coverage raised from 78% to 95% (306 tests, all passing). New test suites cover the tuner state machine, settings persistence error paths, reference tone synthesis, gauge rendering, all 6 locales, and the app entry point.
+
 ## [1.1.2+12] - 2026-05-26
 
 ### Changed

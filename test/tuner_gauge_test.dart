@@ -5,6 +5,8 @@ import 'package:harp_tuner/l10n/app_localizations.dart';
 import 'package:harp_tuner/theme/app_theme.dart';
 import 'package:harp_tuner/widgets/tuner_gauge.dart';
 
+// ignore_for_file: prefer_function_declarations_over_variables
+
 Widget _gauge({
   double? cents,
   String? noteName,
@@ -164,6 +166,199 @@ void main() {
     testWidgets('em-dash fallback renders without error', (tester) async {
       // Covers the case where noteName is '—' (pitch not yet resolved)
       await tester.pumpWidget(_gauge(cents: 0, noteName: '—'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── TunerGauge — disabled animations path ─────────────────────────────────────
+
+  Widget _gaugeNoAnim({double? cents, String? noteName, bool isListening = true}) {
+    return MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => MediaQuery(
+            data: MediaQuery.of(context).copyWith(disableAnimations: true),
+            child: SizedBox(
+              width: 400,
+              height: 500,
+              child: TunerGauge(
+                cents: cents,
+                noteName: noteName,
+                isListening: isListening,
+                theme: TunerThemes.linen,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── TunerGauge — didChangeDependencies re-enables animation ─────────────────
+  // Covers line 92: _pulseCtrl.repeat() in the else-if branch.
+  // Reached when: disableAnimations was true (pulseCtrl stopped), then becomes false.
+
+  group('TunerGauge — didChangeDependencies re-enable animation', () {
+    testWidgets(
+        'switching from disableAnimations=true to false restarts pulse animation',
+        (tester) async {
+      // The key: keep TunerGauge at the SAME position in the widget tree.
+      // pumpWidget twice with only MediaQuery.disableAnimations changing —
+      // the State is reused, so didChangeDependencies fires on the live controller.
+      Future<void> build(bool disable) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: MediaQuery(
+              data: const MediaQueryData().copyWith(disableAnimations: disable),
+              child: const SizedBox(
+                width: 400,
+                height: 500,
+                child: TunerGauge(
+                  cents: 0,
+                  noteName: 'C4',
+                  isListening: true,
+                  theme: TunerThemes.linen,
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
+
+      // Build with animations disabled — pulse controller stopped (line 85).
+      await build(true);
+      await tester.pump();
+
+      // Rebuild with animations enabled — _pulseCtrl.isAnimating==false
+      // → didChangeDependencies fires the else-if branch → _pulseCtrl.repeat() (line 92).
+      await build(false);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('TunerGauge — disableAnimations path', () {
+    testWidgets('renders with disableAnimations=true without error',
+        (tester) async {
+      await tester.pumpWidget(_gaugeNoAnim(cents: null, noteName: null));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('with cents set, needle snaps immediately to value',
+        (tester) async {
+      await tester.pumpWidget(_gaugeNoAnim(cents: -25, noteName: 'D♭4'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('sharp cents with disableAnimations renders sharp color path',
+        (tester) async {
+      await tester.pumpWidget(_gaugeNoAnim(cents: 25, noteName: 'G♯3'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('updating cents triggers didUpdateWidget disabled path',
+        (tester) async {
+      await tester.pumpWidget(_gaugeNoAnim(cents: -20, noteName: 'A♭4'));
+      await tester.pump();
+
+      await tester.pumpWidget(_gaugeNoAnim(cents: 20, noteName: 'G♯4'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('updating cents to null triggers disabled null path',
+        (tester) async {
+      await tester.pumpWidget(_gaugeNoAnim(cents: 15, noteName: 'E4'));
+      await tester.pump();
+
+      await tester.pumpWidget(_gaugeNoAnim(cents: null, noteName: null));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── TunerGauge — animation update paths ──────────────────────────────────────
+
+  group('TunerGauge — animation update paths', () {
+    testWidgets('updating cents from null triggers spring animation',
+        (tester) async {
+      await tester.pumpWidget(_gauge(cents: null, noteName: null));
+      await tester.pump();
+
+      // Update cents — triggers didUpdateWidget → animateWith → addListener
+      await tester.pumpWidget(_gauge(cents: 30, noteName: 'F♯4'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('updating cents from value to null springs needle back',
+        (tester) async {
+      await tester.pumpWidget(_gauge(cents: 20, noteName: 'A♯4'));
+      await tester.pump();
+
+      await tester.pumpWidget(_gauge(cents: null, noteName: null));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('updating from one cents value to another re-animates',
+        (tester) async {
+      await tester.pumpWidget(_gauge(cents: 10, noteName: 'C4'));
+      await tester.pump();
+
+      await tester.pumpWidget(_gauge(cents: -30, noteName: 'B3'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('three-step update hits EMA smoothing branch (line 114)',
+        (tester) async {
+      // null → 10 sets _smoothedTarget; 10 → -30 with non-null target hits EMA
+      await tester.pumpWidget(_gauge(cents: null, noteName: null));
+      await tester.pump();
+
+      await tester.pumpWidget(_gauge(cents: 10, noteName: 'C4'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.pumpWidget(_gauge(cents: -30, noteName: 'B3'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('stale flag with cents renders correctly', (tester) async {
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 500,
+            child: TunerGauge(
+              cents: 5,
+              noteName: 'C4',
+              isListening: true,
+              isStale: true,
+              theme: TunerThemes.linen,
+            ),
+          ),
+        ),
+      ));
       await tester.pump();
       expect(tester.takeException(), isNull);
     });

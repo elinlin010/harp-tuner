@@ -605,6 +605,14 @@ class TunerNotifier extends Notifier<TunerState> {
     return null;
   }
 
+  // ── Test hooks ─────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  void handlePitchResult(PitchResult? result) => _onPitchResult(result);
+
+  @visibleForTesting
+  void setStateForTest(TunerState s) => state = s;
+
 }
 
 final tunerProvider = NotifierProvider<TunerNotifier, TunerState>(

@@ -259,6 +259,15 @@ class TonePlayerService {
     return _toWav(pcm.buffer.asUint8List(), sampleRate);
   }
 
+  // ── Test hooks ─────────────────────────────────────────────────────────────
+
+  @visibleForTesting
+  static Uint8List generateToneForTest(double hz) => _generateTone(hz);
+
+  @visibleForTesting
+  static Uint8List toWavForTest(Uint8List pcm, int sampleRate) =>
+      _toWav(pcm, sampleRate);
+
   /// Wraps raw 16-bit mono PCM bytes in a standard WAV/RIFF header.
   static Uint8List _toWav(Uint8List pcm, int sampleRate) {
     final dataLen = pcm.length;

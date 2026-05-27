@@ -143,4 +143,18 @@ void main() {
       expect(natural, isNot(equals(flat)));
     });
   });
+
+  group('HarpStringModel.hashCode', () {
+    test('equal objects have equal hashCodes', () {
+      const a = HarpStringModel(index: 1, note: NoteName.a, octave: 4);
+      const b = HarpStringModel(index: 2, note: NoteName.a, octave: 4);
+      expect(a.hashCode, equals(b.hashCode));
+    });
+
+    test('different note produces different hashCode', () {
+      const a4 = HarpStringModel(index: 1, note: NoteName.a, octave: 4);
+      const c4 = HarpStringModel(index: 1, note: NoteName.c, octave: 4);
+      expect(a4.hashCode, isNot(equals(c4.hashCode)));
+    });
+  });
 }
