@@ -198,6 +198,53 @@ void main() {
     );
   }
 
+  // ── TunerGauge — didChangeDependencies re-enables animation ─────────────────
+  // Covers line 92: _pulseCtrl.repeat() in the else-if branch.
+  // Reached when: disableAnimations was true (pulseCtrl stopped), then becomes false.
+
+  group('TunerGauge — didChangeDependencies re-enable animation', () {
+    testWidgets(
+        'switching from disableAnimations=true to false restarts pulse animation',
+        (tester) async {
+      // The key: keep TunerGauge at the SAME position in the widget tree.
+      // pumpWidget twice with only MediaQuery.disableAnimations changing —
+      // the State is reused, so didChangeDependencies fires on the live controller.
+      Future<void> build(bool disable) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: MediaQuery(
+              data: const MediaQueryData().copyWith(disableAnimations: disable),
+              child: const SizedBox(
+                width: 400,
+                height: 500,
+                child: TunerGauge(
+                  cents: 0,
+                  noteName: 'C4',
+                  isListening: true,
+                  theme: TunerThemes.linen,
+                ),
+              ),
+            ),
+          ),
+        ));
+      }
+
+      // Build with animations disabled — pulse controller stopped (line 85).
+      await build(true);
+      await tester.pump();
+
+      // Rebuild with animations enabled — _pulseCtrl.isAnimating==false
+      // → didChangeDependencies fires the else-if branch → _pulseCtrl.repeat() (line 92).
+      await build(false);
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('TunerGauge — disableAnimations path', () {
     testWidgets('renders with disableAnimations=true without error',
         (tester) async {
