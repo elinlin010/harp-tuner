@@ -623,9 +623,9 @@ class _SignalReadout extends StatelessWidget {
     final Color baseNoteColor = theme.brightness == Brightness.dark
         ? theme.textSecondary
         : theme.textPrimary;
-    final Color letterColor = baseNoteColor;
-    final Color accColor    = baseNoteColor;
-    final Color octaveColor = theme.textSecondary;
+    final Color letterColor = isInTune ? Colors.white.withValues(alpha: 0.92) : baseNoteColor;
+    final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.87) : baseNoteColor;
+    final Color octaveColor = isInTune ? Colors.white.withValues(alpha: 0.65) : theme.textSecondary;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
@@ -679,7 +679,7 @@ class _SignalReadout extends StatelessWidget {
               shape: BoxShape.circle,
               // alpha 0 → smooth transition without colour shift
               color: isInTune
-                  ? theme.inTune.withValues(alpha: 0.30)
+                  ? theme.inTune.withValues(alpha: 0.55)
                   : theme.inTune.withValues(alpha: 0.0),
               boxShadow: isInTune ? inTuneGlow : [],
             ),
