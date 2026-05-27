@@ -623,10 +623,9 @@ class _SignalReadout extends StatelessWidget {
     final Color baseNoteColor = theme.brightness == Brightness.dark
         ? theme.textSecondary
         : theme.textPrimary;
-    // On the light in-tune circle, use the inTune color for strong contrast.
-    final Color letterColor = isInTune ? theme.inTune : baseNoteColor;
-    final Color accColor    = isInTune ? theme.inTune : baseNoteColor;
-    final Color octaveColor = isInTune ? theme.inTune.withValues(alpha: 0.70) : theme.textSecondary;
+    final Color letterColor = baseNoteColor;
+    final Color accColor    = baseNoteColor;
+    final Color octaveColor = theme.textSecondary;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
