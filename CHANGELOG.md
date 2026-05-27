@@ -2,6 +2,16 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.4+14] - 2026-05-27
+
+### Fixed
+- In-tune note circle now clips correctly on iOS — Outfit font glyphs are slightly larger on CoreText than on Skia, causing the note letter to overflow the circle edge. Fixed by moving FittedBox directly inside the AnimatedContainer (tight 160×160 constraints) and adding `clipBehavior: Clip.antiAlias`.
+
+### Changed
+- In-tune color scheme inverted: the note circle fills with a medium sage colour (55% alpha) and the gauge card returns to its standard `surfaceHi` background. Previously the card glowed light green and the circle was transparent.
+- In-tune note text is white (92% alpha for the letter, 87% for the accidental, 65% for the octave) for legibility against the sage circle. Text colour returns to the standard note colour when out of tune.
+- Note font weight no longer changes on in-tune — always `w400`, no bold jump.
+
 ## [1.1.3+13] - 2026-05-27
 
 ### Changed

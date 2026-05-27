@@ -203,9 +203,7 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
             // filling all Flexible space. Excess space falls below the button.
             final double readoutH = (availH - arcH - 16.0).clamp(0.0, 180.0);
 
-            final sectionBg = isInTune
-                ? widget.theme.inTune.withValues(alpha: 0.30)
-                : widget.theme.surfaceHi;
+            final sectionBg = widget.theme.surfaceHi;
 
             return Padding(
               padding: const EdgeInsets.symmetric(
@@ -625,10 +623,9 @@ class _SignalReadout extends StatelessWidget {
     final Color baseNoteColor = theme.brightness == Brightness.dark
         ? theme.textSecondary
         : theme.textPrimary;
-    // White text inside the green circle when in-tune; softer color otherwise.
-    final Color letterColor = isInTune ? Colors.white.withValues(alpha: 0.95) : baseNoteColor;
-    final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.90) : baseNoteColor;
-    final Color octaveColor = isInTune ? Colors.white.withValues(alpha: 0.70) : theme.textSecondary;
+    final Color letterColor = isInTune ? Colors.white.withValues(alpha: 0.92) : baseNoteColor;
+    final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.87) : baseNoteColor;
+    final Color octaveColor = isInTune ? Colors.white.withValues(alpha: 0.65) : theme.textSecondary;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
@@ -673,20 +670,26 @@ class _SignalReadout extends StatelessWidget {
             curve: Curves.easeOut,
             width: 160,
             height: 160,
+            // Clip to circle on all platforms — BoxDecoration paints the
+            // circle but doesn't clip children by default, which lets the
+            // letter overflow on iOS (CoreText measures Outfit glyphs slightly
+            // larger than Android/Skia at the same font size).
+            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               // alpha 0 → smooth transition without colour shift
               color: isInTune
-                  ? theme.inTune
+                  ? theme.inTune.withValues(alpha: 0.55)
                   : theme.inTune.withValues(alpha: 0.0),
               boxShadow: isInTune ? inTuneGlow : [],
             ),
-            child: Align(
-              // Font ascender space makes the glyph sit slightly above the
-              // bounding-box centre — nudge down to optically centre it.
-              alignment: const Alignment(0, 0.4),
-              child: FittedBox(
+            child: FittedBox(
               fit: BoxFit.scaleDown,
+              // FittedBox directly inside the container gets tight 160×160
+              // constraints, so scaleDown always fires when content overflows —
+              // unlike Align which passes loose constraints and lets overflow
+              // through. Slight y shift optically centres the cap-height glyph.
+              alignment: const Alignment(0, 0.15),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,7 +699,7 @@ class _SignalReadout extends StatelessWidget {
                     curve: Curves.easeOut,
                     style: theme
                         .sans(120,
-                            weight: isInTune ? FontWeight.w700 : FontWeight.w400,
+                            weight: FontWeight.w400,
                             color: letterColor)
                         .copyWith(height: 1),
                     child: Text(noteLetter),
@@ -713,7 +716,7 @@ class _SignalReadout extends StatelessWidget {
                             curve: Curves.easeOut,
                             style: theme
                                 .sans(52,
-                                    weight: isInTune ? FontWeight.w700 : FontWeight.w400,
+                                    weight: FontWeight.w400,
                                     color: accColor)
                                 .copyWith(height: 1),
                             child: Text(noteAcc),
@@ -734,7 +737,6 @@ class _SignalReadout extends StatelessWidget {
               ),
             ),
           ),
-        ),
 
           const SizedBox(width: 36),
           // ♯ bulb — right
