@@ -699,7 +699,7 @@ class _SignalReadout extends StatelessWidget {
                     curve: Curves.easeOut,
                     style: theme
                         .sans(120,
-                            weight: isInTune ? FontWeight.w700 : FontWeight.w400,
+                            weight: FontWeight.w400,
                             color: letterColor)
                         .copyWith(height: 1),
                     child: Text(noteLetter),
@@ -716,7 +716,7 @@ class _SignalReadout extends StatelessWidget {
                             curve: Curves.easeOut,
                             style: theme
                                 .sans(52,
-                                    weight: isInTune ? FontWeight.w700 : FontWeight.w400,
+                                    weight: FontWeight.w400,
                                     color: accColor)
                                 .copyWith(height: 1),
                             child: Text(noteAcc),
