@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:mic_stream/mic_stream.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -72,6 +72,12 @@ class PitchDetectionService {
   bool _processing = false;
 
   // ── Public API ─────────────────────────────────────────────────────────────
+
+  /// Expose the audio-chunk processing pipeline for unit testing.
+  /// In production this is driven by [_micSub]; in tests, callers can feed
+  /// synthetic PCM directly without needing a real microphone.
+  @visibleForTesting
+  Future<void> processChunkForTest(Uint8List bytes) => _onAudioChunk(bytes);
 
   Future<bool> requestPermission() async {
     if (Platform.isIOS) {

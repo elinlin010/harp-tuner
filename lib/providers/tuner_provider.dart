@@ -104,9 +104,15 @@ class TunerState {
 // ── Tuner notifier ────────────────────────────────────────────────────────────
 
 class TunerNotifier extends Notifier<TunerState> {
-  final PitchDetectionService _service    = PitchDetectionService();
-  final TonePlayerService     _tonePlayer = TonePlayerService();
+  PitchDetectionService _service    = PitchDetectionService();
+  TonePlayerService     _tonePlayer = TonePlayerService();
   StreamSubscription<PitchResult?>? _pitchSub;
+
+  @visibleForTesting
+  void injectServicesForTest(PitchDetectionService s, TonePlayerService t) {
+    _service = s;
+    _tonePlayer = t;
+  }
   SharedPreferences? _prefs;
 
   static const _historyLen      = 8;
