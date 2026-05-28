@@ -239,6 +239,9 @@ class TunerNotifier extends Notifier<TunerState> {
   void stopListening() {
     _micRestartTimer?.cancel();
     _micRestartTimer = null;
+    // On iOS, the restart timer's target is _tonePlayer.stop(); cancel the
+    // timer above means the tone must be stopped explicitly here too.
+    if (Platform.isIOS) _tonePlayer.stop();
     _pitchSub?.cancel();
     _pitchSub = null;
     _service.stop();
@@ -276,6 +279,9 @@ class TunerNotifier extends Notifier<TunerState> {
     if (mode == state.tunerMode) return;
     if (mode == TunerMode.auto) {
       // Leaving reference mode: stop any playing tone and wipe reference state.
+      // Also clear _suppressUntil so auto-mode detection isn't silently deaf
+      // if the user switches mid-suppression (e.g. during iOS tone playback).
+      _suppressUntil = null;
       try {
         await _tonePlayer.stop();
       } catch (e) {
@@ -339,6 +345,7 @@ class TunerNotifier extends Notifier<TunerState> {
       _suppressUntil = DateTime.now().add(const Duration(milliseconds: 1500));
       _micRestartTimer = Timer(const Duration(milliseconds: 1100), () {
         _micRestartTimer = null;
+        if (_disposed) return;
         _tonePlayer.stop();
       });
     } else {
@@ -374,7 +381,11 @@ class TunerNotifier extends Notifier<TunerState> {
       _micRestartTimer = Timer(const Duration(milliseconds: 1400), () async {
         _micRestartTimer = null;
         if (_disposed || !state.isListening || _pitchSub != null) return;
-        await _tonePlayer.stop();
+        try {
+          await _tonePlayer.stop();
+        } catch (e) {
+          debugPrint('TunerNotifier: failed to stop tone in restart timer: $e');
+        }
         _suppressUntil = DateTime.now().add(const Duration(milliseconds: 300));
         _attachMicSubscription();
       });
