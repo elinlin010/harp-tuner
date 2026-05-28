@@ -325,6 +325,34 @@ class TunerNotifier extends Notifier<TunerState> {
     _challengeCount = 0;
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
+
+    if (Platform.isIOS) {
+      // iOS: AVAudioSession handles mic + speaker concurrently — no routing
+      // conflict. Keep the mic running. Suppress BEFORE play starts so YIN
+      // ignores the reference tone during and immediately after playback.
+      //
+      // The synthesised tone is 2 s long. For bass notes (F♭3 and below) the
+      // slow-decay envelope is still ~12% amplitude at 1.5 s — loud enough for
+      // YIN to lock onto the tone itself. We stop the tone at 1.1 s (user has
+      // heard enough to identify the pitch) and let the remaining 0.4 s of
+      // suppression clear room acoustics before detection resumes.
+      _suppressUntil = DateTime.now().add(const Duration(milliseconds: 1500));
+      _micRestartTimer = Timer(const Duration(milliseconds: 1100), () {
+        _micRestartTimer = null;
+        _tonePlayer.stop();
+      });
+    } else {
+      // Android: AudioRecord + MediaPlayer active simultaneously reroutes
+      // speaker output to the earpiece. Pause the mic BEFORE play starts to
+      // force speaker routing.
+      final wasMicActive = _pitchSub != null;
+      if (wasMicActive) {
+        _pitchSub!.cancel();
+        _pitchSub = null;
+        _service.stop();
+      }
+    }
+
     try {
       await _tonePlayer.play(hz);
     } catch (e) {
@@ -333,48 +361,23 @@ class TunerNotifier extends Notifier<TunerState> {
       if (!_disposed) state = state.copyWith(isPlayingTone: false);
     }
 
-    if (Platform.isIOS) {
-      // iOS: AVAudioSession handles mic + speaker concurrently — no routing
-      // conflict. Keep the mic running. Suppress for 1.5 s total so the
-      // reference tone doesn't register as the detected pitch.
-      //
-      // The synthesised tone is 2 s long. For bass notes (F♭3 and below) the
-      // slow-decay envelope is still ~12% amplitude at 1.5 s — loud enough for
-      // YIN to lock onto the tone itself. We therefore stop the tone at 1.1 s
-      // (user has heard enough to identify the pitch) and let the remaining
-      // 0.4 s of suppression clear room acoustics before detection resumes.
-      _suppressUntil = DateTime.now().add(const Duration(milliseconds: 1500));
-      _micRestartTimer = Timer(const Duration(milliseconds: 1100), () {
+    // Android post-play: stop tone explicitly then restart mic with brief
+    // suppression to let room echo decay.
+    //
+    // 300 ms suppression: for bass notes the room echo of a 12%-amplitude
+    // tone needs ~300 ms to fall below YIN's detection floor.
+    //
+    // Use state.isListening (intent) not wasMicActive (actual) — on rapid
+    // double-tap the second call sees _pitchSub == null (already stopped by
+    // the first tap), so wasMicActive would be false and no restart fires.
+    if (!Platform.isIOS && state.isListening && !_disposed) {
+      _micRestartTimer = Timer(const Duration(milliseconds: 1400), () async {
         _micRestartTimer = null;
-        _tonePlayer.stop();
+        if (_disposed || !state.isListening || _pitchSub != null) return;
+        await _tonePlayer.stop();
+        _suppressUntil = DateTime.now().add(const Duration(milliseconds: 300));
+        _attachMicSubscription();
       });
-    } else {
-      // Android: AudioRecord + MediaPlayer active simultaneously reroutes
-      // speaker output to the earpiece. Pause the mic while the tone plays,
-      // then stop the tone explicitly before restarting so there is no overlap.
-      //
-      // 300 ms suppression (up from 150 ms): for bass notes the room echo of a
-      // 12%-amplitude tone needs ~300 ms to fall below YIN's detection floor.
-      //
-      // Use state.isListening (intent) not wasMicActive (actual) — on rapid
-      // double-tap the second call sees _pitchSub == null (already stopped by
-      // the first tap), so wasMicActive would be false and no restart fires.
-      final wasMicActive = _pitchSub != null;
-      if (wasMicActive) {
-        _pitchSub!.cancel();
-        _pitchSub = null;
-        _service.stop();
-      }
-
-      if (state.isListening && !_disposed) {
-        _micRestartTimer = Timer(const Duration(milliseconds: 1400), () {
-          _micRestartTimer = null;
-          if (_disposed || !state.isListening || _pitchSub != null) return;
-          _tonePlayer.stop();
-          _suppressUntil = DateTime.now().add(const Duration(milliseconds: 300));
-          _attachMicSubscription();
-        });
-      }
     }
   }
 
