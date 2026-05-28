@@ -6,6 +6,7 @@ import 'package:harp_tuner/models/harp_string_model.dart';
 import 'package:harp_tuner/models/harp_type.dart';
 import 'package:harp_tuner/providers/tuner_provider.dart';
 import 'package:harp_tuner/screens/tuner_screen.dart';
+import 'package:harp_tuner/widgets/settings_display.dart';
 import 'package:harp_tuner/widgets/string_visualizer.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -183,6 +184,26 @@ Future<void> _settle(WidgetTester tester) async {
 }
 
 void main() {
+  // ── TunerScreen const constructor (line 21) ──────────────────────────────
+
+  group('TunerScreen — non-const constructor', () {
+    testWidgets('TunerScreen() without const executes constructor', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      // ignore: prefer_const_constructors — intentional: cover constructor body (line 21)
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          // ignore: prefer_const_constructors
+          home: TunerScreen(),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('TunerScreen — no harp selected (default)', () {
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(_screen());
@@ -1118,6 +1139,40 @@ void main() {
 
       // Settings sheet with language section open — line 1455 covered.
       expect(find.text('Language'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  // ── TunerScreen — _keyFor SettingsSection.stringCount (lines 409-410) ──────
+
+  group('TunerScreen — _keyFor stringCount', () {
+    testWidgets(
+        'invoking onTap(stringCount) opens settings sheet with stringCount focus',
+        (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen(prefs: {
+        'tuner_harp_type': 'leverHarp',
+        'tuner_lever_string_count': 34,
+        'tuner_a4_hz': 440,
+      }));
+      await _settle(tester);
+
+      // Retrieve the SettingsDisplay widget and call its onTap directly with
+      // SettingsSection.stringCount. This triggers _showSettings(context,
+      // focus: SettingsSection.stringCount) → _keyFor(stringCount) at lines 409-410.
+      final displayWidget =
+          tester.widget<SettingsDisplay>(find.byType(SettingsDisplay));
+      displayWidget.onTap(SettingsSection.stringCount);
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400)); // sheet open
+      await tester.pump(const Duration(milliseconds: 100)); // postFrameCallback
+      await tester.pump(const Duration(milliseconds: 300)); // scroll animation
+
       expect(tester.takeException(), isNull);
     });
   });

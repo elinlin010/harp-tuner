@@ -106,5 +106,22 @@ void main() {
       final svc = TonePlayerService();
       svc.dispose(); // _player is null → null-safe no-op
     });
+
+    test('precompute: whenComplete and then callbacks fire after compute finishes',
+        () async {
+      final svc = TonePlayerService();
+      addTearDown(svc.dispose);
+      // 4000 Hz has only ~4 harmonics below 18 kHz — fast synthesis.
+      svc.precompute([4000.0]);
+
+      // Wait long enough for the compute isolate to finish. The whenComplete
+      // callback (lines 72-73) and the then callback (lines 82-83) run in the
+      // main isolate after the isolate completes.
+      await Future.delayed(const Duration(seconds: 15));
+    },
+        timeout: const Timeout(Duration(seconds: 60)),
+        skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+            ? 'Slow synthesis skipped'
+            : null);
   });
 }

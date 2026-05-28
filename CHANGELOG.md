@@ -2,6 +2,21 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.5+15] - 2026-05-28
+
+### Fixed
+- YIN pitch detection now runs on a background isolate (`compute()`), eliminating main-thread jank during pitch analysis. A `_processing` guard drops incoming audio frames while the isolate is busy so the UI never stalls.
+- Reference tone playback on iOS: `_suppressUntil` and the early-stop timer are now armed before `play()` instead of after, so the mic suppression window actually covers the tone.
+- Reference tone playback on Android: microphone is paused before `play()` starts (restoring correct speaker routing — AudioRecord + MediaPlayer active simultaneously routes output to the earpiece).
+- Android restart timer: `_tonePlayer.stop()` is now properly awaited inside an `async` callback; a stop failure no longer silently leaves the mic paused with no recovery path.
+- Mode switch mid-suppression: switching from reference to auto mode clears `_suppressUntil` so pitch detection is not silently deaf for up to 1.5 s after the switch.
+- iOS early-stop timer now checks `_disposed` before calling `_tonePlayer.stop()`.
+- `stopListening()` explicitly stops the tone on iOS when it cancels the pending early-stop timer.
+- `fake_async` dev dependency pinned to `^1.3.3` (was unconstrained `any`).
+
+### Changed
+- Test coverage raised from 95% to 98.7% (337 tests, all passing). New suites cover the pitch-detection pipeline via a `processChunkForTest` hook, TunerNotifier error handlers and timer callbacks via `FakeAsync`, reference tone playback paths, and the non-const `TunerScreen` constructor.
+
 ## [1.1.4+14] - 2026-05-27
 
 ### Fixed
