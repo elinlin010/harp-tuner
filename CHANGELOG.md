@@ -2,6 +2,12 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.10+20] - 2026-05-29
+
+### Fixed
+- Pitch detection now reliably catches notes played in quick succession (~1 per second). Previously, any note plucked during the ~100 ms compute window was silently dropped — its attack never reached the detector. Audio now accumulates continuously; only the detection trigger is gated, so back-to-back notes are no longer missed.
+- Fixed three race conditions in the audio pipeline that could occur during rapid reference-mode tapping: a stop-then-start cycle no longer emits stale detection results into the new session, does not reset the new session's concurrency guard, and no longer allows two compute isolates to run simultaneously against the same accumulator.
+
 ## [1.1.9+19] - 2026-05-29
 
 ### Changed

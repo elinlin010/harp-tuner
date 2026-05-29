@@ -68,8 +68,13 @@ class PitchDetectionService {
   // Running accumulator of normalised float samples
   final List<double> _accumulator = [];
 
-  // Guard: skip incoming chunk if previous detection is still running
+  // Guard: skip incoming chunk if previous detection is still running.
   bool _processing = false;
+
+  // Monotonically-increasing session counter. Incremented on stop() so the
+  // finally{} block of an in-flight compute from session N doesn't reset
+  // _processing for session N+1 after a rapid stop()+start().
+  int _sessionId = 0;
 
   /// Override the mic stream source for testing.
   /// When set, [_startMic] calls this factory instead of [MicStream.microphone].
@@ -119,6 +124,7 @@ class PitchDetectionService {
   }
 
   void stop() {
+    _sessionId++; // invalidate any in-flight _onAudioChunk finally{} blocks
     _micSub?.cancel();
     _micSub = null;
     _ctrl?.close();
@@ -185,17 +191,33 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
-    if (_processing) return; // drop frame — detector still running
-    _processing = true;
-    try {
+    // Capture _ctrl and _sessionId into locals to guard against TOCTOU across
+    // the await. stop()+start() can replace _ctrl and increment _sessionId
+    // while compute() is suspended. The identical() check on _ctrl prevents
+    // emitting stale results into a new session; the sessionId check in the
+    // finally{} prevents the old session from resetting the new session's
+    // _processing flag (which would allow two concurrent computes in session N+1).
+    final ctrl = _ctrl;
+    if (ctrl == null) return; // service stopped — discard late-arriving bytes
+    final capturedSession = _sessionId;
+
+    // Always decode and accumulate PCM — never drop incoming audio, even while
+    // YIN is running. Previously the guard was at the top, which silently
+    // discarded the attack transient of any note plucked during the ~100ms
+    // compute() window, causing missed detections when playing quickly.
+    //
     // mic_stream delivers 16-bit signed PCM, little-endian.
     // Pass offsetInBytes so we read the correct slice of the underlying buffer
     // (bytes may be a sub-view with a non-zero offset into its ByteBuffer).
+    assert(bytes.length % 2 == 0, 'mic_stream delivered odd-byte chunk (${bytes.length} bytes); trailing byte silently dropped');
     final data = bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes);
     for (int i = 0; i + 1 < bytes.length; i += 2) {
       final raw = data.getInt16(i, Endian.little);
       _accumulator.add(raw / 32768.0); // normalise to -1.0..1.0
     }
+
+    // Only gate the YIN computation — audio bytes are always accumulated above.
+    if (_processing) return;
 
     // Discard stale audio to stay real-time: if the accumulator has grown
     // beyond two buffers (YIN lagging in debug mode), skip ahead.
@@ -205,21 +227,30 @@ class PitchDetectionService {
 
     if (_accumulator.length < _bufferSize) return;
 
-    final chunk = _accumulator.sublist(0, _bufferSize);
-    _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
+    _processing = true;
+    try {
+      final chunk = _accumulator.sublist(0, _bufferSize);
+      _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
 
-    final result = await compute(
-      _runYin,
-      _YinInput(_actualSampleRate, _bufferSize, chunk),
-    );
+      final result = await compute(
+        _runYin,
+        _YinInput(_actualSampleRate, _bufferSize, chunk),
+      );
 
-    if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
-        _ctrl?.add(PitchResult(result.pitch));
+      // Post-await guard: bail if the service was stopped or restarted while
+      // compute() was running — don't emit stale results into a new session.
+      if (!identical(_ctrl, ctrl)) return;
+
+      if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
+        ctrl.add(PitchResult(result.pitch));
       } else {
-        _ctrl?.add(null);
+        ctrl.add(null);
       }
     } finally {
-      _processing = false;
+      // Only reset _processing for the session we captured. If stop()+start()
+      // fired during the await, _sessionId has been incremented and we must not
+      // clear the new session's flag.
+      if (_sessionId == capturedSession) _processing = false;
     }
   }
 }

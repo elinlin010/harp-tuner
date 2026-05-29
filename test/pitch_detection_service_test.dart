@@ -248,6 +248,106 @@ void main() {
             ? 'Slow YIN computation skipped'
             : null);
 
+    test('regression: bytes arriving while compute runs are accumulated, not dropped',
+        () async {
+      // Before the fix, _processing was checked at the TOP of _onAudioChunk.
+      // Any bytes arriving while YIN was running via compute() were silently
+      // discarded — causing missed detections when notes were played quickly
+      // (approximately 1 per second). The fix moves accumulation before the guard.
+      //
+      // Setup:
+      //   Batch A (4096 samples): fills buffer → triggers compute1, _processing=true
+      //   Batches B+C (4096+4096): arrive during compute1
+      //     Fix:  accumulated → accumulator grows to ~10K samples
+      //     Bug:  dropped    → accumulator stays at ~2K (overlap only)
+      //   Trigger (256 samples): arrives after compute1 finishes
+      //     Fix:  accumulator ≥ bufferSize → triggers compute2 → detection2
+      //     Bug:  accumulator < bufferSize → no detection2
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+
+      final sc = StreamController<Uint8List>();
+      svc.micStreamOverride = () => sc.stream;
+
+      final results = <PitchResult?>[];
+      svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      // Batch A: triggers detection 1 and sets _processing = true.
+      sc.add(_pcmSineWave(4096, freq: 440.0));
+      // Batches B+C: must accumulate during compute1 (not be dropped).
+      sc.add(_pcmSineWave(4096, freq: 440.0));
+      sc.add(_pcmSineWave(4096, freq: 440.0));
+
+      // Wait for compute1 to finish (YIN on 4096 samples; generous for CI).
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Trigger: tips the large accumulated buffer into a second compute.
+      // With the bug, the accumulator only has ~2048 samples here, so no
+      // second detection fires.
+      sc.add(_pcmSineWave(256, freq: 440.0));
+      await Future.delayed(const Duration(seconds: 2));
+
+      final pitched = results.whereType<PitchResult>().toList();
+      expect(pitched.length, greaterThanOrEqualTo(2),
+          reason: 'Bytes B+C must have accumulated during compute1; '
+              'trigger must fire compute2 → detection2');
+
+      await sc.close();
+    },
+        timeout: const Timeout(Duration(seconds: 30)),
+        skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+            ? 'Slow YIN computation skipped'
+            : null);
+
+    test('bytes arriving after stop() are discarded before accumulation',
+        () async {
+      // _ctrl null-guard: _onAudioChunk exits before touching the accumulator.
+      final svc = PitchDetectionService();
+
+      final results = <PitchResult?>[];
+      svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
+      svc.stop(); // _ctrl → null
+
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await Future.delayed(Duration.zero);
+
+      expect(results, isEmpty, reason: 'No results should emit after stop()');
+    });
+
+    test('stop-then-start: session 1 stream receives no emissions after stop()',
+        () async {
+      // Note: processChunkForTest awaits the full pipeline, so by the time
+      // stop()+start() runs, the prior compute has already completed. This test
+      // verifies the sequential post-stop invariant; the concurrent race
+      // (compute in-flight when stop() fires) is guarded by _sessionId and
+      // _ctrl identity checks but requires real concurrent timing to trigger.
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+
+      final session1 = <PitchResult?>[];
+      svc.start().listen(session1.add, onError: (_) {}, cancelOnError: false);
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await Future.delayed(Duration.zero);
+      final countBeforeStop = session1.length;
+
+      svc.stop();
+      final session2 = <PitchResult?>[];
+      svc.start().listen(session2.add, onError: (_) {}, cancelOnError: false);
+
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await Future.delayed(Duration.zero);
+
+      expect(session1.length, countBeforeStop,
+          reason: 'Session 1 stream must not grow after stop()');
+    },
+        timeout: const Timeout(Duration(seconds: 30)),
+        skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+            ? 'Slow YIN computation skipped'
+            : null);
+
     test('accumulator overflow: chunk > 2×bufferSize trims to bufferSize before compute',
         () async {
       final svc = PitchDetectionService();
