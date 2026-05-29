@@ -73,10 +73,7 @@ class HarpStringModel {
   }
 
   /// Display label in harp-convention format: register first, e.g. "0G", "1E♭".
-  String get label {
-    final acc = semitoneAdjust == -1 ? '♭' : semitoneAdjust == 1 ? '♯' : '';
-    return '$harpOctave${note.label}$acc';
-  }
+  String get label => '$harpOctave$noteWithAccidental';
 
   /// MIDI note number (C4 = 60), adjusted for accidental.
   int get midiNote => 12 * (octave + 1) + note.semitoneOffset + semitoneAdjust;

@@ -612,7 +612,8 @@ class _SignalReadout extends StatelessWidget {
 
   // Matches both harp-convention format ("3A♭") and chromatic format ("A♭4").
   // group 1 = leading digits (harp register), group 2 = letter, group 3 = accidental,
-  // group 4 = trailing digits (chromatic octave). Exactly one of groups 1/4 is non-empty.
+  // group 4 = trailing digits (chromatic octave). Either group 1 or 4 may be non-empty,
+  // or both may be empty for bare note names (e.g. "G" with no octave/register).
   static final _noteRe = RegExp(r'^(\d*)([A-G])(♭|♯)?(\d*)$');
 
   @override

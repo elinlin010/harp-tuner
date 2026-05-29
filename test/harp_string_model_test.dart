@@ -112,12 +112,32 @@ void main() {
   });
 
   group('Lever harp register sanity', () {
-    test('top string (E♭7) is register 1', () {
-      final strings = HarpPresets.leverHarpWithCount(40);
-      final top = strings.last;
-      expect(top.note, NoteName.e);
-      expect(top.harpOctave, 1);
-      expect(top.label, '1E♭');
+    test('top string (E♭7) is register 1 for all counts', () {
+      for (final count in [19, 34, 40]) {
+        final top = HarpPresets.leverHarpWithCount(count).last;
+        expect(top.harpOctave, 1, reason: 'top of $count-string harp');
+        expect(top.label, '1E♭', reason: 'top of $count-string harp');
+      }
+    });
+
+    test('bottom string registers match treble-anchored pool', () {
+      // 40-string: bottom = A♭1 → register 6
+      final bottom40 = HarpPresets.leverHarpWithCount(40).first;
+      expect(bottom40.note, NoteName.a);
+      expect(bottom40.harpOctave, 6);
+      expect(bottom40.label, '6A♭');
+
+      // 34-string: bottom = G2 → register 5
+      final bottom34 = HarpPresets.leverHarpWithCount(34).first;
+      expect(bottom34.note, NoteName.g);
+      expect(bottom34.harpOctave, 5);
+      expect(bottom34.label, '5G');
+
+      // 19-string: bottom = A♭4 → register 3
+      final bottom19 = HarpPresets.leverHarpWithCount(19).first;
+      expect(bottom19.note, NoteName.a);
+      expect(bottom19.harpOctave, 3);
+      expect(bottom19.label, '3A♭');
     });
   });
 }
