@@ -134,6 +134,7 @@ class PitchDetectionService {
     // Yield one event loop turn so the caller can subscribe to _ctrl.stream
     // before we emit any errors (broadcast streams drop events with no listeners).
     await Future.delayed(Duration.zero);
+    if (_ctrl == null) return; // stop() was called during the yield
     if (Platform.isIOS) {
       // Disable mic_stream's internal permission request on iOS —
       // it uses AVCaptureDevice which crashes on iOS 26.
