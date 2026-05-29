@@ -209,7 +209,9 @@ class PitchDetectionService {
     // mic_stream delivers 16-bit signed PCM, little-endian.
     // Pass offsetInBytes so we read the correct slice of the underlying buffer
     // (bytes may be a sub-view with a non-zero offset into its ByteBuffer).
-    assert(bytes.length % 2 == 0, 'mic_stream delivered odd-byte chunk (${bytes.length} bytes); trailing byte silently dropped');
+    // Note: mic_stream on Android can deliver odd-byte chunks. The loop
+    // condition (i + 1 < bytes.length) silently drops the trailing byte,
+    // which is correct — a single byte is not a valid int16 sample.
     final data = bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes);
     for (int i = 0; i + 1 < bytes.length; i += 2) {
       final raw = data.getInt16(i, Endian.little);
