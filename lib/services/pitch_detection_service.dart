@@ -3,7 +3,7 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show compute, visibleForTesting;
+import 'package:flutter/foundation.dart' show compute, debugPrint, kDebugMode, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:mic_stream/mic_stream.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -94,6 +94,116 @@ class PitchServiceError implements Exception {
   });
 }
 
+// ── Diagnostic logger (debug builds only) ────────────────────────────────────
+// Activate by running a debug build and filtering logcat:
+//   adb logcat -s flutter | grep DIAG
+//
+// Key metrics:
+//   isolate_ready_ms  — time from start() until the persistent YIN isolate is
+//                       warm. Detections during this window use compute(), which
+//                       spawns a new Dart isolate per call (~50–200 ms on Android).
+//   yin_ms            — end-to-end latency of each YIN detection (isolate round-
+//                       trip or compute() spawn + run). Should be < 30 ms when
+//                       the persistent isolate is ready.
+//   accum_trim        — the accumulator exceeded 2× buffer size, meaning YIN is
+//                       falling behind real-time audio. Frequent trims indicate
+//                       the device is too slow to keep up.
+//   skip              — a chunk arrived while YIN was still running (_processing).
+//                       Some skips are fine; many consecutive skips mean the
+//                       device cannot sustain the detection rate.
+class _Diag {
+  static bool get _on => kDebugMode;
+  static const String _tag = '[DIAG]';
+
+  final Stopwatch _sessionClock = Stopwatch();
+  int _detectionCount = 0;
+  int _skipCount = 0;
+  int _trimCount = 0;
+  int _isolateCount = 0;
+  int _computeCount = 0;
+  bool _isolateReady = false;
+
+  void sessionStart(double targetSr) {
+    if (!_on) return;
+    _sessionClock.reset();
+    _sessionClock.start();
+    _detectionCount = 0;
+    _skipCount = 0;
+    _trimCount = 0;
+    _isolateCount = 0;
+    _computeCount = 0;
+    _isolateReady = false;
+    debugPrint('$_tag session_start platform=${Platform.operatingSystem}'
+        ' target_sr=${targetSr.toInt()}');
+  }
+
+  void isolateReady() {
+    if (!_on) return;
+    _isolateReady = true;
+    debugPrint('$_tag isolate_ready ms=${_sessionClock.elapsedMilliseconds}');
+  }
+
+  void sampleRate(double actual, double target) {
+    if (!_on) return;
+    debugPrint('$_tag sample_rate actual=${actual.toInt()} target=${target.toInt()}'
+        '${actual != target ? " *** MISMATCH ***" : ""}');
+  }
+
+  void audioSource(String source) {
+    if (!_on) return;
+    debugPrint('$_tag audio_source=$source');
+  }
+
+  void chunkSkipped(int accumSize) {
+    if (!_on) return;
+    _skipCount++;
+    // Only log every 5th skip to avoid spam.
+    if (_skipCount % 5 == 1) {
+      debugPrint('$_tag skip total_skips=$_skipCount accum=$accumSize'
+          ' ms=${_sessionClock.elapsedMilliseconds}');
+    }
+  }
+
+  void accumTrim(int oldSize, int newSize) {
+    if (!_on) return;
+    _trimCount++;
+    debugPrint('$_tag accum_trim #$_trimCount old=$oldSize new=$newSize'
+        ' ms=${_sessionClock.elapsedMilliseconds}');
+  }
+
+  // Returns a Stopwatch already running for timing the YIN call.
+  Stopwatch beginDetection() {
+    _detectionCount++;
+    return kDebugMode ? (Stopwatch()..start()) : Stopwatch();
+  }
+
+  void detectionDone(Stopwatch sw, bool usedIsolate, bool pitched, double freq) {
+    if (!_on) return;
+    if (usedIsolate) { _isolateCount++; } else { _computeCount++; }
+    final path = usedIsolate ? 'isolate' : 'compute';
+    final pitchStr = pitched ? freq.toStringAsFixed(1) : 'none';
+    debugPrint('$_tag detection #$_detectionCount'
+        ' yin_ms=${sw.elapsedMilliseconds} path=$path'
+        ' pitched=$pitched freq=$pitchStr'
+        ' isolate_ready=$_isolateReady'
+        ' session_ms=${_sessionClock.elapsedMilliseconds}');
+  }
+
+  void isolateTimeout() {
+    if (!_on) return;
+    debugPrint('$_tag ISOLATE_TIMEOUT ms=${_sessionClock.elapsedMilliseconds}'
+        ' — persistent isolate hung, falling back to compute()');
+  }
+
+  void sessionStop() {
+    if (!_on) return;
+    debugPrint('$_tag session_stop detections=$_detectionCount'
+        ' skips=$_skipCount trims=$_trimCount'
+        ' isolate_calls=$_isolateCount compute_calls=$_computeCount'
+        ' total_ms=${_sessionClock.elapsedMilliseconds}');
+  }
+}
+
 /// Streams detected fundamental frequencies from the device microphone.
 ///
 /// Usage:
@@ -132,6 +242,8 @@ class PitchDetectionService {
   // Persistent YIN isolate — spawned once on start(), killed on stop().
   SendPort? _yinSendPort;
   Isolate? _yinIsolate;
+
+  final _diag = _Diag();
 
   /// Override the mic stream source for testing.
   /// When set, [_startMic] calls this factory instead of [MicStream.microphone].
@@ -176,6 +288,7 @@ class PitchDetectionService {
     _ctrl?.close();
     _ctrl = StreamController<PitchResult?>.broadcast();
     _accumulator.clear();
+    _diag.sessionStart(_actualSampleRate);
     // Spawn the YIN isolate eagerly so it is warm by the time the first audio
     // chunk arrives (~50–100 ms later). Fire-and-forget is fine here.
     _ensureYinIsolate();
@@ -184,6 +297,7 @@ class PitchDetectionService {
   }
 
   void stop() {
+    _diag.sessionStop();
     _sessionId++; // invalidate any in-flight _onAudioChunk finally{} blocks
     _disposeYinIsolate();
     _micSub?.cancel();
@@ -205,6 +319,7 @@ class PitchDetectionService {
       setupPort.first.then((port) {
         _yinSendPort = port as SendPort;
         setupPort.close();
+        _diag.isolateReady();
       });
     }).catchError((_) {
       setupPort.close();
@@ -224,6 +339,7 @@ class PitchDetectionService {
   // isolate is not yet ready (first call latency) or spawn failed.
   Future<PitchDetectorResult> _detectPitch(
       double sampleRate, int bufferSize, List<double> buffer) async {
+    final sw = _diag.beginDetection();
     final port = _yinSendPort;
     if (port != null) {
       final replyPort = ReceivePort();
@@ -233,8 +349,10 @@ class PitchDetectionService {
         // replyPort.first would block forever, leaving _processing=true permanently.
         final result = await replyPort.first
             .timeout(const Duration(milliseconds: 500)) as PitchDetectorResult;
+        _diag.detectionDone(sw, true, result.pitched, result.pitch);
         return result;
       } on TimeoutException {
+        _diag.isolateTimeout();
         return PitchDetectorResult(pitched: false, pitch: -1, probability: 0);
       } finally {
         replyPort.close();
@@ -243,7 +361,9 @@ class PitchDetectionService {
     // Fallback: isolate not ready yet. Use compute() — NOT synchronous YIN.
     // Running YIN inline blocks the main Dart isolate for ~30–100 ms on Android,
     // preventing mic chunk delivery and cascading into missed detections.
-    return compute(_runYin, _YinInput(sampleRate, bufferSize, buffer));
+    final result = await compute(_runYin, _YinInput(sampleRate, bufferSize, buffer));
+    _diag.detectionDone(sw, false, result.pitched, result.pitch);
+    return result;
   }
 
   // ── Internal ───────────────────────────────────────────────────────────────
@@ -273,12 +393,14 @@ class PitchDetectionService {
             audioFormat: AudioFormat.ENCODING_PCM_16BIT,
             audioSource: AudioSource.UNPROCESSED,
           );
+          _diag.audioSource('UNPROCESSED');
         } catch (_) {
           rawStream = MicStream.microphone(
             sampleRate: _targetSampleRate,
             audioFormat: AudioFormat.ENCODING_PCM_16BIT,
             audioSource: AudioSource.MIC,
           );
+          _diag.audioSource('MIC_fallback');
         }
       } else {
         rawStream = MicStream.microphone(
@@ -309,6 +431,7 @@ class PitchDetectionService {
     if (micStreamOverride == null) {
       MicStream.sampleRate.then((actualRate) {
         _actualSampleRate = actualRate.toDouble();
+        _diag.sampleRate(_actualSampleRate, _targetSampleRate.toDouble());
       }).catchError((_) {}); // default of 44100 Hz remains on error
     }
   }
@@ -340,12 +463,17 @@ class PitchDetectionService {
     }
 
     // Only gate the YIN computation — audio bytes are always accumulated above.
-    if (_processing) return;
+    if (_processing) {
+      _diag.chunkSkipped(_accumulator.length);
+      return;
+    }
 
     // Discard stale audio to stay real-time: if the accumulator has grown
     // beyond two buffers (YIN lagging), skip ahead to the newest audio.
     if (_accumulator.length > _bufferSize * 2) {
+      final before = _accumulator.length;
       _accumulator.removeRange(0, _accumulator.length - _bufferSize);
+      _diag.accumTrim(before, _accumulator.length);
     }
 
     if (_accumulator.length < _bufferSize) return;
