@@ -133,8 +133,10 @@ class PitchDetectionService {
   void _startMic() async {
     // Yield one event loop turn so the caller can subscribe to _ctrl.stream
     // before we emit any errors (broadcast streams drop events with no listeners).
+    final thisCtrl = _ctrl;
     await Future.delayed(Duration.zero);
-    if (_ctrl == null) return; // stop() was called during the yield
+    // Guard against stop() or a rapid second start() that replaced _ctrl.
+    if (_ctrl == null || !identical(_ctrl, thisCtrl)) return;
     if (Platform.isIOS) {
       // Disable mic_stream's internal permission request on iOS —
       // it uses AVCaptureDevice which crashes on iOS 26.
@@ -174,9 +176,12 @@ class PitchDetectionService {
 
     // sampleRate completes once the stream has started; update if the device
     // rate differs from our target so the compute isolate uses the right value.
-    MicStream.sampleRate.then((actualRate) {
-      _actualSampleRate = actualRate.toDouble();
-    });
+    // Skip when using a test override (MicStream may not be initialized).
+    if (micStreamOverride == null) {
+      MicStream.sampleRate.then((actualRate) {
+        _actualSampleRate = actualRate.toDouble();
+      }).catchError((_) {}); // default of 44100 Hz remains on error
+    }
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
