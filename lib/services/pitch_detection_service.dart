@@ -134,9 +134,16 @@ class PitchDetectionService {
     Stream<Uint8List> rawStream;
     try {
       // mic_stream 0.7+: microphone() returns Stream<Uint8List> directly (not a Future)
+      // Android: UNPROCESSED bypasses AGC/noise-suppression (Pixel's audio HAL
+      // enables these on DEFAULT/MIC, subtly distorting the YIN autocorrelation
+      // and causing a small systematic pitch offset vs iOS's .measurement mode).
+      // Requires API 24+; virtually all modern Android devices qualify.
       rawStream = MicStream.microphone(
         sampleRate: _targetSampleRate,
         audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+        audioSource: Platform.isAndroid
+            ? AudioSource.UNPROCESSED
+            : AudioSource.DEFAULT,
       );
     } catch (e) {
       _ctrl?.addError(PitchServiceError(
