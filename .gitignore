@@ -48,5 +48,6 @@ app.*.map.json
 /android/key.properties
 **/*.jks
 **/*.keystore
+/android/fastlane/play-store-key.json
 .gstack/
 .claude/skills/gstack/

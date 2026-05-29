@@ -407,11 +407,17 @@ class TunerNotifier extends Notifier<TunerState> {
 
   Future<void> togglePreferFlats() async {
     final newPreferFlats = !state.preferFlats;
-    if (state.detectedHz != null) {
+    // Reset hysteresis so the new accidental notation takes effect on the
+    // next pitch frame rather than waiting out the challenge counter.
+    _confirmedNote = null;
+    _challengeNote = null;
+    _challengeCount = 0;
+    if (state.detectedHz != null && state.selectedHarp == null) {
+      // No harp selected: recalculate chromatic note name with new preference.
       final info = MusicUtils.frequencyToNoteInfo(
         state.detectedHz!,
         preferFlats: newPreferFlats,
-        pedalHarp: state.selectedHarp == HarpType.pedalHarp,
+        pedalHarp: false,
         a4Hz: state.a4Hz.toDouble(),
       );
       state = state.copyWith(
@@ -420,6 +426,8 @@ class TunerNotifier extends Notifier<TunerState> {
         cents: info.cents,
       );
     } else {
+      // Harp selected: note name comes from the closest string label and does
+      // not depend on preferFlats; just update the flag.
       state = state.copyWith(preferFlats: newPreferFlats);
     }
     try {
@@ -433,17 +441,34 @@ class TunerNotifier extends Notifier<TunerState> {
   Future<void> setA4Hz(int hz) async {
     final clamped = hz.clamp(_kA4HzMin, _kA4HzMax);
     if (state.detectedHz != null) {
-      final info = MusicUtils.frequencyToNoteInfo(
-        state.detectedHz!,
-        preferFlats: state.preferFlats,
-        pedalHarp: state.selectedHarp == HarpType.pedalHarp,
-        a4Hz: clamped.toDouble(),
-      );
-      state = state.copyWith(
-        a4Hz: clamped,
-        closestNoteName: info.noteName,
-        cents: info.cents,
-      );
+      if (state.selectedHarp != null) {
+        // Harp mode: note name is the harp string label (unchanged when a4Hz
+        // shifts); recalculate cents against the calibrated string frequency.
+        final harpStrings = HarpPresets.stringsFor(
+            state.selectedHarp!, leverStringCount: state.leverStringCount);
+        final closest = MusicUtils.closestString(state.detectedHz!, harpStrings);
+        if (closest != null) {
+          state = state.copyWith(
+            a4Hz: clamped,
+            cents: MusicUtils.centsFromTarget(
+                state.detectedHz!, closest.frequencyAt(clamped.toDouble())),
+          );
+        } else {
+          state = state.copyWith(a4Hz: clamped);
+        }
+      } else {
+        final info = MusicUtils.frequencyToNoteInfo(
+          state.detectedHz!,
+          preferFlats: state.preferFlats,
+          pedalHarp: false,
+          a4Hz: clamped.toDouble(),
+        );
+        state = state.copyWith(
+          a4Hz: clamped,
+          closestNoteName: info.noteName,
+          cents: info.cents,
+        );
+      }
     } else {
       state = state.copyWith(a4Hz: clamped);
     }
@@ -581,40 +606,60 @@ class TunerNotifier extends Notifier<TunerState> {
     }
 
     // ── Auto mode: find the closest note ────────────────────────────────────
-    final info = MusicUtils.frequencyToNoteInfo(
-      stableHz,
-      preferFlats: state.preferFlats,
-      pedalHarp: state.selectedHarp == HarpType.pedalHarp,
-      a4Hz: state.a4Hz.toDouble(),
-    );
+    // When a harp is selected, snap to the nearest harp string so the note
+    // name and gauge cents always reference the same string the visualizer
+    // highlights. Harp strings only carry ♭ or natural accidentals, so no ♯
+    // note names can appear even when preferFlats is set.
+    final String noteName;
+    final double centsVal;
+    if (state.selectedHarp != null) {
+      final harpStrings = HarpPresets.stringsFor(
+        state.selectedHarp!,
+        leverStringCount: state.leverStringCount,
+      );
+      final closest = MusicUtils.closestString(stableHz, harpStrings);
+      if (closest == null) return;
+      noteName = closest.label;
+      centsVal = MusicUtils.centsFromTarget(
+          stableHz, closest.frequencyAt(state.a4Hz.toDouble()));
+    } else {
+      final info = MusicUtils.frequencyToNoteInfo(
+        stableHz,
+        preferFlats: state.preferFlats,
+        pedalHarp: false,
+        a4Hz: state.a4Hz.toDouble(),
+      );
+      noteName = info.noteName;
+      centsVal = info.cents;
+    }
 
     // Hysteresis: prevent rapid note switching
-    if (_confirmedNote == null || _confirmedNote == info.noteName) {
-      _confirmedNote = info.noteName;
+    if (_confirmedNote == null || _confirmedNote == noteName) {
+      _confirmedNote = noteName;
       _challengeNote = null;
       _challengeCount = 0;
       state = state.copyWith(
         isStale: false,
         detectedHz: stableHz,
-        closestNoteName: info.noteName,
-        cents: info.cents,
+        closestNoteName: noteName,
+        cents: centsVal,
       );
     } else {
-      if (_challengeNote == info.noteName) {
+      if (_challengeNote == noteName) {
         _challengeCount++;
       } else {
-        _challengeNote = info.noteName;
+        _challengeNote = noteName;
         _challengeCount = 1;
       }
       if (_challengeCount >= _challengeNeeded) {
-        _confirmedNote = info.noteName;
+        _confirmedNote = noteName;
         _challengeNote = null;
         _challengeCount = 0;
         state = state.copyWith(
           isStale: false,
           detectedHz: stableHz,
-          closestNoteName: info.noteName,
-          cents: info.cents,
+          closestNoteName: noteName,
+          cents: centsVal,
         );
       }
     }

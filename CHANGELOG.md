@@ -2,6 +2,16 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.6+16] - 2026-05-29
+
+### Fixed
+- Auto mode with a harp selected: note names now snap to the nearest harp string label (never ♯) instead of using chromatic 12-tone snapping. The displayed note always matches the highlighted string in the string visualizer.
+- `togglePreferFlats` now resets the hysteresis counters (`_confirmedNote`, `_challengeNote`, `_challengeCount`) so the new accidental notation takes effect on the very next pitch frame rather than waiting out the challenge delay.
+- `setA4Hz` with a harp selected: recalculates cents against the harp string frequency instead of re-running chromatic snapping, preventing the note label from reverting to an off-harp name (e.g. `G4` → `G♭4`).
+
+### Changed
+- Six regression tests added to `tuner_notifier_test.dart` guarding the preferFlats/alignment invariants: no-♯ in auto mode, closest-string alignment for common accidental pitches, `setA4Hz` label stability, and hysteresis reset on `togglePreferFlats`.
+
 ## [1.1.5+15] - 2026-05-28
 
 ### Fixed
