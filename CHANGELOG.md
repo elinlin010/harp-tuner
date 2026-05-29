@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.7+17] - 2026-05-29
+
+### Fixed
+- Android pitch detection: switched microphone audio source from `DEFAULT` to `UNPROCESSED` (`AudioSource.UNPROCESSED`, API 24+). Google's audio HAL on Pixel and other Android devices applies AGC and noise suppression on the default source, subtly distorting the YIN autocorrelation waveform and producing a small systematic pitch offset compared to iOS (which uses `.measurement` mode, disabling all signal processing). `UNPROCESSED` bypasses these effects for a raw signal equivalent to iOS.
+
 ## [1.1.6+16] - 2026-05-29
 
 ### Fixed
