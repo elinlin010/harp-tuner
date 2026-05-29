@@ -380,6 +380,137 @@ void main() {
     });
   });
 
+  // ── preferFlats / string alignment regression guards ─────────────────────
+  //
+  // Before the fix, auto mode used frequencyToNoteInfo (chromatic snapping),
+  // which could produce note names like 'G♭4' that do not exist on the harp.
+  // The string visualizer highlights the closest ACTUAL string (e.g. G4),
+  // so the two would diverge.  The fix snaps both to the nearest harp string.
+
+  group('preferFlats / string alignment regression guards', () {
+    test('lever harp: A♭4 pitch resolves to A♭4 string label with ~0 cents', () async {
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(415.30));
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'A♭4');
+      expect(s.cents!, closeTo(0.0, 5.0));
+    });
+
+    test('lever harp: G♭ pitch resolves to nearest harp string (G4), not off-harp G♭4', () async {
+      // 380 Hz lies between F4 (349 Hz, ~144 ¢ away) and G4 (392 Hz, ~54 ¢ away),
+      // so the closest lever harp string is G4.  Before the fix, frequencyToNoteInfo
+      // returned 'G♭4' — a note that does not exist on the harp — causing
+      // closestNoteName and the visualizer's highlighted string to disagree.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(380.0));
+      final name = c.read(tunerProvider).closestNoteName;
+      expect(name, 'G4', reason: 'should snap to nearest harp string, not off-harp G♭4');
+      expect(name, isNot(contains('♯')));
+    });
+
+    test('lever harp: C♯ pitch resolves to nearest harp string (C4), not C♯4 or D♭4', () async {
+      // 275 Hz is closer to C4 (261.63 Hz, ~87 ¢) than to D4 (293.66 Hz, ~113 ¢).
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(275.0));
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'C4');
+      expect(s.closestNoteName, isNot(contains('♯')));
+    });
+
+    test('lever harp auto mode: closestNoteName never contains ♯ for common accidental pitches', () async {
+      // Invariant: harp strings only carry ♭ or natural accidentals, so no ♯
+      // note name can ever appear in auto mode when a harp is selected.
+      SharedPreferences.setMockInitialValues({});
+      const testPitches = <double>[
+        277.18, // C♯4/D♭4 — no lever harp string here, closest is C4 or D4
+        311.13, // D♯4/E♭4 — lever harp has E♭4 string
+        380.0,  // between F4 and G4, closer to G4
+        415.30, // G♯4/A♭4 — lever harp has A♭4 string
+        466.16, // A♯4/B♭4 — lever harp has B♭4 string
+      ];
+      for (final hz in testPitches) {
+        final c = _container(overrideState: const TunerState(
+          selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+        ));
+        await Future.delayed(Duration.zero);
+        final n = c.read(tunerProvider.notifier);
+        for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(hz));
+        final name = c.read(tunerProvider).closestNoteName;
+        if (name != null) {
+          expect(name, isNot(contains('♯')),
+              reason: 'sharp appeared for $hz Hz: got "$name"');
+        }
+      }
+    });
+
+    test('setA4Hz with lever harp: closestNoteName stays harp string label, not chromatic', () async {
+      // Regression: before the fix, setA4Hz re-ran frequencyToNoteInfo which
+      // could overwrite the correctly snapped harp-string label with an
+      // off-harp chromatic name — e.g. 'G4' → 'G♭4' for detectedHz=380.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true,
+        a4Hz: 440,
+        detectedHz: 380.0,   // between F4 and G4 on the lever harp
+        closestNoteName: 'G4',
+        cents: -52.0,
+      ));
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).setA4Hz(445);
+      final s = c.read(tunerProvider);
+      expect(s.a4Hz, 445);
+      expect(s.closestNoteName, 'G4',
+          reason: 'must not revert to off-harp chromatic name G♭4');
+      expect(s.cents, isNotNull);
+      expect(s.cents!, isNot(closeTo(-52.0, 1.0))); // cents change with a4Hz
+    });
+
+    test('togglePreferFlats resets hysteresis: adjacent note confirmed without challenge delay', () async {
+      // Regression: without the hysteresis reset, _confirmedNote held the
+      // confirmed string label ('D4') after togglePreferFlats; when the pitch
+      // moved to the adjacent E♭4 string (100 ¢ away) the challenge counter
+      // blocked acceptance for 3 frames — leaving 'D4' on screen.
+      //
+      // D4 → E♭4 is exactly 100 ¢ so it passes the outlier check (<150 ¢)
+      // and cleanly replaces the history.  Frame 8 of E♭4 is the first
+      // stability-gate pass after the history has been fully flushed.
+      //   With fix (_confirmedNote=null): E♭4 confirmed on frame 8 ✓
+      //   Without fix (_confirmedNote='D4'): only 1 challenge → still 'D4' ✗
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp,
+        preferFlats: false,
+        a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      // Confirm D4 (~293.66 Hz, natural D string on lever harp)
+      for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(293.66));
+      expect(c.read(tunerProvider).closestNoteName, 'D4');
+      // Toggle preferFlats — must reset _confirmedNote to null
+      await n.togglePreferFlats();
+      // Switch to E♭4 (~311.13 Hz, one semitone above D4):
+      // 8 frames flush the old D4 history; frame 8 triggers the stability gate.
+      for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(311.13));
+      expect(c.read(tunerProvider).closestNoteName, 'E♭4');
+    });
+  });
+
   // ── handlePitchResult — reference mode ──────────────────────────────────
 
   group('TunerNotifier.handlePitchResult — reference mode', () {
