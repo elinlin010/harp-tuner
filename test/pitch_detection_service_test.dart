@@ -300,21 +300,23 @@ void main() {
             ? 'Slow YIN computation skipped'
             : null);
 
-    test('bytes arriving after stop() are safely discarded — no crash, no emission',
+    test('bytes arriving after stop() are discarded before accumulation',
         () async {
-      // After stop(), _ctrl is null. If a late in-flight _onAudioChunk call still
-      // runs (e.g., dispatched before the stream subscription cancel propagated),
-      // the PCM accumulation and even a compute() may run, but _ctrl?.add() is a
-      // no-op and no results escape. This test feeds bytes after stop() and
-      // verifies no exception is thrown and no results are emitted.
+      // Guard: _onAudioChunk bails out immediately when _ctrl is null (service
+      // stopped). This prevents late-arriving mic chunks from growing the
+      // accumulator and triggering spurious compute() isolates.
+      //
+      // Also covers the resumed-compute-after-stop() race: if compute() was
+      // in-flight when stop() was called, its finally{} resets _processing=false.
+      // Without the _ctrl null-guard, the next arriving chunk would start a new
+      // compute(). With the guard, it returns immediately.
       final svc = PitchDetectionService();
 
       final results = <PitchResult?>[];
       svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
-      svc.stop(); // immediately stop — _ctrl is now null
+      svc.stop(); // _ctrl → null
 
-      // Feed bytes directly via the test hook. _ctrl is null; the function must
-      // not throw and must not emit anything.
+      // Feed a full buffer after stop(); guard must exit before accumulation.
       await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
       await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
       await Future.delayed(Duration.zero);

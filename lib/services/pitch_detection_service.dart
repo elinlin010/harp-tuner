@@ -185,6 +185,13 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
+    // Bail out immediately if the service has been stopped. _ctrl becomes null
+    // on stop(), and stream cancel() is asynchronous — late chunks can still
+    // arrive. Without this guard, bytes would decode into _accumulator and a
+    // resumed compute() (whose finally{} resets _processing=false) could
+    // trigger a new isolate after stop() with no way to emit results.
+    if (_ctrl == null) return;
+
     // Always decode and accumulate PCM — never drop incoming audio, even while
     // YIN is running. Previously the guard was at the top, which silently
     // discarded the attack transient of any note plucked during the ~100ms
