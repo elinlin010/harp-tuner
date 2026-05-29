@@ -1,0 +1,1 @@
+Internal reliability improvements: fixed edge cases in microphone startup that could cause errors to be silently dropped or a mic subscription to leak on rapid start/stop. No change to the tuning interface.
