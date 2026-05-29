@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -210,7 +211,6 @@ void main() {
 
       // 2048 samples = 4096 bytes; bufferSize = 4096 samples → returns at line 177
       await svc.processChunkForTest(_pcmSilence(2048));
-      // Lines 158-160, 165(?), 166-168, 173, 177, 193 covered
     });
 
     test('silence: two chunks fill the buffer, compute runs, null emitted',
@@ -220,14 +220,11 @@ void main() {
       final results = <PitchResult?>[];
       svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
 
-      // Two calls with 2048 samples each → accumulator reaches 4096 (bufferSize)
-      await svc.processChunkForTest(_pcmSilence(2048)); // accumulates to 2048 (<4096), returns
-      await svc.processChunkForTest(_pcmSilence(2048)); // accumulates to 4096, runs compute
-      // Flush broadcast stream delivery (async, scheduled as microtask after compute).
+      await svc.processChunkForTest(_pcmSilence(2048));
+      await svc.processChunkForTest(_pcmSilence(2048));
       await Future.delayed(Duration.zero);
-      // Lines 179, 180, 182, 184, 190 (silence → not pitched → null), 193 covered
 
-      expect(results, contains(null)); // silence yields null PitchResult
+      expect(results, contains(null));
     },
         timeout: const Timeout(Duration(seconds: 30)),
         skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
@@ -240,20 +237,261 @@ void main() {
       final results = <PitchResult?>[];
       svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
 
-      // First call: 2048 samples → accumulator = 2048 < 4096, returns early
       await svc.processChunkForTest(_pcmSineWave(2048));
-      // Second call: 2048 more → accumulator = 4096, runs compute on 440 Hz signal
       await svc.processChunkForTest(_pcmSineWave(2048));
-      // Flush broadcast stream delivery (async, scheduled as microtask after compute).
       await Future.delayed(Duration.zero);
-      // Line 188 (pitched result path) covered when YIN detects the 440 Hz pitch
 
-      // Either a PitchResult(≈440) or null was emitted — just verify no crash
       expect(results.isNotEmpty, isTrue);
     },
         timeout: const Timeout(Duration(seconds: 30)),
         skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
             ? 'Slow YIN computation skipped'
             : null);
+
+    test('accumulator overflow: chunk > 2×bufferSize trims to bufferSize before compute',
+        () async {
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+      final results = <PitchResult?>[];
+      svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
+
+      // 9000 samples > bufferSize*2 (8192) → triggers the overflow trim path
+      await svc.processChunkForTest(_pcmSilence(9000));
+      await Future.delayed(Duration.zero);
+
+      // Trim fires and compute runs; silence → null
+      expect(results, contains(null));
+    },
+        timeout: const Timeout(Duration(seconds: 30)),
+        skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+            ? 'Slow YIN computation skipped'
+            : null);
+  });
+
+  // ── micStreamOverride injection (covers _startMic stream-setup paths) ─────
+
+  group('PitchDetectionService micStreamOverride', () {
+    test('throwing factory emits PitchServiceError on the stream', () async {
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+
+      svc.micStreamOverride = () => throw Exception('no mic available');
+
+      Object? received;
+      svc.start().listen(
+        (_) {},
+        onError: (Object e) { received = e; },
+        cancelOnError: false,
+      );
+
+      // Yield so _startMic() async body runs and the catch block fires
+      await Future.delayed(const Duration(milliseconds: 30));
+
+      expect(received, isA<PitchServiceError>());
+      expect((received! as PitchServiceError).isPermissionError, isFalse);
+      expect((received! as PitchServiceError).message, contains('no mic available'));
+    });
+
+    test('stream emitting bytes triggers the data callback', () async {
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+
+      final sc = StreamController<Uint8List>.broadcast();
+      svc.micStreamOverride = () => sc.stream;
+      svc.start().listen((_) {}, onError: (_) {}, cancelOnError: false);
+
+      // Let _startMic() run and register the stream listener
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      // Adding bytes invokes the data callback (bytes) => _onAudioChunk(bytes)
+      sc.add(_pcmSilence(100));
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      await sc.close();
+    });
+
+    test('stream emitting a non-PitchServiceError wraps it', () async {
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+
+      final sc = StreamController<Uint8List>.broadcast();
+      svc.micStreamOverride = () => sc.stream;
+
+      Object? received;
+      svc.start().listen(
+        (_) {},
+        onError: (Object e) { received = e; },
+        cancelOnError: false,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      // A bare Exception from the stream should be wrapped in PitchServiceError
+      sc.addError(Exception('stream broke'));
+      await Future.delayed(const Duration(milliseconds: 10));
+
+      expect(received, isA<PitchServiceError>());
+      expect((received! as PitchServiceError).isPermissionError, isFalse);
+      expect((received! as PitchServiceError).message, contains('stream broke'));
+
+      await sc.close();
+    });
+
+  });
+
+  // ── Pitch accuracy (platform-agnostic core algorithm) ────────────────────
+  //
+  // These tests feed synthetic PCM directly into the detection pipeline,
+  // bypassing the microphone entirely. Because _onAudioChunk and the YIN
+  // parameters (sampleRate=44100, bufferSize=4096) are identical on Android
+  // and iOS, accuracy here proves the detection is consistent across platforms.
+
+  group('PitchDetectionService pitch accuracy', () {
+    // Returns the first PitchResult emitted after feeding [pcm].
+    // Null means YIN decided no pitch was present.
+    Future<PitchResult?> firstResult(double freq) async {
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+      final results = <PitchResult?>[];
+      svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
+      // One call with exactly bufferSize samples triggers a single YIN pass.
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: freq));
+      await Future.delayed(Duration.zero);
+      return results.whereType<PitchResult>().firstOrNull;
+    }
+
+    void expectAccurate(PitchResult? result, double expectedHz,
+        {double maxCents = 15.0}) {
+      expect(result, isNotNull,
+          reason: 'YIN should detect a pitch for ${expectedHz}Hz sine wave');
+      final detected = result!.frequency;
+      final cents = 1200 * log(detected / expectedHz) / log(2);
+      expect(cents.abs(), lessThan(maxCents),
+          reason: 'detected ${detected.toStringAsFixed(2)} Hz, expected '
+              '$expectedHz Hz (${cents.toStringAsFixed(1)} cents off; '
+              'max $maxCents cents allowed)');
+    }
+
+    test(
+      'A4 (440 Hz) — standard reference, verifies 44100 Hz sample-rate config',
+      () async {
+        final result = await firstResult(440.0);
+        expectAccurate(result, 440.0);
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+      skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+          ? 'Slow YIN computation skipped'
+          : null,
+    );
+
+    test(
+      'C4 (261.63 Hz) — middle C, 24 cycles in buffer',
+      () async {
+        final result = await firstResult(261.63);
+        expectAccurate(result, 261.63);
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+      skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+          ? 'Slow YIN computation skipped'
+          : null,
+    );
+
+    test(
+      'G3 (196 Hz) — lever harp bass zone, 18 cycles in buffer',
+      () async {
+        final result = await firstResult(196.0);
+        expectAccurate(result, 196.0);
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+      skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+          ? 'Slow YIN computation skipped'
+          : null,
+    );
+
+    test(
+      'A5 (880 Hz) — upper harp range, 82 cycles in buffer',
+      () async {
+        final result = await firstResult(880.0);
+        expectAccurate(result, 880.0);
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+      skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+          ? 'Slow YIN computation skipped'
+          : null,
+    );
+
+    test(
+      'C5 (523.25 Hz) — treble harp range, 49 cycles in buffer',
+      () async {
+        final result = await firstResult(523.25);
+        expectAccurate(result, 523.25);
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+      skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+          ? 'Slow YIN computation skipped'
+          : null,
+    );
+
+    test(
+      'amplitude independence: half-scale (16-bit) sine detects same as full-scale',
+      () async {
+        // YIN is autocorrelation-based; amplitude does not affect pitch accuracy.
+        // This verifies int16 normalisation (/32768.0) is correct for both Android
+        // (UNPROCESSED source, often lower gain) and iOS (DEFAULT/measurement mode).
+        final bd = ByteData(4096 * 2);
+        for (int i = 0; i < 4096; i++) {
+          final v =
+              (sin(2 * pi * 440.0 * i / 44100) * 16383).round().clamp(-32768, 32767);
+          bd.setInt16(i * 2, v, Endian.little);
+        }
+        final halfScale = bd.buffer.asUint8List();
+
+        final svc = PitchDetectionService();
+        addTearDown(svc.stop);
+        final results = <PitchResult?>[];
+        svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
+        await svc.processChunkForTest(halfScale);
+        await Future.delayed(Duration.zero);
+
+        final result = results.whereType<PitchResult>().firstOrNull;
+        expectAccurate(result, 440.0);
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+      skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+          ? 'Slow YIN computation skipped'
+          : null,
+    );
+
+    test(
+      '50% overlap: second window (2048 new + 2048 carry-over) detects the same pitch',
+      () async {
+        // After the first 4096-sample buffer is processed, 2048 samples remain
+        // (the 50% overlap). The next 2048 samples complete a new buffer and
+        // should detect the same pitch — verifying the overlap logic is correct
+        // on all platforms.
+        final svc = PitchDetectionService();
+        addTearDown(svc.stop);
+        final results = <PitchResult?>[];
+        svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
+
+        await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+        await Future.delayed(Duration.zero);
+        await svc.processChunkForTest(_pcmSineWave(2048, freq: 440.0));
+        await Future.delayed(Duration.zero);
+
+        final pitched = results.whereType<PitchResult>().toList();
+        expect(pitched.length, greaterThanOrEqualTo(2),
+            reason: 'both overlapping windows should detect 440 Hz');
+        for (final r in pitched) {
+          final cents = 1200 * log(r.frequency / 440.0) / log(2);
+          expect(cents.abs(), lessThan(15.0),
+              reason: 'overlap window detected ${r.frequency} Hz, expected 440 Hz');
+        }
+      },
+      timeout: const Timeout(Duration(seconds: 60)),
+      skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+          ? 'Slow YIN computation skipped'
+          : null,
+    );
   });
 }

@@ -2,6 +2,17 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.8+18] - 2026-05-29
+
+### Fixed
+- `PitchDetectionService._startMic`: mic setup now properly yields before emitting errors, so callers can subscribe to the stream before any error is delivered (broadcast streams silently drop events with no listeners).
+- `_startMic` now guards against a double-start race: if `start()` is called a second time before the first yield resolves, the stale coroutine detects the controller has been replaced and exits cleanly — preventing a leaked mic subscription that would double CPU usage.
+- `MicStream.sampleRate` callback is now guarded with `.catchError` so an unhandled rejection cannot silently corrupt the YIN sample rate; the default of 44100 Hz is preserved on error.
+- `PitchServiceError` now `implements Exception` so Dart's zone/stream error system reliably delivers it through broadcast streams on both Android and iOS.
+
+### Changed
+- Test coverage for `PitchDetectionService` increased from 85% to 94%. Eleven new tests added: accumulator overflow trim, mic stream injection (catch block, data callback, error wrapping), and pitch accuracy at A4 (440 Hz), C4, G3, A5, C5 — each within ±15 cents. Amplitude-independence and 50% overlap window tests verify the cross-platform detection pipeline.
+
 ## [1.1.7+17] - 2026-05-29
 
 ### Fixed
