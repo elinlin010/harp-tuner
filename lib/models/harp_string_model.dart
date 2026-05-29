@@ -55,8 +55,9 @@ class HarpStringModel {
     }
   }
 
-  /// Harp-convention register number.
-  /// G7 and F7 (top two pedal-harp strings) are register 0.
+  /// Harp-convention register number (accidentals are ignored — only note name
+  /// and scientific octave determine the register).
+  /// G7 and F7 (top two pedal-harp strings, natural or flat) are register 0.
   /// Each subsequent group of 7 diatonic notes (E…F descending) increments
   /// the register: 1 = E7…F6, 2 = E6…F5, 3 = E5…F4, etc.
   int get harpOctave {

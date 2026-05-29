@@ -341,7 +341,8 @@ void main() {
     // 466.16 Hz = A♯4 — exactly 100 cents above A4 (440 Hz), within the ±150 cent
     // octave-correction window, so it passes the history outlier check and is added
     // to history normally. After 8 frames the stability gate sees centSpread≈0 and
-    // confirms A♯4. Since _confirmedNote is 'A4', the challenge branch fires.
+    // confirms B♭4. Since _confirmedNote is the A-string label (e.g. '3A♭' on lever
+    // harp), the challenge branch fires when a new string is detected.
     test('challenge hysteresis: 3 frames of new note switches confirmed note', () async {
       SharedPreferences.setMockInitialValues({});
       final c = _container();
