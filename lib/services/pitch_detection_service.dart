@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show compute, visibleForTesting;
@@ -9,7 +10,26 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:pitch_detector_dart/pitch_detector.dart';
 import 'package:pitch_detector_dart/pitch_detector_result.dart';
 
-// Passed to a compute isolate — YIN is O(n²) and blocks the main thread if run inline.
+// ── Persistent YIN isolate ────────────────────────────────────────────────────
+// compute() spawns a new Dart isolate on EVERY call — on Android this costs
+// 50–200 ms of OS thread creation before YIN even starts, making detection feel
+// sluggish or unreliable. A persistent isolate pays the spawn cost once and then
+// processes each buffer via a fast port message (~1 ms round-trip overhead).
+//
+// Fallback: while the isolate is still spawning (first few buffers), we use
+// compute() — NOT synchronous YIN on the main thread. Running YIN synchronously
+// would block the event loop for ~30–100 ms per buffer on Android, causing
+// mic chunks to pile up and subsequent detections to fail.
+
+class _YinRequest {
+  final SendPort replyPort;
+  final double sampleRate;
+  final int bufferSize;
+  final List<double> buffer;
+  const _YinRequest(this.replyPort, this.sampleRate, this.bufferSize, this.buffer);
+}
+
+// Used by compute() fallback — top-level required by compute().
 class _YinInput {
   final double sampleRate;
   final int bufferSize;
@@ -17,7 +37,6 @@ class _YinInput {
   const _YinInput(this.sampleRate, this.bufferSize, this.buffer);
 }
 
-// Top-level function required by compute().
 Future<PitchDetectorResult> _runYin(_YinInput input) {
   final detector = PitchDetector(
     audioSampleRate: input.sampleRate,
@@ -25,6 +44,41 @@ Future<PitchDetectorResult> _runYin(_YinInput input) {
   );
   return detector.getPitchFromFloatBuffer(input.buffer);
 }
+
+// Top-level function — required by Isolate.spawn().
+// Caches the PitchDetector so it is not reallocated on every buffer.
+void _yinIsolateEntry(SendPort mainPort) {
+  final port = ReceivePort();
+  mainPort.send(port.sendPort); // hand back our receive port
+
+  PitchDetector? detector;
+  double? cachedRate;
+  int? cachedSize;
+
+  port.listen((message) {
+    if (message == null) { // graceful shutdown signal
+      port.close();
+      return;
+    }
+    final req = message as _YinRequest;
+    if (detector == null || cachedRate != req.sampleRate || cachedSize != req.bufferSize) {
+      detector = PitchDetector(audioSampleRate: req.sampleRate, bufferSize: req.bufferSize);
+      cachedRate = req.sampleRate;
+      cachedSize = req.bufferSize;
+    }
+    // Always send a reply — if we throw, replyPort.first in the main isolate
+    // hangs indefinitely, leaving _processing=true and killing detection.
+    try {
+      detector!.getPitchFromFloatBuffer(req.buffer)
+          .then((r) => req.replyPort.send(r))
+          .catchError((_) => req.replyPort.send(PitchDetectorResult(pitched: false, pitch: -1, probability: 0)));
+    } catch (_) {
+      req.replyPort.send(PitchDetectorResult(pitched: false, pitch: -1, probability: 0));
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class PitchResult {
   final double frequency; // Hz
@@ -58,7 +112,6 @@ class PitchDetectionService {
       MethodChannel('com.harptuner/mic_permission');
 
   // 4096 samples ≈ 93 ms — covers down to ~21 Hz (below all harp strings).
-  // Halved from 8192: YIN is O(n²), so 2048²=4M ops vs 4096²=16M ops per frame.
   static const int _bufferSize = 4096;
 
   StreamSubscription<Uint8List>? _micSub;
@@ -72,9 +125,13 @@ class PitchDetectionService {
   bool _processing = false;
 
   // Monotonically-increasing session counter. Incremented on stop() so the
-  // finally{} block of an in-flight compute from session N doesn't reset
+  // finally{} block of an in-flight YIN call from session N doesn't reset
   // _processing for session N+1 after a rapid stop()+start().
   int _sessionId = 0;
+
+  // Persistent YIN isolate — spawned once on start(), killed on stop().
+  SendPort? _yinSendPort;
+  Isolate? _yinIsolate;
 
   /// Override the mic stream source for testing.
   /// When set, [_startMic] calls this factory instead of [MicStream.microphone].
@@ -119,12 +176,16 @@ class PitchDetectionService {
     _ctrl?.close();
     _ctrl = StreamController<PitchResult?>.broadcast();
     _accumulator.clear();
+    // Spawn the YIN isolate eagerly so it is warm by the time the first audio
+    // chunk arrives (~50–100 ms later). Fire-and-forget is fine here.
+    _ensureYinIsolate();
     _startMic();
     return _ctrl!.stream;
   }
 
   void stop() {
     _sessionId++; // invalidate any in-flight _onAudioChunk finally{} blocks
+    _disposeYinIsolate();
     _micSub?.cancel();
     _micSub = null;
     _ctrl?.close();
@@ -132,6 +193,57 @@ class PitchDetectionService {
     _accumulator.clear();
     _processing = false;
     _actualSampleRate = _targetSampleRate.toDouble();
+  }
+
+  // ── Persistent isolate lifecycle ───────────────────────────────────────────
+
+  void _ensureYinIsolate() {
+    if (_yinSendPort != null) return;
+    final setupPort = ReceivePort();
+    Isolate.spawn(_yinIsolateEntry, setupPort.sendPort).then((iso) {
+      _yinIsolate = iso;
+      setupPort.first.then((port) {
+        _yinSendPort = port as SendPort;
+        setupPort.close();
+      });
+    }).catchError((_) {
+      setupPort.close();
+      // Isolate spawn failed — _yinSendPort stays null; _detectPitch will
+      // fall back to compute() via _runYinFallback.
+    });
+  }
+
+  void _disposeYinIsolate() {
+    _yinSendPort?.send(null); // graceful shutdown
+    _yinSendPort = null;
+    _yinIsolate?.kill(priority: Isolate.immediate);
+    _yinIsolate = null;
+  }
+
+  // Runs YIN via the persistent isolate. Falls back to compute() if the
+  // isolate is not yet ready (first call latency) or spawn failed.
+  Future<PitchDetectorResult> _detectPitch(
+      double sampleRate, int bufferSize, List<double> buffer) async {
+    final port = _yinSendPort;
+    if (port != null) {
+      final replyPort = ReceivePort();
+      port.send(_YinRequest(replyPort.sendPort, sampleRate, bufferSize, buffer));
+      try {
+        // 500 ms safety timeout: if the isolate hangs (e.g. killed mid-reply),
+        // replyPort.first would block forever, leaving _processing=true permanently.
+        final result = await replyPort.first
+            .timeout(const Duration(milliseconds: 500)) as PitchDetectorResult;
+        return result;
+      } on TimeoutException {
+        return PitchDetectorResult(pitched: false, pitch: -1, probability: 0);
+      } finally {
+        replyPort.close();
+      }
+    }
+    // Fallback: isolate not ready yet. Use compute() — NOT synchronous YIN.
+    // Running YIN inline blocks the main Dart isolate for ~30–100 ms on Android,
+    // preventing mic chunk delivery and cascading into missed detections.
+    return compute(_runYin, _YinInput(sampleRate, bufferSize, buffer));
   }
 
   // ── Internal ───────────────────────────────────────────────────────────────
@@ -150,20 +262,31 @@ class PitchDetectionService {
     }
     Stream<Uint8List> rawStream;
     try {
-      // mic_stream 0.7+: microphone() returns Stream<Uint8List> directly (not a Future)
-      // Android: UNPROCESSED bypasses AGC/noise-suppression (Pixel's audio HAL
-      // enables these on DEFAULT/MIC, subtly distorting the YIN autocorrelation
-      // and causing a small systematic pitch offset vs iOS's .measurement mode).
-      // Requires API 24+; virtually all modern Android devices qualify.
-      rawStream = micStreamOverride != null
-          ? micStreamOverride!()
-          : MicStream.microphone(
-              sampleRate: _targetSampleRate,
-              audioFormat: AudioFormat.ENCODING_PCM_16BIT,
-              audioSource: Platform.isAndroid
-                  ? AudioSource.UNPROCESSED
-                  : AudioSource.DEFAULT,
-            );
+      if (micStreamOverride != null) {
+        rawStream = micStreamOverride!();
+      } else if (Platform.isAndroid) {
+        // Prefer UNPROCESSED (bypasses AGC/noise-suppression). Some non-Pixel
+        // Android devices don't support it — fall back to MIC on failure.
+        try {
+          rawStream = MicStream.microphone(
+            sampleRate: _targetSampleRate,
+            audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+            audioSource: AudioSource.UNPROCESSED,
+          );
+        } catch (_) {
+          rawStream = MicStream.microphone(
+            sampleRate: _targetSampleRate,
+            audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+            audioSource: AudioSource.MIC,
+          );
+        }
+      } else {
+        rawStream = MicStream.microphone(
+          sampleRate: _targetSampleRate,
+          audioFormat: AudioFormat.ENCODING_PCM_16BIT,
+          audioSource: AudioSource.DEFAULT,
+        );
+      }
     } catch (e) {
       _ctrl?.addError(PitchServiceError(
         isPermissionError: false,
@@ -181,7 +304,7 @@ class PitchDetectionService {
     );
 
     // sampleRate completes once the stream has started; update if the device
-    // rate differs from our target so the compute isolate uses the right value.
+    // rate differs from our target so the YIN isolate uses the right value.
     // Skip when using a test override (MicStream may not be initialized).
     if (micStreamOverride == null) {
       MicStream.sampleRate.then((actualRate) {
@@ -193,18 +316,16 @@ class PitchDetectionService {
   Future<void> _onAudioChunk(Uint8List bytes) async {
     // Capture _ctrl and _sessionId into locals to guard against TOCTOU across
     // the await. stop()+start() can replace _ctrl and increment _sessionId
-    // while compute() is suspended. The identical() check on _ctrl prevents
-    // emitting stale results into a new session; the sessionId check in the
-    // finally{} prevents the old session from resetting the new session's
-    // _processing flag (which would allow two concurrent computes in session N+1).
+    // while YIN is running. The identical() check on _ctrl prevents emitting
+    // stale results into a new session; the sessionId check in finally{} prevents
+    // the old session from resetting the new session's _processing flag.
     final ctrl = _ctrl;
     if (ctrl == null) return; // service stopped — discard late-arriving bytes
     final capturedSession = _sessionId;
 
     // Always decode and accumulate PCM — never drop incoming audio, even while
     // YIN is running. Previously the guard was at the top, which silently
-    // discarded the attack transient of any note plucked during the ~100ms
-    // compute() window, causing missed detections when playing quickly.
+    // discarded the attack transient of any note plucked during the compute window.
     //
     // mic_stream delivers 16-bit signed PCM, little-endian.
     // Pass offsetInBytes so we read the correct slice of the underlying buffer
@@ -222,7 +343,7 @@ class PitchDetectionService {
     if (_processing) return;
 
     // Discard stale audio to stay real-time: if the accumulator has grown
-    // beyond two buffers (YIN lagging in debug mode), skip ahead.
+    // beyond two buffers (YIN lagging), skip ahead to the newest audio.
     if (_accumulator.length > _bufferSize * 2) {
       _accumulator.removeRange(0, _accumulator.length - _bufferSize);
     }
@@ -234,13 +355,10 @@ class PitchDetectionService {
       final chunk = _accumulator.sublist(0, _bufferSize);
       _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
 
-      final result = await compute(
-        _runYin,
-        _YinInput(_actualSampleRate, _bufferSize, chunk),
-      );
+      final result = await _detectPitch(_actualSampleRate, _bufferSize, chunk);
 
       // Post-await guard: bail if the service was stopped or restarted while
-      // compute() was running — don't emit stale results into a new session.
+      // YIN was running — don't emit stale results into a new session.
       if (!identical(_ctrl, ctrl)) return;
 
       if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
