@@ -2,6 +2,12 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [Unreleased] - 2026-05-30
+
+### Fixed
+- Gauge now shows only the note letter and accidental (e.g. "A♭") without the octave or register number, which was redundant with the string list below.
+- Note text on the gauge was being clipped by the in-tune circle on devices with different font metrics (observed on iPhone 17). Removed the `Clip.antiAlias` constraint and changed the `FittedBox` alignment from a downward y-offset to exact center, keeping all glyph corners equidistant from the circle edge.
+
 ## [1.1.10+20] - 2026-05-29
 
 ### Fixed

@@ -621,10 +621,6 @@ class _SignalReadout extends StatelessWidget {
     final match = _noteRe.firstMatch(noteName);
     final noteLetter = match?.group(2) ?? noteName;
     final noteAcc = match?.group(3) ?? '';
-    // Register (harp) or octave (chromatic) — whichever position has the digit.
-    final noteOctave = (match?.group(1)?.isNotEmpty == true)
-        ? match!.group(1)!
-        : (match?.group(4) ?? '');
 
     // On dark themes, textPrimary at 120px is too intense — use textSecondary.
     final Color baseNoteColor = theme.brightness == Brightness.dark
@@ -632,7 +628,6 @@ class _SignalReadout extends StatelessWidget {
         : theme.textPrimary;
     final Color letterColor = isInTune ? Colors.white.withValues(alpha: 0.92) : baseNoteColor;
     final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.87) : baseNoteColor;
-    final Color octaveColor = isInTune ? Colors.white.withValues(alpha: 0.65) : theme.textSecondary;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
@@ -677,11 +672,6 @@ class _SignalReadout extends StatelessWidget {
             curve: Curves.easeOut,
             width: 160,
             height: 160,
-            // Clip to circle on all platforms — BoxDecoration paints the
-            // circle but doesn't clip children by default, which lets the
-            // letter overflow on iOS (CoreText measures Outfit glyphs slightly
-            // larger than Android/Skia at the same font size).
-            clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               // alpha 0 → smooth transition without colour shift
@@ -692,11 +682,9 @@ class _SignalReadout extends StatelessWidget {
             ),
             child: FittedBox(
               fit: BoxFit.scaleDown,
-              // FittedBox directly inside the container gets tight 160×160
-              // constraints, so scaleDown always fires when content overflows —
-              // unlike Align which passes loose constraints and lets overflow
-              // through. Slight y shift optically centres the cap-height glyph.
-              alignment: const Alignment(0, 0.15),
+              // Center alignment keeps all content corners equidistant from
+              // the circle edge, preventing corner clipping on any device.
+              alignment: Alignment.center,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -711,35 +699,20 @@ class _SignalReadout extends StatelessWidget {
                         .copyWith(height: 1),
                     child: Text(noteLetter),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (noteAcc.isNotEmpty)
-                          AnimatedDefaultTextStyle(
-                            duration: animDur,
-                            curve: Curves.easeOut,
-                            style: theme
-                                .sans(52,
-                                    weight: FontWeight.w400,
-                                    color: accColor)
-                                .copyWith(height: 1),
-                            child: Text(noteAcc),
-                          ),
-                        if (noteOctave.isNotEmpty)
-                          AnimatedDefaultTextStyle(
-                            duration: animDur,
-                            curve: Curves.easeOut,
-                            style: theme
-                                .sans(36, weight: FontWeight.w400, color: octaveColor)
-                                .copyWith(height: 1),
-                            child: Text(noteOctave),
-                          ),
-                      ],
+                  if (noteAcc.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: AnimatedDefaultTextStyle(
+                        duration: animDur,
+                        curve: Curves.easeOut,
+                        style: theme
+                            .sans(52,
+                                weight: FontWeight.w400,
+                                color: accColor)
+                            .copyWith(height: 1),
+                        child: Text(noteAcc),
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
