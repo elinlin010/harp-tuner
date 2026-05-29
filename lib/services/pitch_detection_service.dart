@@ -68,8 +68,13 @@ class PitchDetectionService {
   // Running accumulator of normalised float samples
   final List<double> _accumulator = [];
 
-  // Guard: skip incoming chunk if previous detection is still running
+  // Guard: skip incoming chunk if previous detection is still running.
   bool _processing = false;
+
+  // Monotonically-increasing session counter. Incremented on stop() so the
+  // finally{} block of an in-flight compute from session N doesn't reset
+  // _processing for session N+1 after a rapid stop()+start().
+  int _sessionId = 0;
 
   /// Override the mic stream source for testing.
   /// When set, [_startMic] calls this factory instead of [MicStream.microphone].
@@ -119,6 +124,7 @@ class PitchDetectionService {
   }
 
   void stop() {
+    _sessionId++; // invalidate any in-flight _onAudioChunk finally{} blocks
     _micSub?.cancel();
     _micSub = null;
     _ctrl?.close();
@@ -185,12 +191,15 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
-    // Capture _ctrl into a local to guard against TOCTOU across the await:
-    // stop()+start() can replace _ctrl while compute() is suspended, and we
-    // must not emit the result of session N into session N+1's stream.
-    // Using an identical() check after await detects the replacement.
+    // Capture _ctrl and _sessionId into locals to guard against TOCTOU across
+    // the await. stop()+start() can replace _ctrl and increment _sessionId
+    // while compute() is suspended. The identical() check on _ctrl prevents
+    // emitting stale results into a new session; the sessionId check in the
+    // finally{} prevents the old session from resetting the new session's
+    // _processing flag (which would allow two concurrent computes in session N+1).
     final ctrl = _ctrl;
     if (ctrl == null) return; // service stopped — discard late-arriving bytes
+    final capturedSession = _sessionId;
 
     // Always decode and accumulate PCM — never drop incoming audio, even while
     // YIN is running. Previously the guard was at the top, which silently
@@ -200,6 +209,7 @@ class PitchDetectionService {
     // mic_stream delivers 16-bit signed PCM, little-endian.
     // Pass offsetInBytes so we read the correct slice of the underlying buffer
     // (bytes may be a sub-view with a non-zero offset into its ByteBuffer).
+    assert(bytes.length % 2 == 0, 'mic_stream delivered odd-byte chunk (${bytes.length} bytes); trailing byte silently dropped');
     final data = bytes.buffer.asByteData(bytes.offsetInBytes, bytes.lengthInBytes);
     for (int i = 0; i + 1 < bytes.length; i += 2) {
       final raw = data.getInt16(i, Endian.little);
@@ -237,7 +247,10 @@ class PitchDetectionService {
         ctrl.add(null);
       }
     } finally {
-      _processing = false;
+      // Only reset _processing for the session we captured. If stop()+start()
+      // fired during the await, _sessionId has been incremented and we must not
+      // clear the new session's flag.
+      if (_sessionId == capturedSession) _processing = false;
     }
   }
 }
