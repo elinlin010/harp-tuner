@@ -300,6 +300,28 @@ void main() {
             ? 'Slow YIN computation skipped'
             : null);
 
+    test('bytes arriving after stop() are safely discarded — no crash, no emission',
+        () async {
+      // After stop(), _ctrl is null. If a late in-flight _onAudioChunk call still
+      // runs (e.g., dispatched before the stream subscription cancel propagated),
+      // the PCM accumulation and even a compute() may run, but _ctrl?.add() is a
+      // no-op and no results escape. This test feeds bytes after stop() and
+      // verifies no exception is thrown and no results are emitted.
+      final svc = PitchDetectionService();
+
+      final results = <PitchResult?>[];
+      svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
+      svc.stop(); // immediately stop — _ctrl is now null
+
+      // Feed bytes directly via the test hook. _ctrl is null; the function must
+      // not throw and must not emit anything.
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await Future.delayed(Duration.zero);
+
+      expect(results, isEmpty, reason: 'No results should emit after stop()');
+    });
+
     test('accumulator overflow: chunk > 2×bufferSize trims to bufferSize before compute',
         () async {
       final svc = PitchDetectionService();
