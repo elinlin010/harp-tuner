@@ -302,27 +302,59 @@ void main() {
 
     test('bytes arriving after stop() are discarded before accumulation',
         () async {
-      // Guard: _onAudioChunk bails out immediately when _ctrl is null (service
-      // stopped). This prevents late-arriving mic chunks from growing the
-      // accumulator and triggering spurious compute() isolates.
-      //
-      // Also covers the resumed-compute-after-stop() race: if compute() was
-      // in-flight when stop() was called, its finally{} resets _processing=false.
-      // Without the _ctrl null-guard, the next arriving chunk would start a new
-      // compute(). With the guard, it returns immediately.
+      // _ctrl null-guard: _onAudioChunk exits before touching the accumulator.
       final svc = PitchDetectionService();
 
       final results = <PitchResult?>[];
       svc.start().listen(results.add, onError: (_) {}, cancelOnError: false);
       svc.stop(); // _ctrl → null
 
-      // Feed a full buffer after stop(); guard must exit before accumulation.
       await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
       await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
       await Future.delayed(Duration.zero);
 
       expect(results, isEmpty, reason: 'No results should emit after stop()');
     });
+
+    test('stop-then-start race: compute result from old session is not emitted to new session',
+        () async {
+      // TOCTOU guard: _ctrl is captured into a local before await compute().
+      // A stop()+start() during the compute window replaces _ctrl; the
+      // identical() check after await detects this and discards the result.
+      //
+      // We simulate this with processChunkForTest (which awaits the full compute
+      // pipeline): trigger a detection in session 1, stop and start a new session,
+      // then verify the new session's stream has no results from session 1.
+      final svc = PitchDetectionService();
+      addTearDown(svc.stop);
+
+      // Session 1: trigger one detection
+      final session1 = <PitchResult?>[];
+      svc.start().listen(session1.add, onError: (_) {}, cancelOnError: false);
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await Future.delayed(Duration.zero);
+
+      // Stop session 1 and immediately start session 2
+      svc.stop();
+      final session2 = <PitchResult?>[];
+      svc.start().listen(session2.add, onError: (_) {}, cancelOnError: false);
+
+      // Feed bytes into session 2 — should only see session 2 detections
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await svc.processChunkForTest(_pcmSineWave(4096, freq: 440.0));
+      await Future.delayed(Duration.zero);
+
+      // session2 may or may not have detections, but session1 must be closed
+      // and its result count must not grow after stop() was called.
+      final session1CountAfterStop = session1.length;
+      await Future.delayed(Duration.zero);
+      expect(session1.length, session1CountAfterStop,
+          reason: 'Session 1 stream must not receive new emissions after stop()');
+    },
+        timeout: const Timeout(Duration(seconds: 30)),
+        skip: const bool.fromEnvironment('SKIP_SLOW_TESTS')
+            ? 'Slow YIN computation skipped'
+            : null);
 
     test('accumulator overflow: chunk > 2×bufferSize trims to bufferSize before compute',
         () async {

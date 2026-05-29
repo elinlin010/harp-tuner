@@ -185,12 +185,12 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
-    // Bail out immediately if the service has been stopped. _ctrl becomes null
-    // on stop(), and stream cancel() is asynchronous — late chunks can still
-    // arrive. Without this guard, bytes would decode into _accumulator and a
-    // resumed compute() (whose finally{} resets _processing=false) could
-    // trigger a new isolate after stop() with no way to emit results.
-    if (_ctrl == null) return;
+    // Capture _ctrl into a local to guard against TOCTOU across the await:
+    // stop()+start() can replace _ctrl while compute() is suspended, and we
+    // must not emit the result of session N into session N+1's stream.
+    // Using an identical() check after await detects the replacement.
+    final ctrl = _ctrl;
+    if (ctrl == null) return; // service stopped — discard late-arriving bytes
 
     // Always decode and accumulate PCM — never drop incoming audio, even while
     // YIN is running. Previously the guard was at the top, which silently
@@ -227,10 +227,14 @@ class PitchDetectionService {
         _YinInput(_actualSampleRate, _bufferSize, chunk),
       );
 
+      // Post-await guard: bail if the service was stopped or restarted while
+      // compute() was running — don't emit stale results into a new session.
+      if (!identical(_ctrl, ctrl)) return;
+
       if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
-        _ctrl?.add(PitchResult(result.pitch));
+        ctrl.add(PitchResult(result.pitch));
       } else {
-        _ctrl?.add(null);
+        ctrl.add(null);
       }
     } finally {
       _processing = false;
