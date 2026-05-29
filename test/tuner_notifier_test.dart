@@ -397,7 +397,7 @@ void main() {
       final n = c.read(tunerProvider.notifier);
       for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(415.30));
       final s = c.read(tunerProvider);
-      expect(s.closestNoteName, 'A♭4');
+      expect(s.closestNoteName, '3A♭');
       expect(s.cents!, closeTo(0.0, 5.0));
     });
 
@@ -414,7 +414,7 @@ void main() {
       final n = c.read(tunerProvider.notifier);
       for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(380.0));
       final name = c.read(tunerProvider).closestNoteName;
-      expect(name, 'G4', reason: 'should snap to nearest harp string, not off-harp G♭4');
+      expect(name, '3G', reason: 'should snap to nearest harp string, not off-harp G♭4');
       expect(name, isNot(contains('♯')));
     });
 
@@ -428,7 +428,7 @@ void main() {
       final n = c.read(tunerProvider.notifier);
       for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(275.0));
       final s = c.read(tunerProvider);
-      expect(s.closestNoteName, 'C4');
+      expect(s.closestNoteName, '4C');
       expect(s.closestNoteName, isNot(contains('♯')));
     });
 
@@ -467,14 +467,14 @@ void main() {
         selectedHarp: HarpType.leverHarp, preferFlats: true,
         a4Hz: 440,
         detectedHz: 380.0,   // between F4 and G4 on the lever harp
-        closestNoteName: 'G4',
+        closestNoteName: '3G',
         cents: -52.0,
       ));
       await Future.delayed(Duration.zero);
       await c.read(tunerProvider.notifier).setA4Hz(445);
       final s = c.read(tunerProvider);
       expect(s.a4Hz, 445);
-      expect(s.closestNoteName, 'G4',
+      expect(s.closestNoteName, '3G',
           reason: 'must not revert to off-harp chromatic name G♭4');
       expect(s.cents, isNotNull);
       expect(s.cents!, isNot(closeTo(-52.0, 1.0))); // cents change with a4Hz
@@ -501,13 +501,13 @@ void main() {
       final n = c.read(tunerProvider.notifier);
       // Confirm D4 (~293.66 Hz, natural D string on lever harp)
       for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(293.66));
-      expect(c.read(tunerProvider).closestNoteName, 'D4');
+      expect(c.read(tunerProvider).closestNoteName, '4D');
       // Toggle preferFlats — must reset _confirmedNote to null
       await n.togglePreferFlats();
       // Switch to E♭4 (~311.13 Hz, one semitone above D4):
       // 8 frames flush the old D4 history; frame 8 triggers the stability gate.
       for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(311.13));
-      expect(c.read(tunerProvider).closestNoteName, 'E♭4');
+      expect(c.read(tunerProvider).closestNoteName, '4E♭');
     });
   });
 
