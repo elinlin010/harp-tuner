@@ -30,6 +30,21 @@ void main() {
       }
     });
 
+    test('registers 3–6 boundary anchors are correct', () {
+      // E5..F4 → register 3
+      expect(_str(NoteName.e, 5).harpOctave, 3);
+      expect(_str(NoteName.f, 4).harpOctave, 3);
+      // E4..F3 → register 4
+      expect(_str(NoteName.e, 4).harpOctave, 4);
+      expect(_str(NoteName.f, 3).harpOctave, 4);
+      // E3..F2 → register 5
+      expect(_str(NoteName.e, 3).harpOctave, 5);
+      expect(_str(NoteName.f, 2).harpOctave, 5);
+      // E2..F1 → register 6
+      expect(_str(NoteName.e, 2).harpOctave, 6);
+      expect(_str(NoteName.f, 1).harpOctave, 6);
+    });
+
     test('C1 (lowest pedal-harp note) is register 7', () {
       expect(_str(NoteName.c, 1).harpOctave, 7);
     });
