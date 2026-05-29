@@ -185,9 +185,11 @@ class PitchDetectionService {
   }
 
   Future<void> _onAudioChunk(Uint8List bytes) async {
-    if (_processing) return; // drop frame — detector still running
-    _processing = true;
-    try {
+    // Always decode and accumulate PCM — never drop incoming audio, even while
+    // YIN is running. Previously the guard was at the top, which silently
+    // discarded the attack transient of any note plucked during the ~100ms
+    // compute() window, causing missed detections when playing quickly.
+    //
     // mic_stream delivers 16-bit signed PCM, little-endian.
     // Pass offsetInBytes so we read the correct slice of the underlying buffer
     // (bytes may be a sub-view with a non-zero offset into its ByteBuffer).
@@ -197,6 +199,9 @@ class PitchDetectionService {
       _accumulator.add(raw / 32768.0); // normalise to -1.0..1.0
     }
 
+    // Only gate the YIN computation — audio bytes are always accumulated above.
+    if (_processing) return;
+
     // Discard stale audio to stay real-time: if the accumulator has grown
     // beyond two buffers (YIN lagging in debug mode), skip ahead.
     if (_accumulator.length > _bufferSize * 2) {
@@ -205,15 +210,17 @@ class PitchDetectionService {
 
     if (_accumulator.length < _bufferSize) return;
 
-    final chunk = _accumulator.sublist(0, _bufferSize);
-    _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
+    _processing = true;
+    try {
+      final chunk = _accumulator.sublist(0, _bufferSize);
+      _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
 
-    final result = await compute(
-      _runYin,
-      _YinInput(_actualSampleRate, _bufferSize, chunk),
-    );
+      final result = await compute(
+        _runYin,
+        _YinInput(_actualSampleRate, _bufferSize, chunk),
+      );
 
-    if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
+      if (result.pitched && result.pitch > 27.0 && result.pitch < 4200.0) {
         _ctrl?.add(PitchResult(result.pitch));
       } else {
         _ctrl?.add(null);
