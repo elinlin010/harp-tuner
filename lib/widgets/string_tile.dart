@@ -59,22 +59,22 @@ class StringTile extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // Note name + octave inline
+                        // Register number (small) then note + accidental (large)
                         Text(
-                          string.note.label,
-                          style: AppTextStyles.sans(26,
-                              weight: FontWeight.w700,
-                              color: active
-                                  ? AppColors.textPrimary
-                                  : AppColors.textSecondary),
-                        ),
-                        Text(
-                          '${string.octave}',
+                          '${string.harpOctave}',
                           style: AppTextStyles.sans(16,
                               weight: FontWeight.w500,
                               color: active
                                   ? AppColors.textSecondary
                                   : AppColors.textDim),
+                        ),
+                        Text(
+                          string.noteWithAccidental,
+                          style: AppTextStyles.sans(26,
+                              weight: FontWeight.w700,
+                              color: active
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary),
                         ),
                         const Spacer(),
                         // Hz — small, secondary

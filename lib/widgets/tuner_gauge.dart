@@ -610,14 +610,21 @@ class _SignalReadout extends StatelessWidget {
     required this.isSharp,
   });
 
-  static final _noteRe = RegExp(r'^([A-G])(♭|♯)?(\d+)?$');
+  // Matches both harp-convention format ("3A♭") and chromatic format ("A♭4").
+  // group 1 = leading digits (harp register), group 2 = letter, group 3 = accidental,
+  // group 4 = trailing digits (chromatic octave). Either group 1 or 4 may be non-empty,
+  // or both may be empty for bare note names (e.g. "G" with no octave/register).
+  static final _noteRe = RegExp(r'^(\d*)([A-G])(♭|♯)?(\d*)$');
 
   @override
   Widget build(BuildContext context) {
     final match = _noteRe.firstMatch(noteName);
-    final noteLetter = match?.group(1) ?? noteName;
-    final noteAcc = match?.group(2) ?? '';
-    final noteOctave = match?.group(3) ?? '';
+    final noteLetter = match?.group(2) ?? noteName;
+    final noteAcc = match?.group(3) ?? '';
+    // Register (harp) or octave (chromatic) — whichever position has the digit.
+    final noteOctave = (match?.group(1)?.isNotEmpty == true)
+        ? match!.group(1)!
+        : (match?.group(4) ?? '');
 
     // On dark themes, textPrimary at 120px is too intense — use textSecondary.
     final Color baseNoteColor = theme.brightness == Brightness.dark

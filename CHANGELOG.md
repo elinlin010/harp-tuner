@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.9+19] - 2026-05-29
+
+### Changed
+- String labels now use harp-convention register numbering instead of scientific octave notation. The top two pedal harp strings (G and F) are register 0; each descending group of seven diatonic strings increments the register. The register number appears before the note letter — for example, `0G♭`, `1E♭`, `4C♭`, `7C♭` — matching the numbering harpists use. Both the string list and the tuner gauge now display this format.
+
 ## [1.1.8+18] - 2026-05-29
 
 ### Fixed

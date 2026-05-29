@@ -57,21 +57,21 @@ void main() {
   // ── HarpStringModel ───────────────────────────────────────────────────────────
 
   group('HarpStringModel.label', () {
-    test('natural string: no accidental in label', () {
+    test('natural string: register-first, no accidental', () {
       const s = HarpStringModel(index: 1, note: NoteName.a, octave: 4);
-      expect(s.label, 'A4');
+      expect(s.label, '3A'); // A4: rank=53-(4*7+5)=20 → register 3
     });
 
-    test('flat string: ♭ in label', () {
+    test('flat string: register-first, ♭ after note', () {
       const s = HarpStringModel(
           index: 1, note: NoteName.b, octave: 4, semitoneAdjust: -1);
-      expect(s.label, 'B♭4');
+      expect(s.label, '3B♭'); // B4: rank=53-(4*7+6)=19 → register 3
     });
 
-    test('sharp string: ♯ in label', () {
+    test('sharp string: register-first, ♯ after note', () {
       const s = HarpStringModel(
           index: 1, note: NoteName.c, octave: 5, semitoneAdjust: 1);
-      expect(s.label, 'C♯5');
+      expect(s.label, '3C♯'); // C5: rank=53-(5*7+0)=18 → register 3
     });
   });
 
