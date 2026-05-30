@@ -177,13 +177,15 @@ class _Diag {
     return kDebugMode ? (Stopwatch()..start()) : Stopwatch();
   }
 
-  void detectionDone(Stopwatch sw, bool usedIsolate, bool pitched, double freq) {
+  void detectionDone(Stopwatch sw, bool usedIsolate, bool pitched, double freq,
+      {required bool trimmedCycle}) {
     if (!_on) return;
     if (usedIsolate) { _isolateCount++; } else { _computeCount++; }
     final path = usedIsolate ? 'isolate' : 'compute';
     final pitchStr = pitched ? freq.toStringAsFixed(1) : 'none';
+    final drain = trimmedCycle ? 'full' : 'overlap';
     debugPrint('$_tag detection #$_detectionCount'
-        ' yin_ms=${sw.elapsedMilliseconds} path=$path'
+        ' yin_ms=${sw.elapsedMilliseconds} path=$path drain=$drain'
         ' pitched=$pitched freq=$pitchStr'
         ' isolate_ready=$_isolateReady'
         ' session_ms=${_sessionClock.elapsedMilliseconds}');
@@ -338,7 +340,8 @@ class PitchDetectionService {
   // Runs YIN via the persistent isolate. Falls back to compute() if the
   // isolate is not yet ready (first call latency) or spawn failed.
   Future<PitchDetectorResult> _detectPitch(
-      double sampleRate, int bufferSize, List<double> buffer) async {
+      double sampleRate, int bufferSize, List<double> buffer,
+      {required bool trimmedCycle}) async {
     final sw = _diag.beginDetection();
     final port = _yinSendPort;
     if (port != null) {
@@ -349,7 +352,8 @@ class PitchDetectionService {
         // replyPort.first would block forever, leaving _processing=true permanently.
         final result = await replyPort.first
             .timeout(const Duration(milliseconds: 500)) as PitchDetectorResult;
-        _diag.detectionDone(sw, true, result.pitched, result.pitch);
+        _diag.detectionDone(sw, true, result.pitched, result.pitch,
+            trimmedCycle: trimmedCycle);
         return result;
       } on TimeoutException {
         _diag.isolateTimeout();
@@ -362,7 +366,8 @@ class PitchDetectionService {
     // Running YIN inline blocks the main Dart isolate for ~30–100 ms on Android,
     // preventing mic chunk delivery and cascading into missed detections.
     final result = await compute(_runYin, _YinInput(sampleRate, bufferSize, buffer));
-    _diag.detectionDone(sw, false, result.pitched, result.pitch);
+    _diag.detectionDone(sw, false, result.pitched, result.pitch,
+        trimmedCycle: trimmedCycle);
     return result;
   }
 
@@ -470,9 +475,11 @@ class PitchDetectionService {
 
     // Discard stale audio to stay real-time: if the accumulator has grown
     // beyond two buffers (YIN lagging), skip ahead to the newest audio.
+    bool trimmedThisCycle = false;
     if (_accumulator.length > _bufferSize * 2) {
       final before = _accumulator.length;
       _accumulator.removeRange(0, _accumulator.length - _bufferSize);
+      trimmedThisCycle = true;
       _diag.accumTrim(before, _accumulator.length);
     }
 
@@ -481,9 +488,14 @@ class PitchDetectionService {
     _processing = true;
     try {
       final chunk = _accumulator.sublist(0, _bufferSize);
-      _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
+      // 50% overlap when keeping up — consecutive detections share the second
+      // half, smoothing note transitions. When the device is behind (trim fired
+      // this cycle), drop the overlap entirely so the next detection starts on
+      // fresh audio rather than re-processing samples that are already stale.
+      _accumulator.removeRange(0, trimmedThisCycle ? _bufferSize : _bufferSize ~/ 2);
 
-      final result = await _detectPitch(_actualSampleRate, _bufferSize, chunk);
+      final result = await _detectPitch(_actualSampleRate, _bufferSize, chunk,
+          trimmedCycle: trimmedThisCycle);
 
       // Post-await guard: bail if the service was stopped or restarted while
       // YIN was running — don't emit stale results into a new session.
