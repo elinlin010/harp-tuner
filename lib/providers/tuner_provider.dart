@@ -707,8 +707,17 @@ class TunerNotifier extends Notifier<TunerState> {
     return 1200 * log(s.last / s.first) / ln2;
   }
 
+  // Pulls a reading that landed on a harmonic (or sub-harmonic) of the note
+  // being played back to the fundamental in [reference]'s octave. YIN regularly
+  // latches onto the 2nd or 3rd harmonic of a plucked string — e.g. D4's 3rd
+  // harmonic ≈ A5, C4's 3rd harmonic ≈ G5, C4's sub-3rd ≈ F2 — which would
+  // otherwise be read as a different (wrong) note that snaps "in tune". Trying
+  // ×2/÷2 (octave), ×3/÷3 (twelfth) and ×4/÷4 (two octaves) covers the
+  // harmonics strong enough for YIN to misfire on. Returns null when no
+  // harmonic ratio lands within 80 cents of the reference — i.e. a genuine
+  // note change rather than a harmonic error.
   double? _octaveCorrect(double hz, double reference) {
-    for (final factor in [2.0, 0.5]) {
+    for (final factor in [2.0, 0.5, 3.0, 1 / 3, 4.0, 0.25]) {
       final candidate = hz * factor;
       final cents = 1200 * log(candidate / reference) / ln2;
       if (cents.abs() < 80) return candidate;

@@ -346,6 +346,43 @@ void main() {
       expect(c.read(tunerProvider).isListening, isFalse);
     });
 
+    test('3rd-harmonic reading does not switch the confirmed note', () async {
+      // Regression: playing D4 (293.66 Hz), YIN intermittently reports the 3rd
+      // harmonic ≈ A5 (880.98 Hz). Without harmonic correction this was seeded
+      // as a new note and confirmed, flipping the display to A and showing it
+      // "in tune". With ÷3 correction it must stay D4.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      // Establish D4
+      for (var i = 0; i < 6; i++) n.handlePitchResult(PitchResult(293.66));
+      final confirmed = c.read(tunerProvider).closestNoteName;
+      expect(confirmed, contains('D'));
+      // Inject several 3rd-harmonic readings (A5) — must NOT switch to A
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(880.98));
+      expect(c.read(tunerProvider).closestNoteName, confirmed,
+          reason: '3rd harmonic must be corrected to fundamental, not shown as A');
+    });
+
+    test('sub-3rd-harmonic reading does not switch the confirmed note', () async {
+      // C4 (261.63 Hz) sub-3rd harmonic ≈ F2 (87.21 Hz). Must stay C4.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 6; i++) n.handlePitchResult(PitchResult(261.63));
+      final confirmed = c.read(tunerProvider).closestNoteName;
+      expect(confirmed, contains('C'));
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(87.21));
+      expect(c.read(tunerProvider).closestNoteName, confirmed,
+          reason: 'sub-3rd harmonic must be corrected to fundamental, not shown as F');
+    });
+
     test('spread too wide: stability gate rejects noisy signal', () async {
       SharedPreferences.setMockInitialValues({});
       final c = _container();
