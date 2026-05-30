@@ -237,11 +237,32 @@ void main() {
   // ── handlePitchResult — silence paths ───────────────────────────────────
 
   group('TunerNotifier.handlePitchResult — silence handling', () {
-    test('null result: first silence frame clears history', () async {
+    test('null result: first silence when no confirmed note does NOT block subsequent detection', () async {
+      // Regression: on slow devices, null frames arrive between valid detections.
+      // A null during accumulation (no confirmed note) must not clear history,
+      // otherwise a true/null/true/null pattern can never reach _stableNeeded.
       SharedPreferences.setMockInitialValues({});
       final c = _container();
       await Future.delayed(Duration.zero);
       final n = c.read(tunerProvider.notifier);
+      // Alternating pattern — should still confirm after 3 pitched frames
+      n.handlePitchResult(PitchResult(440.0));
+      n.handlePitchResult(null);
+      n.handlePitchResult(PitchResult(440.0));
+      n.handlePitchResult(null);
+      n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, isNotNull);
+    });
+
+    test('null result after confirmed note: clears history so next note starts fresh', () async {
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      // Confirm a note first
+      for (var i = 0; i < 3; i++) n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, isNotNull);
+      // One null — confirmed note cleared, history cleared (allows fresh start)
       n.handlePitchResult(null);
       expect(c.read(tunerProvider).isListening, isFalse);
     });

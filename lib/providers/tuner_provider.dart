@@ -537,19 +537,33 @@ class TunerNotifier extends Notifier<TunerState> {
     if (result == null) {
       _silenceCount++;
       if (_silenceCount == 1) {
-        // First silence frame: reset detection state immediately so the next
-        // note has a clean history and no hysteresis blocking. Display stays
-        // fully bright until _kStaleFrames to avoid flicker between notes.
-        _freqHistory.clear();
+        // First silence after a confirmed note: clear history so the next note
+        // starts accumulating fresh without old-note frequencies biasing the
+        // stability gate or octave correction.
+        // If no note is confirmed yet (still accumulating), do NOT clear history.
+        // On slow Android devices, YIN regularly produces null frames even while
+        // a string is ringing — interspersed with valid detections. Because
+        // _silenceCount resets to 0 on every pitched frame, _silenceCount==1
+        // fires on every single null in a true/null/true/null pattern. Clearing
+        // history here during accumulation resets the 3-frame stability counter
+        // on every null, making it impossible to ever reach _stableNeeded frames.
+        if (_confirmedNote != null) {
+          _freqHistory.clear();
+        }
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
-      } else if (_silenceCount == _kStaleFrames && !state.isStale) {
-        // Sustained silence: dim the display to signal stale reading
-        if (state.cents != null) state = state.copyWith(isStale: true);
+      } else if (_silenceCount == _kStaleFrames) {
+        // Sustained silence: dim the display and clear history — the frequency
+        // context is stale and would mislead the next detection.
+        _freqHistory.clear();
+        if (!state.isStale && state.cents != null) {
+          state = state.copyWith(isStale: true);
+        }
       } else if (_silenceCount >= _kHoldFrames) {
         // Long silence: wipe the display too
         _silenceCount = 0;
+        _freqHistory.clear();
         state = state.copyWith(clearPitch: true); // also resets isStale
       }
       return;
@@ -572,8 +586,15 @@ class TunerNotifier extends Notifier<TunerState> {
       final centsDiff = 1200 * log(hz / med) / ln2;
       if (centsDiff.abs() > 150) {
         final corrected = _octaveCorrect(hz, med);
-        if (corrected == null) return;
-        _addToHistory(corrected);
+        if (corrected == null) {
+          // Frequency is too far for octave correction — genuine note jump (not
+          // a YIN octave error). Clear stale history and start fresh from this
+          // reading so the new note can accumulate without old-note pollution.
+          _freqHistory.clear();
+          _addToHistory(hz);
+        } else {
+          _addToHistory(corrected);
+        }
       } else {
         _addToHistory(hz);
       }
