@@ -315,7 +315,7 @@ void main() {
       await Future.delayed(Duration.zero);
       final n = c.read(tunerProvider.notifier);
       n.handlePitchResult(PitchResult(440.0));
-      // Not yet stable (need 3 frames), state unchanged
+      // Not yet stable (need 2 frames minimum), state unchanged after 1 frame
       expect(c.read(tunerProvider).detectedHz, isNull);
     });
 

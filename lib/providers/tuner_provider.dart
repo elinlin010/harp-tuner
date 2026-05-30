@@ -116,9 +116,14 @@ class TunerNotifier extends Notifier<TunerState> {
   SharedPreferences? _prefs;
 
   static const _historyLen      = 8;
-  static const _stableNeeded    = 3;   // 3 stable frames (~280ms) to confirm a note
+  // 2 stable frames to confirm (~190ms at typical detection rate). Combined
+  // with the null-frame tolerance fix (isolated nulls don't reset history),
+  // a true/null/true pattern now confirms — no 3 consecutive frames required.
+  static const _stableNeeded    = 2;
   static const _stableCents     = 25.0;
-  static const _challengeNeeded = 3;   // 3 challenge frames before switching note
+  // 2 challenge frames to switch confirmed note. Reduces note-skip when
+  // playing strings in sequence on slow devices where per-frame latency is high.
+  static const _challengeNeeded = 2;
   static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
   static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
