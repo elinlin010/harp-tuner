@@ -485,23 +485,18 @@ class PitchDetectionService {
 
     if (_accumulator.length < _bufferSize) return;
 
-    // Device is "behind" if: (a) a trim fired this call (was > 2× buffer), OR
-    // (b) the accumulator has any excess above one buffer (audio arrived faster
-    // than YIN ran last cycle). On a slow device this is almost always true —
-    // drain=full fires every cycle, keeping detections latched to fresh audio.
-    // On a fast device the accumulator is exactly _bufferSize when detection
-    // triggers, so behindSchedule=false and the 50% overlap is preserved.
-    final behindSchedule = trimmedThisCycle || _accumulator.length > _bufferSize;
-
     _processing = true;
     try {
       final chunk = _accumulator.sublist(0, _bufferSize);
-      // Drop the overlap when behind so the next window starts on fresh audio.
-      // Keep 50% overlap only when perfectly keeping up (fast devices).
-      _accumulator.removeRange(0, behindSchedule ? _bufferSize : _bufferSize ~/ 2);
+      // 50% overlap when keeping up — consecutive windows share the second half,
+      // preserving the decaying tail of harp notes across detection cycles.
+      // When the accumulator needed a trim this call (device fell > 2× behind),
+      // drop the overlap so the next window starts on fresh audio instead of
+      // re-processing the same stale samples.
+      _accumulator.removeRange(0, trimmedThisCycle ? _bufferSize : _bufferSize ~/ 2);
 
       final result = await _detectPitch(_actualSampleRate, _bufferSize, chunk,
-          trimmedCycle: behindSchedule);
+          trimmedCycle: trimmedThisCycle);
 
       // Post-await guard: bail if the service was stopped or restarted while
       // YIN was running — don't emit stale results into a new session.
