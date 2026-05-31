@@ -615,14 +615,22 @@ class TunerNotifier extends Notifier<TunerState> {
     // window fills with the new pitch in _stableNeeded frames, so a half-step
     // move — which stays under the 150¢ clear threshold and therefore does NOT
     // flush history — still switches in a few frames instead of waiting for the
-    // full _historyLen ring to drain (the cause of the half-step lag). The full
-    // history is still used above as the robust reference for harmonic
-    // correction.
+    // full _historyLen ring to drain (the cause of the half-step lag).
     if (_freqHistory.length < _stableNeeded) return;
     final recent = _freqHistory.sublist(_freqHistory.length - _stableNeeded);
     if (_centSpread(recent) > _stableCents) return;
+    final recentMedian = _median(recent);
 
-    final stableHz = _median(recent);
+    // The recent window decides WHICH note (fast), but median-of-2 makes the
+    // cents reading float. For a steady display, average over every reading in
+    // history that agrees with the current pitch (within _stableCents). While
+    // holding a string that's the whole buffer → smooth; just after a switch
+    // it's only the new-note readings → accurate, and it smooths as the buffer
+    // refills. Outliers (>25¢ off) are excluded, so the needle settles.
+    final consistent = _freqHistory
+        .where((f) => (1200 * log(f / recentMedian) / ln2).abs() <= _stableCents)
+        .toList();
+    final stableHz = _median(consistent);
 
     // ── Reference mode: measure cents relative to the pinned string ──────────
     // If no string has been tapped yet, suppress all updates — the gauge should
