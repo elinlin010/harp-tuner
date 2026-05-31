@@ -3,7 +3,8 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show compute, debugPrint, kDebugMode, visibleForTesting;
+import 'package:flutter/foundation.dart'
+    show compute, debugPrint, kDebugMode, kProfileMode, visibleForTesting;
 import 'package:flutter/services.dart';
 import 'package:mic_stream/mic_stream.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -112,7 +113,12 @@ class PitchServiceError implements Exception {
 //                       Some skips are fine; many consecutive skips mean the
 //                       device cannot sustain the detection rate.
 class _Diag {
-  static bool get _on => kDebugMode;
+  // Enabled in debug AND profile builds. Profile builds run at release speed,
+  // so capturing a [DIAG] log from `flutter run --profile` shows the real
+  // detection timing — debug builds are 5-10x slower and distort yin_ms,
+  // trims and skips, which masks whether a detection problem is algorithmic
+  // or just debug-build overload.
+  static bool get _on => kDebugMode || kProfileMode;
   static const String _tag = '[DIAG]';
 
   final Stopwatch _sessionClock = Stopwatch();
