@@ -437,6 +437,40 @@ void main() {
           reason: 'sub-3rd harmonic must be corrected to fundamental, not shown as F');
     });
 
+    test('bass inter-harmonic jump (124↔184 Hz, 3:2) does not flip the note', () async {
+      // A low string (~61 Hz fundamental) reads as its 2nd harmonic (~124 Hz)
+      // and its 3rd (~184 Hz) intermittently — a 3:2 ratio between two
+      // harmonics, not a simple multiple of the fundamental. Without bass
+      // inter-harmonic correction the note flipped (e.g. C♭ ↔ G♭). It must hold.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.pedalHarp, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 6; i++) n.handlePitchResult(PitchResult(124.0));
+      final confirmed = c.read(tunerProvider).closestNoteName;
+      expect(confirmed, isNotNull);
+      // Inject the 3:2 harmonic (~184 Hz) — must stay on the same note.
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(184.0));
+      expect(c.read(tunerProvider).closestNoteName, confirmed,
+          reason: 'bass 3:2 harmonic jump must be corrected, not flip the note');
+    });
+
+    test('melodic fifth (A4→E5) is NOT collapsed by harmonic correction', () async {
+      // The bass inter-harmonic correction must not apply above 250 Hz: A4→E5
+      // is a real 3:2 jump between two strings and must switch, not snap back.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, contains('A'));
+      for (var i = 0; i < 5; i++) n.handlePitchResult(PitchResult(659.25)); // E5
+      expect(c.read(tunerProvider).closestNoteName, contains('E'),
+          reason: 'a real fifth above 250 Hz must switch, not be harmonic-corrected');
+    });
+
     test('spread too wide: stability gate rejects noisy signal', () async {
       SharedPreferences.setMockInitialValues({});
       final c = _container();

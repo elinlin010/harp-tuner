@@ -750,6 +750,20 @@ class TunerNotifier extends Notifier<TunerState> {
       final cents = 1200 * log(candidate / reference) / ln2;
       if (cents.abs() < 80) return candidate;
     }
+    // Bass strings (< 250 Hz) have a weak fundamental, so YIN jumps BETWEEN
+    // harmonics frame to frame — e.g. a ~61 Hz string read as its 2nd harmonic
+    // (124 Hz) one frame and its 3rd (184 Hz) the next. Those differ by 3:2,
+    // 4:3, etc. — not a simple multiple of the fundamental — so the factors
+    // above miss them and the note flips (C♭ ↔ G♭). Snap these inter-harmonic
+    // ratios too, but ONLY in the bass: higher up the same ratios are genuine
+    // fifths/fourths between real strings (e.g. A4 → E5) that must NOT collapse.
+    if (reference < 250) {
+      for (final factor in [3 / 2, 2 / 3, 4 / 3, 3 / 4]) {
+        final candidate = hz * factor;
+        final cents = 1200 * log(candidate / reference) / ln2;
+        if (cents.abs() < 80) return candidate;
+      }
+    }
     return null;
   }
 
