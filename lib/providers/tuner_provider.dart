@@ -116,10 +116,12 @@ class TunerNotifier extends Notifier<TunerState> {
   SharedPreferences? _prefs;
 
   static const _historyLen      = 8;
-  // 2 stable frames to confirm (~190ms at typical detection rate). Combined
-  // with the null-frame tolerance fix (isolated nulls don't reset history),
-  // a true/null/true pattern now confirms — no 3 consecutive frames required.
-  static const _stableNeeded    = 2;
+  // 3-reading sliding window for the stability gate and pitch estimate. The
+  // median of 3 rejects single-frame outliers and keeps the cents reading
+  // steady; 2 (a plain average of the last two) slid every frame and let one
+  // glitch shift the note. Combined with the null-frame tolerance fix (isolated
+  // nulls don't reset history) so true/null/true gaps don't stall acquisition.
+  static const _stableNeeded    = 3;
   static const _stableCents     = 25.0;
   // 2 challenge frames to switch confirmed note. Reduces note-skip when
   // playing strings in sequence on slow devices where per-frame latency is high.
@@ -610,27 +612,24 @@ class TunerNotifier extends Notifier<TunerState> {
       _addToHistory(hz);
     }
 
-    // Stability gate over the most recent _stableNeeded readings (a sliding
-    // window) rather than the whole ring buffer. During a note change the
-    // window fills with the new pitch in _stableNeeded frames, so a half-step
-    // move — which stays under the 150¢ clear threshold and therefore does NOT
-    // flush history — still switches in a few frames instead of waiting for the
-    // full _historyLen ring to drain (the cause of the half-step lag).
+    // Stability gate + pitch estimate over the most recent _stableNeeded
+    // readings (a sliding window), not the whole ring buffer. The window fills
+    // with a new pitch in _stableNeeded frames, so a half-step move — which
+    // stays under the 150¢ clear threshold and therefore does NOT flush history
+    // — still switches in a few frames instead of waiting for the full
+    // _historyLen ring to drain (the half-step lag).
+    //
+    // _stableNeeded is 3: the median of 3 ignores a single outlier frame (the
+    // glitch becomes the min or max, the middle reading wins) and only moves
+    // when the true pitch moves — so the cents reading stays steady and a stray
+    // octave/harmonic frame can't jerk the note. A median of 2 is just the
+    // average of the last two readings: it slides every frame and weights an
+    // outlier at 50%, which is what made the display float.
     if (_freqHistory.length < _stableNeeded) return;
     final recent = _freqHistory.sublist(_freqHistory.length - _stableNeeded);
     if (_centSpread(recent) > _stableCents) return;
-    final recentMedian = _median(recent);
 
-    // The recent window decides WHICH note (fast), but median-of-2 makes the
-    // cents reading float. For a steady display, average over every reading in
-    // history that agrees with the current pitch (within _stableCents). While
-    // holding a string that's the whole buffer → smooth; just after a switch
-    // it's only the new-note readings → accurate, and it smooths as the buffer
-    // refills. Outliers (>25¢ off) are excluded, so the needle settles.
-    final consistent = _freqHistory
-        .where((f) => (1200 * log(f / recentMedian) / ln2).abs() <= _stableCents)
-        .toList();
-    final stableHz = _median(consistent);
+    final stableHz = _median(recent);
 
     // ── Reference mode: measure cents relative to the pinned string ──────────
     // If no string has been tapped yet, suppress all updates — the gauge should

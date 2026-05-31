@@ -245,12 +245,13 @@ void main() {
       final c = _container();
       await Future.delayed(Duration.zero);
       final n = c.read(tunerProvider.notifier);
-      // Alternating pattern — should still confirm after 3 pitched frames
-      n.handlePitchResult(PitchResult(440.0));
-      n.handlePitchResult(null);
-      n.handlePitchResult(PitchResult(440.0));
-      n.handlePitchResult(null);
-      n.handlePitchResult(PitchResult(440.0));
+      // Alternating true/null must still confirm — the nulls must not reset the
+      // accumulation. Feed enough pitched frames to fill the window and satisfy
+      // the confirmation counter.
+      for (var i = 0; i < 6; i++) {
+        n.handlePitchResult(PitchResult(440.0));
+        n.handlePitchResult(null);
+      }
       expect(c.read(tunerProvider).closestNoteName, isNotNull);
     });
 
@@ -262,7 +263,7 @@ void main() {
       final c = _container();
       await Future.delayed(Duration.zero);
       final n = c.read(tunerProvider.notifier);
-      for (var i = 0; i < 3; i++) n.handlePitchResult(PitchResult(440.0));
+      for (var i = 0; i < 5; i++) n.handlePitchResult(PitchResult(440.0));
       expect(c.read(tunerProvider).closestNoteName, isNotNull);
       n.handlePitchResult(null); // single gap — harmless
       expect(c.read(tunerProvider).closestNoteName, isNotNull);
