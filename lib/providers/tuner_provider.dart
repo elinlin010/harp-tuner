@@ -546,34 +546,29 @@ class TunerNotifier extends Notifier<TunerState> {
   void _onPitchResult(PitchResult? result) {
     if (result == null) {
       _silenceCount++;
-      if (_silenceCount == 1) {
-        // First silence after a confirmed note: clear history so the next note
-        // starts accumulating fresh without old-note frequencies biasing the
-        // stability gate or octave correction.
-        // If no note is confirmed yet (still accumulating), do NOT clear history.
-        // On slow Android devices, YIN regularly produces null frames even while
-        // a string is ringing — interspersed with valid detections. Because
-        // _silenceCount resets to 0 on every pitched frame, _silenceCount==1
-        // fires on every single null in a true/null/true/null pattern. Clearing
-        // history here during accumulation resets the 3-frame stability counter
-        // on every null, making it impossible to ever reach _stableNeeded frames.
-        if (_confirmedNote != null) {
-          _freqHistory.clear();
-        }
+      // Isolated nulls are NOT treated as note ends. On slow Android devices
+      // YIN emits null frames intermittently while a string is still ringing
+      // (true/null/true/null), and _silenceCount resets to 0 on every pitched
+      // frame — so a single null must not disturb history or the acquisition
+      // counter, or notes could never confirm. Detection state is only reset
+      // on SUSTAINED silence (the note has genuinely stopped).
+      if (_silenceCount == _kStaleFrames) {
+        // ~1.4s of continuous silence: the note has stopped. Clear detection
+        // state so the next note acquires fresh, and dim the display.
+        _freqHistory.clear();
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
-      } else if (_silenceCount == _kStaleFrames) {
-        // Sustained silence: dim the display and clear history — the frequency
-        // context is stale and would mislead the next detection.
-        _freqHistory.clear();
         if (!state.isStale && state.cents != null) {
           state = state.copyWith(isStale: true);
         }
       } else if (_silenceCount >= _kHoldFrames) {
-        // Long silence: wipe the display too
+        // ~2s of silence: wipe the display too.
         _silenceCount = 0;
         _freqHistory.clear();
+        _confirmedNote = null;
+        _challengeNote = null;
+        _challengeCount = 0;
         state = state.copyWith(clearPitch: true); // also resets isStale
       }
       return;
@@ -599,16 +594,12 @@ class TunerNotifier extends Notifier<TunerState> {
         if (corrected == null) {
           // Too far for harmonic correction — a genuine note change, not a YIN
           // harmonic error (those are corrected above). Clear the stale history
-          // AND drop the confirmed-note hysteresis so the new note confirms via
-          // the fast path (stability gate only) instead of also waiting out the
-          // challenge counter. This is what makes moving string-to-string feel
-          // responsive. Small (<150¢) disagreements never reach here — they go
-          // through the challenge mechanism below for anti-flicker.
+          // so the new note accumulates cleanly and isn't dragged back to the
+          // old note by the median/correction. The confirmation counter below
+          // still gates the actual switch, so a brief attack transient lands
+          // at most one or two challenge frames and never reaches the display.
           _freqHistory.clear();
           _addToHistory(hz);
-          _confirmedNote = null;
-          _challengeNote = null;
-          _challengeCount = 0;
         } else {
           _addToHistory(corrected);
         }
@@ -671,9 +662,14 @@ class TunerNotifier extends Notifier<TunerState> {
       centsVal = info.cents;
     }
 
-    // Hysteresis: prevent rapid note switching
-    if (_confirmedNote == null || _confirmedNote == noteName) {
-      _confirmedNote = noteName;
+    // Confirm / switch with hysteresis. A candidate note must persist for
+    // _challengeNeeded consecutive stability-passing frames before it is shown.
+    // This applies to BOTH first acquisition (no confirmed note) and switching,
+    // so a brief attack-transient sub-harmonic — e.g. plucking D5 momentarily
+    // reading as its sub-harmonic G before the string settles — lands at most
+    // one or two challenge frames and never flashes on screen. Re-affirming the
+    // note already displayed is instant, so holding/tuning a string has no lag.
+    if (_confirmedNote == noteName) {
       _challengeNote = null;
       _challengeCount = 0;
       state = state.copyWith(
@@ -690,6 +686,11 @@ class TunerNotifier extends Notifier<TunerState> {
         _challengeCount = 1;
       }
       if (_challengeCount >= _challengeNeeded) {
+        if (kDebugMode && _confirmedNote != noteName) {
+          debugPrint('[DIAG] note_confirm ${_confirmedNote ?? "—"} -> $noteName '
+              'hz=${stableHz.toStringAsFixed(1)} '
+              'cents=${centsVal.toStringAsFixed(0)}');
+        }
         _confirmedNote = noteName;
         _challengeNote = null;
         _challengeCount = 0;
