@@ -592,11 +592,18 @@ class TunerNotifier extends Notifier<TunerState> {
       if (centsDiff.abs() > 150) {
         final corrected = _octaveCorrect(hz, med);
         if (corrected == null) {
-          // Frequency is too far for octave correction — genuine note jump (not
-          // a YIN octave error). Clear stale history and start fresh from this
-          // reading so the new note can accumulate without old-note pollution.
+          // Too far for harmonic correction — a genuine note change, not a YIN
+          // harmonic error (those are corrected above). Clear the stale history
+          // AND drop the confirmed-note hysteresis so the new note confirms via
+          // the fast path (stability gate only) instead of also waiting out the
+          // challenge counter. This is what makes moving string-to-string feel
+          // responsive. Small (<150¢) disagreements never reach here — they go
+          // through the challenge mechanism below for anti-flicker.
           _freqHistory.clear();
           _addToHistory(hz);
+          _confirmedNote = null;
+          _challengeNote = null;
+          _challengeCount = 0;
         } else {
           _addToHistory(corrected);
         }

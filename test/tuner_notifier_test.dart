@@ -346,6 +346,24 @@ void main() {
       expect(c.read(tunerProvider).isListening, isFalse);
     });
 
+    test('genuine far jump confirms fast (no challenge wait)', () async {
+      // After confirming A4, jumping to E5 (700 cents away, non-harmonic) must
+      // confirm within 2 pitched frames — the far-jump path drops the
+      // confirmed-note hysteresis so the new note doesn't wait out the
+      // challenge counter. This is the string-to-string responsiveness fix.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, contains('A'));
+      // Two frames of E5 should be enough to switch
+      n.handlePitchResult(PitchResult(659.25));
+      n.handlePitchResult(PitchResult(659.25));
+      expect(c.read(tunerProvider).closestNoteName, contains('E'),
+          reason: 'far jump should confirm in 2 frames, not wait for challenge');
+    });
+
     test('3rd-harmonic reading does not switch the confirmed note', () async {
       // Regression: playing D4 (293.66 Hz), YIN intermittently reports the 3rd
       // harmonic ≈ A5 (880.98 Hz). Without harmonic correction this was seeded
