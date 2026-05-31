@@ -381,6 +381,24 @@ void main() {
           reason: 'a 2-frame transient must not switch the displayed note');
     });
 
+    test('half-step move switches within a few frames (sliding stability window)', () async {
+      // A half step (100¢) stays under the 150¢ clear threshold, so history is
+      // not flushed. The sliding stability window must still let the new note
+      // take over in a handful of frames rather than waiting for the full
+      // _historyLen ring to drain (the half-step lag).
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(); // chromatic (no harp)
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(440.0)); // A4
+      expect(c.read(tunerProvider).closestNoteName, 'A4');
+      // A♯4 is exactly 100¢ above A4. Four frames must be enough to switch —
+      // with the old full-ring stability gate this took ~10 frames.
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(466.16));
+      expect(c.read(tunerProvider).closestNoteName, isNot('A4'),
+          reason: 'half-step move should switch quickly, not hold the old note');
+    });
+
     test('3rd-harmonic reading does not switch the confirmed note', () async {
       // Regression: playing D4 (293.66 Hz), YIN intermittently reports the 3rd
       // harmonic ≈ A5 (880.98 Hz). Without harmonic correction this was seeded

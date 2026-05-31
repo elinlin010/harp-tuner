@@ -610,11 +610,19 @@ class TunerNotifier extends Notifier<TunerState> {
       _addToHistory(hz);
     }
 
-    // Stability gate
+    // Stability gate over the most recent _stableNeeded readings (a sliding
+    // window) rather than the whole ring buffer. During a note change the
+    // window fills with the new pitch in _stableNeeded frames, so a half-step
+    // move — which stays under the 150¢ clear threshold and therefore does NOT
+    // flush history — still switches in a few frames instead of waiting for the
+    // full _historyLen ring to drain (the cause of the half-step lag). The full
+    // history is still used above as the robust reference for harmonic
+    // correction.
     if (_freqHistory.length < _stableNeeded) return;
-    if (_centSpread(_freqHistory) > _stableCents) return;
+    final recent = _freqHistory.sublist(_freqHistory.length - _stableNeeded);
+    if (_centSpread(recent) > _stableCents) return;
 
-    final stableHz = _median(_freqHistory);
+    final stableHz = _median(recent);
 
     // ── Reference mode: measure cents relative to the pinned string ──────────
     // If no string has been tapped yet, suppress all updates — the gauge should
