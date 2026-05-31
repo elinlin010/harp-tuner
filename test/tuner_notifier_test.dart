@@ -237,13 +237,36 @@ void main() {
   // ── handlePitchResult — silence paths ───────────────────────────────────
 
   group('TunerNotifier.handlePitchResult — silence handling', () {
-    test('null result: first silence frame clears history', () async {
+    test('null result: first silence when no confirmed note does NOT block subsequent detection', () async {
+      // Regression: on slow devices, null frames arrive between valid detections.
+      // A null during accumulation (no confirmed note) must not clear history,
+      // otherwise a true/null/true/null pattern can never reach _stableNeeded.
       SharedPreferences.setMockInitialValues({});
       final c = _container();
       await Future.delayed(Duration.zero);
       final n = c.read(tunerProvider.notifier);
-      n.handlePitchResult(null);
-      expect(c.read(tunerProvider).isListening, isFalse);
+      // Alternating true/null must still confirm — the nulls must not reset the
+      // accumulation. Feed enough pitched frames to fill the window and satisfy
+      // the confirmation counter.
+      for (var i = 0; i < 6; i++) {
+        n.handlePitchResult(PitchResult(440.0));
+        n.handlePitchResult(null);
+      }
+      expect(c.read(tunerProvider).closestNoteName, isNotNull);
+    });
+
+    test('isolated null after a confirmed note does not crash or clear', () async {
+      // A single null is an intermittent YIN gap, not a note end. It must not
+      // disturb the confirmed note — only sustained silence (_kStaleFrames)
+      // resets detection state.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 5; i++) n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, isNotNull);
+      n.handlePitchResult(null); // single gap — harmless
+      expect(c.read(tunerProvider).closestNoteName, isNotNull);
     });
 
     test('null result x _kStaleFrames → stale flag set (needs detectedHz)', () async {
@@ -294,7 +317,7 @@ void main() {
       await Future.delayed(Duration.zero);
       final n = c.read(tunerProvider.notifier);
       n.handlePitchResult(PitchResult(440.0));
-      // Not yet stable (need 3 frames), state unchanged
+      // Not yet stable (need 2 frames minimum), state unchanged after 1 frame
       expect(c.read(tunerProvider).detectedHz, isNull);
     });
 
@@ -323,6 +346,129 @@ void main() {
       n.handlePitchResult(PitchResult(880.0)); // octave jump
       // No exception
       expect(c.read(tunerProvider).isListening, isFalse);
+    });
+
+    test('genuine far jump confirms after short hysteresis', () async {
+      // After confirming A4, a sustained jump to E5 (700 cents, non-harmonic)
+      // switches once the new note survives the confirmation counter. The
+      // history is cleared on the jump so E5 isn't dragged back to A4.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, contains('A'));
+      // Sustained E5 switches after the counter is satisfied.
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(659.25));
+      expect(c.read(tunerProvider).closestNoteName, contains('E'),
+          reason: 'sustained far jump should switch to the new note');
+    });
+
+    test('brief 1-2 frame transient does NOT flash the wrong note', () async {
+      // Regression for the onset bounce: plucking a string can momentarily read
+      // as a non-harmonic neighbour for a frame or two before settling. That
+      // transient must not reach the display — the confirmation counter holds
+      // the previously displayed note until the new one persists.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, contains('A'));
+      // Two frames of a far note, then back to the real note: must stay A.
+      n.handlePitchResult(PitchResult(659.25));
+      n.handlePitchResult(PitchResult(659.25));
+      expect(c.read(tunerProvider).closestNoteName, contains('A'),
+          reason: 'a 2-frame transient must not switch the displayed note');
+    });
+
+    test('half-step move switches within a few frames (sliding stability window)', () async {
+      // A half step (100¢) stays under the 150¢ clear threshold, so history is
+      // not flushed. The sliding stability window must still let the new note
+      // take over in a handful of frames rather than waiting for the full
+      // _historyLen ring to drain (the half-step lag).
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(); // chromatic (no harp)
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(440.0)); // A4
+      expect(c.read(tunerProvider).closestNoteName, 'A4');
+      // A♯4 is exactly 100¢ above A4. Four frames must be enough to switch —
+      // with the old full-ring stability gate this took ~10 frames.
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(466.16));
+      expect(c.read(tunerProvider).closestNoteName, isNot('A4'),
+          reason: 'half-step move should switch quickly, not hold the old note');
+    });
+
+    test('3rd-harmonic reading does not switch the confirmed note', () async {
+      // Regression: playing D4 (293.66 Hz), YIN intermittently reports the 3rd
+      // harmonic ≈ A5 (880.98 Hz). Without harmonic correction this was seeded
+      // as a new note and confirmed, flipping the display to A and showing it
+      // "in tune". With ÷3 correction it must stay D4.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      // Establish D4
+      for (var i = 0; i < 6; i++) n.handlePitchResult(PitchResult(293.66));
+      final confirmed = c.read(tunerProvider).closestNoteName;
+      expect(confirmed, contains('D'));
+      // Inject several 3rd-harmonic readings (A5) — must NOT switch to A
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(880.98));
+      expect(c.read(tunerProvider).closestNoteName, confirmed,
+          reason: '3rd harmonic must be corrected to fundamental, not shown as A');
+    });
+
+    test('sub-3rd-harmonic reading does not switch the confirmed note', () async {
+      // C4 (261.63 Hz) sub-3rd harmonic ≈ F2 (87.21 Hz). Must stay C4.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.leverHarp, preferFlats: true, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 6; i++) n.handlePitchResult(PitchResult(261.63));
+      final confirmed = c.read(tunerProvider).closestNoteName;
+      expect(confirmed, contains('C'));
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(87.21));
+      expect(c.read(tunerProvider).closestNoteName, confirmed,
+          reason: 'sub-3rd harmonic must be corrected to fundamental, not shown as F');
+    });
+
+    test('bass inter-harmonic jump (124↔184 Hz, 3:2) does not flip the note', () async {
+      // A low string (~61 Hz fundamental) reads as its 2nd harmonic (~124 Hz)
+      // and its 3rd (~184 Hz) intermittently — a 3:2 ratio between two
+      // harmonics, not a simple multiple of the fundamental. Without bass
+      // inter-harmonic correction the note flipped (e.g. C♭ ↔ G♭). It must hold.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(
+        selectedHarp: HarpType.pedalHarp, a4Hz: 440,
+      ));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 6; i++) n.handlePitchResult(PitchResult(124.0));
+      final confirmed = c.read(tunerProvider).closestNoteName;
+      expect(confirmed, isNotNull);
+      // Inject the 3:2 harmonic (~184 Hz) — must stay on the same note.
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(184.0));
+      expect(c.read(tunerProvider).closestNoteName, confirmed,
+          reason: 'bass 3:2 harmonic jump must be corrected, not flip the note');
+    });
+
+    test('melodic fifth (A4→E5) is NOT collapsed by harmonic correction', () async {
+      // The bass inter-harmonic correction must not apply above 250 Hz: A4→E5
+      // is a real 3:2 jump between two strings and must switch, not snap back.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(440.0));
+      expect(c.read(tunerProvider).closestNoteName, contains('A'));
+      for (var i = 0; i < 5; i++) n.handlePitchResult(PitchResult(659.25)); // E5
+      expect(c.read(tunerProvider).closestNoteName, contains('E'),
+          reason: 'a real fifth above 250 Hz must switch, not be harmonic-corrected');
     });
 
     test('spread too wide: stability gate rejects noisy signal', () async {
@@ -481,17 +627,15 @@ void main() {
       expect(s.cents!, isNot(closeTo(-52.0, 1.0))); // cents change with a4Hz
     });
 
-    test('togglePreferFlats resets hysteresis: adjacent note confirmed without challenge delay', () async {
-      // Regression: without the hysteresis reset, _confirmedNote held the
-      // confirmed string label ('D4') after togglePreferFlats; when the pitch
-      // moved to the adjacent E♭4 string (100 ¢ away) the challenge counter
-      // blocked acceptance for 3 frames — leaving 'D4' on screen.
+    test('togglePreferFlats resets hysteresis: adjacent note eventually confirms', () async {
+      // Regression: without the hysteresis reset, _confirmedNote held 'D4' after
+      // togglePreferFlats and the adjacent E♭4 string (100 ¢ away) could never
+      // take over. After the reset, moving to E♭4 must end up displaying E♭4.
       //
-      // D4 → E♭4 is exactly 100 ¢ so it passes the outlier check (<150 ¢)
-      // and cleanly replaces the history.  Frame 8 of E♭4 is the first
-      // stability-gate pass after the history has been fully flushed.
-      //   With fix (_confirmedNote=null): E♭4 confirmed on frame 8 ✓
-      //   Without fix (_confirmedNote='D4'): only 1 challenge → still 'D4' ✗
+      // D4 → E♭4 is 100 ¢ (<150 ¢), so it replaces history frame by frame; the
+      // first stability-gate pass is at frame 8, then the confirmation counter
+      // (_challengeNeeded) needs a couple more agreeing frames — the same
+      // transient-filtering path every note acquisition uses now.
       SharedPreferences.setMockInitialValues({});
       final c = _container(overrideState: const TunerState(
         selectedHarp: HarpType.leverHarp,
@@ -505,9 +649,8 @@ void main() {
       expect(c.read(tunerProvider).closestNoteName, '4D');
       // Toggle preferFlats — must reset _confirmedNote to null
       await n.togglePreferFlats();
-      // Switch to E♭4 (~311.13 Hz, one semitone above D4):
-      // 8 frames flush the old D4 history; frame 8 triggers the stability gate.
-      for (var i = 0; i < 8; i++) n.handlePitchResult(PitchResult(311.13));
+      // Sustained E♭4 (~311.13 Hz): flush old history, then satisfy the counter.
+      for (var i = 0; i < 12; i++) n.handlePitchResult(PitchResult(311.13));
       expect(c.read(tunerProvider).closestNoteName, '4E♭');
     });
   });

@@ -2,9 +2,13 @@
 
 All notable changes to Harp Tuner are documented here.
 
-## [Unreleased] - 2026-05-30
+## [1.1.11+21] - 2026-05-31
 
 ### Fixed
+- Pitch detection is far more reliable on Android, especially on slower devices. Notes are detected faster after pressing start, moving between strings no longer stalls for a second or two, and low strings no longer flip to the wrong note (e.g. a low C reading as G).
+- Bass strings hold the correct note instead of jumping between octaves. A weak-fundamental string whose harmonics confuse the detector (reading as a fifth or octave away) is now pulled back to the note you actually played.
+- A freshly plucked string no longer flashes a wrong note for a moment before settling — the attack transient is filtered out.
+- Held strings read a steady cents value you can tune against, instead of the needle floating.
 - Gauge now shows only the note letter and accidental (e.g. "A♭") without the octave or register number, which was redundant with the string list below.
 - Note text on the gauge was being clipped by the in-tune circle on devices with different font metrics (observed on iPhone 17). Removed the `Clip.antiAlias` constraint and changed the `FittedBox` alignment from a downward y-offset to exact center, keeping all glyph corners equidistant from the circle edge.
 

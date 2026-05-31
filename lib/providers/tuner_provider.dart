@@ -116,9 +116,16 @@ class TunerNotifier extends Notifier<TunerState> {
   SharedPreferences? _prefs;
 
   static const _historyLen      = 8;
-  static const _stableNeeded    = 3;   // 3 stable frames (~280ms) to confirm a note
+  // 3-reading sliding window for the stability gate and pitch estimate. The
+  // median of 3 rejects single-frame outliers and keeps the cents reading
+  // steady; 2 (a plain average of the last two) slid every frame and let one
+  // glitch shift the note. Combined with the null-frame tolerance fix (isolated
+  // nulls don't reset history) so true/null/true gaps don't stall acquisition.
+  static const _stableNeeded    = 3;
   static const _stableCents     = 25.0;
-  static const _challengeNeeded = 3;   // 3 challenge frames before switching note
+  // 2 challenge frames to switch confirmed note. Reduces note-skip when
+  // playing strings in sequence on slow devices where per-frame latency is high.
+  static const _challengeNeeded = 2;
   static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
   static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
@@ -156,12 +163,17 @@ class TunerNotifier extends Notifier<TunerState> {
       _disposed = true;
       _micRestartTimer?.cancel();
       _pitchSub?.cancel();
-      _service.stop();
+      _service.dispose();
       _tonePlayer.dispose();
     });
     _loadPrefs();
     return const TunerState();
   }
+
+  /// Spawn the pitch-detection isolate ahead of the first [startListening] so
+  /// tapping the mic button detects the first note without the ~260 ms cold
+  /// spawn. Call when the tuner screen mounts. No-op if already warm.
+  void prewarmDetector() => _service.prewarm();
 
   Future<void> _loadPrefs() async {
     try {
@@ -536,20 +548,29 @@ class TunerNotifier extends Notifier<TunerState> {
   void _onPitchResult(PitchResult? result) {
     if (result == null) {
       _silenceCount++;
-      if (_silenceCount == 1) {
-        // First silence frame: reset detection state immediately so the next
-        // note has a clean history and no hysteresis blocking. Display stays
-        // fully bright until _kStaleFrames to avoid flicker between notes.
+      // Isolated nulls are NOT treated as note ends. On slow Android devices
+      // YIN emits null frames intermittently while a string is still ringing
+      // (true/null/true/null), and _silenceCount resets to 0 on every pitched
+      // frame — so a single null must not disturb history or the acquisition
+      // counter, or notes could never confirm. Detection state is only reset
+      // on SUSTAINED silence (the note has genuinely stopped).
+      if (_silenceCount == _kStaleFrames) {
+        // ~1.4s of continuous silence: the note has stopped. Clear detection
+        // state so the next note acquires fresh, and dim the display.
         _freqHistory.clear();
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
-      } else if (_silenceCount == _kStaleFrames && !state.isStale) {
-        // Sustained silence: dim the display to signal stale reading
-        if (state.cents != null) state = state.copyWith(isStale: true);
+        if (!state.isStale && state.cents != null) {
+          state = state.copyWith(isStale: true);
+        }
       } else if (_silenceCount >= _kHoldFrames) {
-        // Long silence: wipe the display too
+        // ~2s of silence: wipe the display too.
         _silenceCount = 0;
+        _freqHistory.clear();
+        _confirmedNote = null;
+        _challengeNote = null;
+        _challengeCount = 0;
         state = state.copyWith(clearPitch: true); // also resets isStale
       }
       return;
@@ -572,8 +593,18 @@ class TunerNotifier extends Notifier<TunerState> {
       final centsDiff = 1200 * log(hz / med) / ln2;
       if (centsDiff.abs() > 150) {
         final corrected = _octaveCorrect(hz, med);
-        if (corrected == null) return;
-        _addToHistory(corrected);
+        if (corrected == null) {
+          // Too far for harmonic correction — a genuine note change, not a YIN
+          // harmonic error (those are corrected above). Clear the stale history
+          // so the new note accumulates cleanly and isn't dragged back to the
+          // old note by the median/correction. The confirmation counter below
+          // still gates the actual switch, so a brief attack transient lands
+          // at most one or two challenge frames and never reaches the display.
+          _freqHistory.clear();
+          _addToHistory(hz);
+        } else {
+          _addToHistory(corrected);
+        }
       } else {
         _addToHistory(hz);
       }
@@ -581,11 +612,24 @@ class TunerNotifier extends Notifier<TunerState> {
       _addToHistory(hz);
     }
 
-    // Stability gate
+    // Stability gate + pitch estimate over the most recent _stableNeeded
+    // readings (a sliding window), not the whole ring buffer. The window fills
+    // with a new pitch in _stableNeeded frames, so a half-step move — which
+    // stays under the 150¢ clear threshold and therefore does NOT flush history
+    // — still switches in a few frames instead of waiting for the full
+    // _historyLen ring to drain (the half-step lag).
+    //
+    // _stableNeeded is 3: the median of 3 ignores a single outlier frame (the
+    // glitch becomes the min or max, the middle reading wins) and only moves
+    // when the true pitch moves — so the cents reading stays steady and a stray
+    // octave/harmonic frame can't jerk the note. A median of 2 is just the
+    // average of the last two readings: it slides every frame and weights an
+    // outlier at 50%, which is what made the display float.
     if (_freqHistory.length < _stableNeeded) return;
-    if (_centSpread(_freqHistory) > _stableCents) return;
+    final recent = _freqHistory.sublist(_freqHistory.length - _stableNeeded);
+    if (_centSpread(recent) > _stableCents) return;
 
-    final stableHz = _median(_freqHistory);
+    final stableHz = _median(recent);
 
     // ── Reference mode: measure cents relative to the pinned string ──────────
     // If no string has been tapped yet, suppress all updates — the gauge should
@@ -633,9 +677,14 @@ class TunerNotifier extends Notifier<TunerState> {
       centsVal = info.cents;
     }
 
-    // Hysteresis: prevent rapid note switching
-    if (_confirmedNote == null || _confirmedNote == noteName) {
-      _confirmedNote = noteName;
+    // Confirm / switch with hysteresis. A candidate note must persist for
+    // _challengeNeeded consecutive stability-passing frames before it is shown.
+    // This applies to BOTH first acquisition (no confirmed note) and switching,
+    // so a brief attack-transient sub-harmonic — e.g. plucking D5 momentarily
+    // reading as its sub-harmonic G before the string settles — lands at most
+    // one or two challenge frames and never flashes on screen. Re-affirming the
+    // note already displayed is instant, so holding/tuning a string has no lag.
+    if (_confirmedNote == noteName) {
       _challengeNote = null;
       _challengeCount = 0;
       state = state.copyWith(
@@ -681,11 +730,34 @@ class TunerNotifier extends Notifier<TunerState> {
     return 1200 * log(s.last / s.first) / ln2;
   }
 
+  // Pulls a reading that landed on a harmonic (or sub-harmonic) of the note
+  // being played back to the fundamental in [reference]'s octave. YIN regularly
+  // latches onto the 2nd or 3rd harmonic of a plucked string — e.g. D4's 3rd
+  // harmonic ≈ A5, C4's 3rd harmonic ≈ G5, C4's sub-3rd ≈ F2 — which would
+  // otherwise be read as a different (wrong) note that snaps "in tune". Trying
+  // ×2/÷2 (octave), ×3/÷3 (twelfth) and ×4/÷4 (two octaves) covers the
+  // harmonics strong enough for YIN to misfire on. Returns null when no
+  // harmonic ratio lands within 80 cents of the reference — i.e. a genuine
+  // note change rather than a harmonic error.
   double? _octaveCorrect(double hz, double reference) {
-    for (final factor in [2.0, 0.5]) {
+    for (final factor in [2.0, 0.5, 3.0, 1 / 3, 4.0, 0.25]) {
       final candidate = hz * factor;
       final cents = 1200 * log(candidate / reference) / ln2;
       if (cents.abs() < 80) return candidate;
+    }
+    // Bass strings (< 250 Hz) have a weak fundamental, so YIN jumps BETWEEN
+    // harmonics frame to frame — e.g. a ~61 Hz string read as its 2nd harmonic
+    // (124 Hz) one frame and its 3rd (184 Hz) the next. Those differ by 3:2,
+    // 4:3, etc. — not a simple multiple of the fundamental — so the factors
+    // above miss them and the note flips (C♭ ↔ G♭). Snap these inter-harmonic
+    // ratios too, but ONLY in the bass: higher up the same ratios are genuine
+    // fifths/fourths between real strings (e.g. A4 → E5) that must NOT collapse.
+    if (reference < 250) {
+      for (final factor in [3 / 2, 2 / 3, 4 / 3, 3 / 4]) {
+        final candidate = hz * factor;
+        final cents = 1200 * log(candidate / reference) / ln2;
+        if (cents.abs() < 80) return candidate;
+      }
     }
     return null;
   }

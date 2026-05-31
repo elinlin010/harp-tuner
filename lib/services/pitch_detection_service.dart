@@ -170,14 +170,21 @@ class PitchDetectionService {
     return status.isGranted;
   }
 
+  /// Spawn the YIN isolate ahead of [start] so it is already warm before the
+  /// user taps the mic button. Safe to call repeatedly — a no-op once the
+  /// isolate exists. Call this when the tuner screen mounts to remove the
+  /// ~260 ms isolate-spawn latency from the first detection (cold start).
+  void prewarm() => _ensureYinIsolate();
+
   /// Returns a broadcast stream of [PitchResult] (or null when no pitch found).
   /// Caller must call [stop] when done.
   Stream<PitchResult?> start() {
     _ctrl?.close();
     _ctrl = StreamController<PitchResult?>.broadcast();
     _accumulator.clear();
-    // Spawn the YIN isolate eagerly so it is warm by the time the first audio
-    // chunk arrives (~50–100 ms later). Fire-and-forget is fine here.
+    // Spawn the YIN isolate if it isn't already warm from prewarm() or a
+    // previous session. Kept alive across stop()/start() so warm restarts skip
+    // the spawn entirely; torn down only in dispose().
     _ensureYinIsolate();
     _startMic();
     return _ctrl!.stream;
@@ -185,7 +192,6 @@ class PitchDetectionService {
 
   void stop() {
     _sessionId++; // invalidate any in-flight _onAudioChunk finally{} blocks
-    _disposeYinIsolate();
     _micSub?.cancel();
     _micSub = null;
     _ctrl?.close();
@@ -193,6 +199,16 @@ class PitchDetectionService {
     _accumulator.clear();
     _processing = false;
     _actualSampleRate = _targetSampleRate.toDouble();
+    // The YIN isolate is intentionally kept alive here so the next start() is a
+    // warm restart (no ~260 ms respawn). It is killed in dispose().
+  }
+
+  /// Permanently tears down the service, including the persistent YIN isolate.
+  /// After this, a later [start] re-spawns from cold. Call from the owner's
+  /// dispose — NOT between sessions (use [stop] for that).
+  void dispose() {
+    stop();
+    _disposeYinIsolate();
   }
 
   // ── Persistent isolate lifecycle ───────────────────────────────────────────
@@ -344,8 +360,10 @@ class PitchDetectionService {
 
     // Discard stale audio to stay real-time: if the accumulator has grown
     // beyond two buffers (YIN lagging), skip ahead to the newest audio.
+    bool trimmedThisCycle = false;
     if (_accumulator.length > _bufferSize * 2) {
       _accumulator.removeRange(0, _accumulator.length - _bufferSize);
+      trimmedThisCycle = true;
     }
 
     if (_accumulator.length < _bufferSize) return;
@@ -353,7 +371,12 @@ class PitchDetectionService {
     _processing = true;
     try {
       final chunk = _accumulator.sublist(0, _bufferSize);
-      _accumulator.removeRange(0, _bufferSize ~/ 2); // 50% overlap
+      // 50% overlap when keeping up — consecutive windows share the second half,
+      // preserving the decaying tail of harp notes across detection cycles.
+      // When the accumulator needed a trim this call (device fell > 2× behind),
+      // drop the overlap so the next window starts on fresh audio instead of
+      // re-processing the same stale samples.
+      _accumulator.removeRange(0, trimmedThisCycle ? _bufferSize : _bufferSize ~/ 2);
 
       final result = await _detectPitch(_actualSampleRate, _bufferSize, chunk);
 
