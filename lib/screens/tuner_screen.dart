@@ -35,6 +35,12 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+    // Warm the pitch-detection isolate while the user is reading the screen, so
+    // the first mic tap detects without the ~260 ms cold spawn. Post-frame so
+    // the provider is fully built before we touch it.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(tunerProvider.notifier).prewarmDetector();
+    });
   }
 
   @override

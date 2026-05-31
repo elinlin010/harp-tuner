@@ -143,6 +143,13 @@ class _Diag {
     debugPrint('$_tag isolate_ready ms=${_sessionClock.elapsedMilliseconds}');
   }
 
+  void isolateWarmAtStart(bool warm) {
+    if (!_on) return;
+    _isolateReady = warm;
+    debugPrint('$_tag isolate_warm_at_start=$warm'
+        '${warm ? "" : " (cold — spawning now, first detections use compute())"}');
+  }
+
   void sampleRate(double actual, double target) {
     if (!_on) return;
     debugPrint('$_tag sample_rate actual=${actual.toInt()} target=${target.toInt()}'
@@ -286,13 +293,21 @@ class PitchDetectionService {
 
   /// Returns a broadcast stream of [PitchResult] (or null when no pitch found).
   /// Caller must call [stop] when done.
+  /// Spawn the YIN isolate ahead of [start] so it is already warm before the
+  /// user taps the mic button. Safe to call repeatedly — a no-op once the
+  /// isolate exists. Call this when the tuner screen mounts to remove the
+  /// ~260 ms isolate-spawn latency from the first detection (cold start).
+  void prewarm() => _ensureYinIsolate();
+
   Stream<PitchResult?> start() {
     _ctrl?.close();
     _ctrl = StreamController<PitchResult?>.broadcast();
     _accumulator.clear();
     _diag.sessionStart(_actualSampleRate);
-    // Spawn the YIN isolate eagerly so it is warm by the time the first audio
-    // chunk arrives (~50–100 ms later). Fire-and-forget is fine here.
+    _diag.isolateWarmAtStart(_yinSendPort != null);
+    // Spawn the YIN isolate if it isn't already warm from prewarm() or a
+    // previous session. Kept alive across stop()/start() so warm restarts skip
+    // the spawn entirely; torn down only in dispose().
     _ensureYinIsolate();
     _startMic();
     return _ctrl!.stream;
@@ -301,7 +316,6 @@ class PitchDetectionService {
   void stop() {
     _diag.sessionStop();
     _sessionId++; // invalidate any in-flight _onAudioChunk finally{} blocks
-    _disposeYinIsolate();
     _micSub?.cancel();
     _micSub = null;
     _ctrl?.close();
@@ -309,6 +323,16 @@ class PitchDetectionService {
     _accumulator.clear();
     _processing = false;
     _actualSampleRate = _targetSampleRate.toDouble();
+    // The YIN isolate is intentionally kept alive here so the next start() is a
+    // warm restart (no ~260 ms respawn). It is killed in dispose().
+  }
+
+  /// Permanently tears down the service, including the persistent YIN isolate.
+  /// After this, a later [start] re-spawns from cold. Call from the owner's
+  /// dispose — NOT between sessions (use [stop] for that).
+  void dispose() {
+    stop();
+    _disposeYinIsolate();
   }
 
   // ── Persistent isolate lifecycle ───────────────────────────────────────────

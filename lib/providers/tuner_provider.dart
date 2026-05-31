@@ -161,12 +161,17 @@ class TunerNotifier extends Notifier<TunerState> {
       _disposed = true;
       _micRestartTimer?.cancel();
       _pitchSub?.cancel();
-      _service.stop();
+      _service.dispose();
       _tonePlayer.dispose();
     });
     _loadPrefs();
     return const TunerState();
   }
+
+  /// Spawn the pitch-detection isolate ahead of the first [startListening] so
+  /// tapping the mic button detects the first note without the ~260 ms cold
+  /// spawn. Call when the tuner screen mounts. No-op if already warm.
+  void prewarmDetector() => _service.prewarm();
 
   Future<void> _loadPrefs() async {
     try {
