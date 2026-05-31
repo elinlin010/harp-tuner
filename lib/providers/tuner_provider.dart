@@ -701,11 +701,6 @@ class TunerNotifier extends Notifier<TunerState> {
         _challengeCount = 1;
       }
       if (_challengeCount >= _challengeNeeded) {
-        if ((kDebugMode || kProfileMode) && _confirmedNote != noteName) {
-          debugPrint('[DIAG] note_confirm ${_confirmedNote ?? "—"} -> $noteName '
-              'hz=${stableHz.toStringAsFixed(1)} '
-              'cents=${centsVal.toStringAsFixed(0)}');
-        }
         _confirmedNote = noteName;
         _challengeNote = null;
         _challengeCount = 0;
