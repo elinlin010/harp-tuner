@@ -457,6 +457,22 @@ void main() {
           reason: 'bass 3:2 harmonic jump must be corrected, not flip the note');
     });
 
+    test('bass melodic fifth (E3→B3) is NOT collapsed by harmonic correction', () async {
+      // Regression: the original cutoff (reference < 250) treated E3 (165 Hz) as
+      // "bass" and snapped B3 (247 Hz, a fifth up) back via 247 × 2/3 ≈ 165 —
+      // so playing B after E showed E with the wrong octave. The cutoff is now
+      // 130 Hz, so E3 is a well-locked fundamental and the fifth must switch.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(164.81)); // E3
+      expect(c.read(tunerProvider).closestNoteName, contains('E'));
+      for (var i = 0; i < 5; i++) n.handlePitchResult(PitchResult(246.94)); // B3
+      expect(c.read(tunerProvider).closestNoteName, contains('B'),
+          reason: 'a real fifth from a 165 Hz reference must switch, not collapse to E');
+    });
+
     test('melodic fifth (A4→E5) is NOT collapsed by harmonic correction', () async {
       // The bass inter-harmonic correction must not apply above 250 Hz: A4→E5
       // is a real 3:2 jump between two strings and must switch, not snap back.
@@ -524,6 +540,297 @@ void main() {
       // Two challenges: first sets _challengeNote, second increments count
       expect(c.read(tunerProvider).closestNoteName, isNotNull);
       expect(confirmedBefore, isNotNull);
+    });
+  });
+
+  // ── harmonic correction & the 130 Hz bass cutoff ─────────────────────────
+  //
+  // _octaveCorrect pulls harmonic/sub-harmonic misreads back to the fundamental
+  // so a plucked string's overtones don't flash a wrong note. It tries octave
+  // ratios (×2 ÷2 ×4 ÷4) and twelfth ratios (×3 ÷3) everywhere, plus
+  // inter-harmonic ratios (3:2, 2:3, 4:3, 3:4) ONLY when the reference is below
+  // 130 Hz — the register where the weakest fundamentals make YIN jump between
+  // overtones. Above 130 Hz those same ratios are real melodic fourths/fifths
+  // between two strings and MUST switch. These tests pin both halves of that
+  // contract, and the cutoff itself, so it can't silently drift back to the old
+  // 250 Hz value that turned B into E.
+  group('TunerNotifier.handlePitchResult — harmonic correction & bass cutoff', () {
+    // Drive enough identical frames to fill the sliding window and clear the
+    // challenge counter, confirming a note from the given frequency.
+    void confirm(TunerNotifier n, double hz, [int frames = 6]) {
+      for (var i = 0; i < frames; i++) {
+        n.handlePitchResult(PitchResult(hz));
+      }
+    }
+
+    test('reference just BELOW 130 Hz still collapses a 3:2 inter-harmonic jump',
+        () async {
+      // Seed ~120 Hz (a weak-fundamental bass string read as an overtone), then
+      // inject its 3:2 partner ~180 Hz. Because 120 < 130 the inter-harmonic
+      // rule fires: 180 × 2/3 = 120, within 80¢, so it must HOLD near 120 Hz and
+      // not jump to 180. This is the Android weak-bass fix; it must survive the
+      // lowered cutoff.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 120.0);
+      final held = c.read(tunerProvider).closestNoteName;
+      confirm(n, 180.0, 4);
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, held,
+          reason: 'a 3:2 jump from a <130 Hz reference is a harmonic, must hold');
+      expect(s.detectedHz, lessThan(140.0),
+          reason: 'reading must stay near 120 Hz, not climb to 180 Hz');
+    });
+
+    test('reference just ABOVE 130 Hz lets a real fifth switch', () async {
+      // Seed ~140 Hz (a well-locked fundamental), then play its fifth ~210 Hz.
+      // Because 140 > 130 the inter-harmonic rule is skipped: this is a genuine
+      // melodic fifth and must SWITCH up to ~210 Hz, not snap back to 140.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 140.0);
+      final before = c.read(tunerProvider).closestNoteName;
+      confirm(n, 210.0);
+      final s = c.read(tunerProvider);
+      expect(s.detectedHz, greaterThan(180.0),
+          reason: 'a fifth from a >130 Hz reference must switch, not collapse');
+      expect(s.closestNoteName, isNot(before));
+    });
+
+    test('descending fifth (B3→E3) switches — the reported bug, mirrored', () async {
+      // The user-reported failure was ascending B-after-E showing E. The
+      // descending direction must work too: E-after-B must show E, not stay B.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 246.94); // B3
+      expect(c.read(tunerProvider).closestNoteName, contains('B'));
+      confirm(n, 164.81); // E3
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, contains('E'),
+          reason: 'a real descending fifth must switch, not hold B');
+      expect(s.detectedHz, lessThan(190.0),
+          reason: 'octave must follow the note down to E3 (~165 Hz)');
+    });
+
+    test('real perfect fourth (E3→A3) switches', () async {
+      // E3 (165 Hz) → A3 (220 Hz) is a 4:3 ratio. With the old 250 Hz cutoff
+      // this collapsed (165 < 250 → 220 × 3/4 ≈ 165). At 130 Hz it switches.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 164.81); // E3
+      expect(c.read(tunerProvider).closestNoteName, contains('E'));
+      confirm(n, 220.0); // A3
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, contains('A'),
+          reason: 'a real fourth above 130 Hz must switch, not be harmonic-corrected');
+      expect(s.detectedHz, greaterThan(195.0));
+    });
+
+    test('octave harmonic (A4→A5, ×2) is corrected to the fundamental', () async {
+      // A clean octave overtone is the most common YIN error. Playing A4 (440)
+      // while YIN reports A5 (880) must hold A4, not jump an octave.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 440.0);
+      final held = c.read(tunerProvider).closestNoteName;
+      confirm(n, 880.0, 4); // A5 overtone
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, held,
+          reason: 'an octave overtone must be corrected, not switch the note');
+      expect(s.detectedHz, lessThan(500.0),
+          reason: 'reading must stay near A4 (440 Hz), not jump to 880 Hz');
+    });
+
+    test('two-octave harmonic (A4→A6, ×4) is corrected to the fundamental',
+        () async {
+      // The ×4 factor covers the two-octave overtone: A4 (440) read as A6 (1760).
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 440.0);
+      final held = c.read(tunerProvider).closestNoteName;
+      confirm(n, 1760.0, 4); // A6 overtone
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, held,
+          reason: 'a two-octave overtone must be corrected, not switch the note');
+      expect(s.detectedHz, lessThan(700.0));
+    });
+
+    test('isolated harmonic spike does not flash through the confirmed note',
+        () async {
+      // A single overtone frame mid-note (the common YIN glitch) must never
+      // reach the display — the confirmed note holds throughout.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 293.66); // D4
+      final held = c.read(tunerProvider).closestNoteName;
+      n.handlePitchResult(PitchResult(880.98)); // one 3rd-harmonic spike (A5)
+      expect(c.read(tunerProvider).closestNoteName, held,
+          reason: 'a single harmonic spike must not change the displayed note');
+    });
+  });
+
+  // ── octave-level detection (end-to-end) ──────────────────────────────────
+  //
+  // The reported bug included "the octave number is also wrong", so verify the
+  // full detection pipeline — not just the naming helper — carries the correct
+  // octave at every level, and that a clean octave overtone never bumps the
+  // displayed octave up.
+  group('TunerNotifier.handlePitchResult — octave-level detection', () {
+    void confirm(TunerNotifier n, double hz, [int frames = 6]) {
+      for (var i = 0; i < frames; i++) {
+        n.handlePitchResult(PitchResult(hz));
+      }
+    }
+
+    test('a steady A at every octave (A1–A7) confirms the correct octave', () async {
+      const aByOctave = {
+        1: 55.0, 2: 110.0, 3: 220.0, 4: 440.0,
+        5: 880.0, 6: 1760.0, 7: 3520.0,
+      };
+      for (final entry in aByOctave.entries) {
+        SharedPreferences.setMockInitialValues({});
+        final c = _container(); // chromatic — label carries the octave digit
+        await Future.delayed(Duration.zero);
+        final n = c.read(tunerProvider.notifier);
+        confirm(n, entry.value);
+        final s = c.read(tunerProvider);
+        expect(s.closestNoteName, 'A${entry.key}',
+            reason: '${entry.value} Hz should detect as A${entry.key}');
+        expect(s.detectedHz, closeTo(entry.value, entry.value * 0.02));
+      }
+    });
+
+    test('octave boundary B3→C4 detects as two distinct octaves', () async {
+      // B3 (246.94) confirmed, then C4 (261.63) — a semitone up that crosses the
+      // octave-number rollover. The display must move B3 → C4, not stay on B or
+      // mislabel the octave.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 246.94);
+      expect(c.read(tunerProvider).closestNoteName, 'B3');
+      confirm(n, 261.63);
+      expect(c.read(tunerProvider).closestNoteName, 'C4',
+          reason: 'crossing the octave rollover must relabel B3 → C4');
+    });
+
+    test('a clean octave overtone does not bump the displayed octave', () async {
+      // Holding A3 (220) while YIN reports the octave overtone A4 (440): the
+      // ÷2 correction must keep the display on A3, never flash A4.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 220.0); // A3
+      expect(c.read(tunerProvider).closestNoteName, 'A3');
+      confirm(n, 440.0, 4); // A4 overtone
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'A3',
+          reason: 'an octave overtone must not bump A3 up to A4');
+      expect(s.detectedHz, lessThan(300.0));
+    });
+  });
+
+  // ── instrument-independent detection ─────────────────────────────────────
+  //
+  // Harmonic correction runs on the raw detected Hz BEFORE any harp-string
+  // snapping, so pitch detection must behave identically whichever instrument
+  // is selected — the instrument only changes how the note is *labelled*, not
+  // which pitch is detected. `detectedHz` carries the raw pitch, so it's the
+  // instrument-independent signal to assert on. These tests run the same
+  // scenarios across chromatic, lever harp and pedal harp.
+  group('TunerNotifier.handlePitchResult — instrument-independent detection', () {
+    void confirm(TunerNotifier n, double hz, [int frames = 6]) {
+      for (var i = 0; i < frames; i++) {
+        n.handlePitchResult(PitchResult(hz));
+      }
+    }
+
+    // Pin the instrument deterministically: let the async _loadPrefs settle
+    // (it defaults selectedHarp to leverHarp) BEFORE selecting, so the load
+    // can't clobber our choice mid-test. null = chromatic (no harp).
+    Future<ProviderContainer> withInstrument(HarpType? harp) async {
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(const Duration(milliseconds: 20));
+      await c.read(tunerProvider.notifier).setSelectedHarp(harp);
+      return c;
+    }
+
+    const instruments = <String, HarpType?>{
+      'chromatic': null,
+      'lever harp': HarpType.leverHarp,
+      'pedal harp': HarpType.pedalHarp,
+    };
+
+    instruments.forEach((name, harp) {
+      test('$name: real fifth (E3→B3) tracks up, does not collapse (B→E fix)',
+          () async {
+        final c = await withInstrument(harp);
+        final n = c.read(tunerProvider.notifier);
+        confirm(n, 164.81); // E3
+        final low = c.read(tunerProvider);
+        expect(low.detectedHz, closeTo(164.81, 6.0));
+        confirm(n, 246.94); // B3 — a fifth up
+        final high = c.read(tunerProvider);
+        expect(high.detectedHz, greaterThan(200.0),
+            reason: '$name: the fifth must track to ~247 Hz, not collapse to 165');
+        expect(high.closestNoteName, isNot(low.closestNoteName),
+            reason: '$name: the note label must change on a real interval');
+      });
+
+      test('$name: octave overtone is corrected (A3 held, A4 ignored)', () async {
+        final c = await withInstrument(harp);
+        final n = c.read(tunerProvider.notifier);
+        confirm(n, 220.0); // A3
+        final before = c.read(tunerProvider).closestNoteName;
+        confirm(n, 440.0, 4); // A4 overtone
+        final s = c.read(tunerProvider);
+        expect(s.detectedHz, lessThan(300.0),
+            reason: '$name: octave overtone must hold near 220 Hz');
+        expect(s.closestNoteName, before,
+            reason: '$name: octave overtone must not change the note');
+      });
+
+      test('$name: steady A4 (440 Hz) tracks the pitch', () async {
+        final c = await withInstrument(harp);
+        final n = c.read(tunerProvider.notifier);
+        confirm(n, 440.0);
+        expect(c.read(tunerProvider).detectedHz, closeTo(440.0, 6.0),
+            reason: '$name: 440 Hz must read ~440 Hz on every instrument');
+      });
+    });
+
+    test('switching instrument mid-session keeps detecting cleanly', () async {
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(const Duration(milliseconds: 20));
+      final n = c.read(tunerProvider.notifier);
+      await n.setSelectedHarp(HarpType.leverHarp);
+      confirm(n, 440.0);
+      expect(c.read(tunerProvider).detectedHz, closeTo(440.0, 6.0));
+      // Switch instruments right after a note was confirmed.
+      await n.setSelectedHarp(HarpType.pedalHarp);
+      confirm(n, 261.63); // C4
+      final s = c.read(tunerProvider);
+      expect(s.detectedHz, closeTo(261.63, 6.0),
+          reason: 'detection must keep working after switching instruments');
+      expect(s.closestNoteName, isNotNull);
     });
   });
 
