@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.13+23] - 2026-06-06
+
+### Fixed
+- A freshly plucked string is no longer occasionally detected as a wrong, much lower note — e.g. playing C showing F, or the display refusing to switch until you plucked a second time. The cause was a sub-harmonic misread (the detector reading C4 as its ÷3 sub-harmonic F2): if that wrong low reading arrived first in the pluck attack, the real higher note was folded down onto it and the note locked low. Acquisition now re-anchors up to the true fundamental when incoming readings are a persistent higher multiple of the seed, so notes lock onto the right string on the first pluck. Applies in chromatic, lever, and pedal harp modes. Sustained notes are unaffected (a held string still rejects overtones without drifting).
+
 ## [1.1.12+22] - 2026-06-05
 
 ### Fixed

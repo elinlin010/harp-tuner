@@ -146,6 +146,14 @@ class TunerNotifier extends Notifier<TunerState> {
   String? _challengeNote;
   int _challengeCount = 0;
 
+  // Anti-sub-harmonic acquisition re-anchor. While no note is confirmed yet,
+  // tracks a higher candidate fundamental when the current history median looks
+  // like a sub-harmonic of it (see _onPitchResult). Reset whenever detection
+  // state is cleared.
+  double? _reanchorCandidate;
+  int _reanchorCount = 0;
+  static const _reanchorNeeded = 2;
+
   // On Android, AudioRecord and AudioTrack/MediaPlayer conflict for audio
   // routing: while the mic is active, speaker output is routed to the earpiece.
   // We pause the mic during reference tone playback and restart it after.
@@ -262,6 +270,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
+    _resetReanchor();
     state = state.copyWith(isListening: false, clearPitch: true);
   }
 
@@ -341,6 +350,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
+    _resetReanchor();
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
 
@@ -424,6 +434,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
+    _resetReanchor();
     if (state.detectedHz != null && state.selectedHarp == null) {
       // No harp selected: recalculate chromatic note name with new preference.
       final info = MusicUtils.frequencyToNoteInfo(
@@ -561,6 +572,7 @@ class TunerNotifier extends Notifier<TunerState> {
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
+        _resetReanchor();
         if (!state.isStale && state.cents != null) {
           state = state.copyWith(isStale: true);
         }
@@ -571,6 +583,7 @@ class TunerNotifier extends Notifier<TunerState> {
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
+        _resetReanchor();
         state = state.copyWith(clearPitch: true); // also resets isStale
       }
       return;
@@ -602,6 +615,39 @@ class TunerNotifier extends Notifier<TunerState> {
           // at most one or two challenge frames and never reaches the display.
           _freqHistory.clear();
           _addToHistory(hz);
+          _resetReanchor();
+        } else if (_confirmedNote == null && hz > med && _isSubHarmonic(med, hz)) {
+          // Anti-sub-harmonic re-anchor (acquisition only). A sub-harmonic
+          // misread reads LOW — e.g. C4 (261 Hz) read as C4÷3 = F2 (87 Hz). If
+          // that wrong low value seeds the empty history first, _octaveCorrect
+          // would fold the real, higher fundamental DOWN onto it (261 × 1/3 ≈
+          // 87) and the note locks to the wrong (lower) string, or never
+          // switches until re-plucked. While no note is confirmed yet, a stream
+          // of readings that are a higher integer multiple of the median means
+          // the median is the sub-harmonic and hz is the true fundamental:
+          // re-anchor UP to hz instead of folding down. Persistence
+          // (_reanchorNeeded frames) stops a single stray ×2 overtone from
+          // jumping an octave. A confirmed/held note skips this entirely — it
+          // rejects overtones via _octaveCorrect and must not drift.
+          if (_reanchorCandidate != null &&
+              (1200 * log(hz / _reanchorCandidate!) / ln2).abs() < 80) {
+            _reanchorCount++;
+          } else {
+            _reanchorCandidate = hz;
+            _reanchorCount = 1;
+          }
+          if (_reanchorCount >= _reanchorNeeded) {
+            // The higher fundamental has persisted — discard the sub-harmonic
+            // seed and re-anchor history to it. Falls through to the stability
+            // gate, which re-accumulates from the corrected pitch.
+            _freqHistory.clear();
+            _addToHistory(hz);
+            _resetReanchor();
+          } else {
+            // Not yet persistent: hold this frame OUT of history so it isn't
+            // folded down and used to reinforce the sub-harmonic seed.
+            return;
+          }
         } else {
           _addToHistory(corrected);
         }
@@ -704,6 +750,7 @@ class TunerNotifier extends Notifier<TunerState> {
         _confirmedNote = noteName;
         _challengeNote = null;
         _challengeCount = 0;
+        _resetReanchor();
         state = state.copyWith(
           isStale: false,
           detectedHz: stableHz,
@@ -712,6 +759,21 @@ class TunerNotifier extends Notifier<TunerState> {
         );
       }
     }
+  }
+
+  void _resetReanchor() {
+    _reanchorCandidate = null;
+    _reanchorCount = 0;
+  }
+
+  // True when [low] is ≈ an integer (×2/×3/×4) sub-harmonic of [high] within
+  // ~80 cents — i.e. [high] is a plausible true fundamental and [low] is the
+  // octave/twelfth-too-low misread that YIN sometimes reports.
+  bool _isSubHarmonic(double low, double high) {
+    for (final n in [2.0, 3.0, 4.0]) {
+      if ((1200 * log(high / (low * n)) / ln2).abs() < 80) return true;
+    }
+    return false;
   }
 
   void _addToHistory(double hz) {
