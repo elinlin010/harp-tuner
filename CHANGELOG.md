@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.12+22] - 2026-06-05
+
+### Fixed
+- iOS pitch detection no longer misreads notes as a nearby wrong note an octave off (e.g. playing B showed E). The Android reliability fix had widened a bass harmonic-correction rule too far, so any real fourth or fifth above a bass note (anything from E3 / 165 Hz upward) was collapsed back onto the lower note instead of switching. The correction is now limited to the very lowest strings (below 130 Hz), where weak fundamentals genuinely make the detector jump between overtones. Real melodic intervals in the playable bass now switch correctly, while the original weak-bass fix (a ~61 Hz string read as its 124/184 Hz overtones) still holds. Detection behaves identically across chromatic, lever harp, and pedal harp.
+
 ## [1.1.11+21] - 2026-05-31
 
 ### Fixed

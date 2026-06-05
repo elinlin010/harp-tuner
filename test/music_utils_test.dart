@@ -58,9 +58,44 @@ void main() {
       expect(r442.cents, lessThan(0)); // 440 Hz is flat when A=442
     });
 
-    test('octave number is correct for notes across the range', () {
-      expect(MusicUtils.frequencyToNoteInfo(32.70).noteName, 'C1');  // C1
-      expect(MusicUtils.frequencyToNoteInfo(4186.0).noteName, 'C8'); // C8
+    test('A at every octave (A1–A7) resolves to the correct octave number', () {
+      // A doubles each octave from A4=440. Covers the full harp range and then
+      // some, proving octave numbering is correct (not off-by-one) everywhere.
+      const aByOctave = {
+        1: 55.0, 2: 110.0, 3: 220.0, 4: 440.0,
+        5: 880.0, 6: 1760.0, 7: 3520.0,
+      };
+      aByOctave.forEach((octave, hz) {
+        final r = MusicUtils.frequencyToNoteInfo(hz);
+        expect(r.noteName, 'A$octave', reason: '$hz Hz should be A$octave');
+        expect(r.octave, octave);
+        expect(r.cents.abs(), lessThan(1.0), reason: '$hz Hz is exactly A$octave');
+      });
+    });
+
+    test('C at every octave (C1–C8) — the octave number increments at C', () {
+      // C is where the octave label rolls over (B3 → C4). Verifying every C
+      // pins the rollover point at each octave so a note can't land an octave off.
+      const cByOctave = {
+        1: 32.70, 2: 65.41, 3: 130.81, 4: 261.63,
+        5: 523.25, 6: 1046.50, 7: 2093.00, 8: 4186.01,
+      };
+      cByOctave.forEach((octave, hz) {
+        final r = MusicUtils.frequencyToNoteInfo(hz);
+        expect(r.noteName, 'C$octave', reason: '$hz Hz should be C$octave');
+        expect(r.octave, octave);
+      });
+    });
+
+    test('octave boundary B3↔C4 does not bleed across the rollover', () {
+      // One semitone apart but a different octave digit — the exact place an
+      // off-by-one octave bug would show. B3 (246.94) must NOT become C4, and
+      // C4 (261.63) must NOT become B3.
+      expect(MusicUtils.frequencyToNoteInfo(246.94).noteName, 'B3');
+      expect(MusicUtils.frequencyToNoteInfo(261.63).noteName, 'C4');
+      // And the same boundary an octave up, to confirm it generalises.
+      expect(MusicUtils.frequencyToNoteInfo(493.88).noteName, 'B4');
+      expect(MusicUtils.frequencyToNoteInfo(523.25).noteName, 'C5');
     });
   });
 
@@ -83,6 +118,33 @@ void main() {
       // C♯4/D♭4 ≈ 277.18 Hz
       final r = MusicUtils.frequencyToNoteInfo(277.18, pedalHarp: true);
       expect(r.noteName, startsWith('D♭'));
+    });
+
+    test('C♭ octave bump is correct at every octave (B♮ → C♭ of next octave)', () {
+      // A B♮ at octave N is named C♭ at octave N+1 in harp notation. This +1
+      // bump must hold across the whole range, not just B4. Each B_n must read
+      // as C♭(n+1).
+      const bByOctave = {
+        2: 123.47, 3: 246.94, 4: 493.88, 5: 987.77, 6: 1975.53,
+      };
+      bByOctave.forEach((bOctave, hz) {
+        final r = MusicUtils.frequencyToNoteInfo(hz, pedalHarp: true);
+        expect(r.noteName, 'C♭${bOctave + 1}',
+            reason: 'B$bOctave ($hz Hz) should display as C♭${bOctave + 1}');
+        expect(r.octave, bOctave + 1);
+      });
+    });
+
+    test('pedal harp octave numbers are correct across the bass range', () {
+      // The bass is where the harp lives and where octave errors were reported.
+      // Only C♭-major degrees exist on a pedal harp (all-flat), so spot-check
+      // actual flat scale notes resolve to the right octave digit. (Naturals
+      // like C2/D3 are off-instrument and correctly snap to a neighbouring flat.)
+      expect(MusicUtils.frequencyToNoteInfo(61.74, pedalHarp: true).noteName, 'C♭2');
+      expect(MusicUtils.frequencyToNoteInfo(77.78, pedalHarp: true).noteName, 'E♭2');
+      expect(MusicUtils.frequencyToNoteInfo(92.50, pedalHarp: true).noteName, 'G♭2');
+      expect(MusicUtils.frequencyToNoteInfo(138.59, pedalHarp: true).noteName, 'D♭3');
+      expect(MusicUtils.frequencyToNoteInfo(207.65, pedalHarp: true).noteName, 'A♭3');
     });
   });
 
