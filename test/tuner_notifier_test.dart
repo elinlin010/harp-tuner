@@ -834,6 +834,102 @@ void main() {
     });
   });
 
+  // ── sub-harmonic acquisition (anti-octave-lock) ──────────────────────────
+  //
+  // A sub-harmonic misread reads LOW (C4 → C4÷3 = F2 ≈ 87 Hz). If it seeds the
+  // empty history first — common in the noisy pluck attack — the real higher
+  // fundamental was being folded DOWN onto it and the note locked to the wrong
+  // (lower) string, or wouldn't switch until re-plucked. The acquisition
+  // re-anchor pulls history UP to the persistent higher fundamental. These
+  // tests cover the seed-first case (distinct from the established-note tests
+  // above, which verify a held note still rejects a sub-harmonic without
+  // drifting).
+  group('TunerNotifier.handlePitchResult — sub-harmonic acquisition', () {
+    void confirm(TunerNotifier n, double hz, [int frames = 6]) {
+      for (var i = 0; i < frames; i++) {
+        n.handlePitchResult(PitchResult(hz));
+      }
+    }
+
+    test('chromatic: F2 sub-harmonic seeds first, C4 still wins', () async {
+      // The reported bug: play C, see F. One stray F2 (sub-3rd) lands first,
+      // then the real C4 stream — must re-anchor up and confirm C4, not F2.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      n.handlePitchResult(PitchResult(87.21)); // F2 sub-harmonic seeds history
+      confirm(n, 261.63); // real C4 stream
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'C4',
+          reason: 'real C4 must win over the F2 sub-harmonic that seeded first');
+      expect(s.detectedHz, closeTo(261.63, 8.0),
+          reason: 'reading must re-anchor up to ~261 Hz, not lock at ~87 Hz');
+    });
+
+    test('chromatic: alternating F2/C4 readings still resolve to C4', () async {
+      // YIN bouncing between the fundamental and its sub-3rd harmonic. The
+      // re-anchor must accumulate evidence across the intervening sub-harmonic
+      // frames and still land on C4.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (final hz in [87.21, 261.63, 87.21, 261.63, 261.63, 261.63, 261.63]) {
+        n.handlePitchResult(PitchResult(hz));
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'C4',
+          reason: 'alternating sub-harmonic/fundamental must resolve to C4');
+    });
+
+    test('harp mode: F2 sub-harmonic seeds first, C string still wins', () async {
+      // Same fix must hold with a harp selected (label is register-format).
+      // Lever harp (E♭ major) has a real C string; pedal harp is all-flat and
+      // would snap 261.63 Hz to D♭4, so we use lever harp for a clean C label.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(const Duration(milliseconds: 20));
+      final n = c.read(tunerProvider.notifier);
+      await n.setSelectedHarp(HarpType.leverHarp);
+      n.handlePitchResult(PitchResult(87.21)); // F2 sub-harmonic
+      confirm(n, 261.63); // real C4
+      final s = c.read(tunerProvider);
+      expect(s.detectedHz, closeTo(261.63, 8.0),
+          reason: 'harp mode must re-anchor up to ~261 Hz too');
+      expect(s.closestNoteName, contains('C'),
+          reason: 'closest string must be a C, not an F');
+      expect(s.closestNoteName, isNot(contains('F')),
+          reason: 'must not lock to the F2 sub-harmonic');
+    });
+
+    test('single stray octave overtone does NOT jump the acquired note up',
+        () async {
+      // The persistence guard: one ×2 overtone frame (522 Hz) amid a clean C4
+      // stream must not re-anchor up to C5. C4 must win.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (final hz in [261.63, 523.25, 261.63, 261.63, 261.63, 261.63]) {
+        n.handlePitchResult(PitchResult(hz));
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'C4',
+          reason: 'a single octave overtone glitch must not jump to C5');
+    });
+
+    test('clean fundamental-first acquisition is unaffected (no added lag)',
+        () async {
+      // Regression guard: when the fundamental seeds first (the normal case),
+      // the re-anchor never fires and acquisition is unchanged.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      confirm(n, 261.63, 5);
+      expect(c.read(tunerProvider).closestNoteName, 'C4');
+    });
+  });
+
   // ── preferFlats / string alignment regression guards ─────────────────────
   //
   // Before the fix, auto mode used frequencyToNoteInfo (chromatic snapping),
