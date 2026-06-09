@@ -902,19 +902,55 @@ void main() {
           reason: 'must not lock to the F2 sub-harmonic');
     });
 
-    test('single stray octave overtone does NOT jump the acquired note up',
+    test('octave 2nd-harmonic flashes do NOT jump the acquired note up (B♭4 stays B♭4)',
         () async {
-      // The persistence guard: one ×2 overtone frame (522 Hz) amid a clean C4
-      // stream must not re-anchor up to C5. C4 must win.
+      // Reported regression: plucking a note flashes its strong 2nd harmonic
+      // (an octave up) for a frame or two during the attack. The re-anchor must
+      // NOT treat the octave as a sub-harmonic and jump up — the octave is
+      // ambiguous (a note's 2nd harmonic IS its octave). Only the non-octave
+      // twelfth (×3) re-anchors, so even SUSTAINED octave-overtone frames hold.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(); // chromatic; A♯4 = B♭4 enharmonic
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      n.handlePitchResult(PitchResult(466.16)); // B♭4 fundamental seeds
+      n.handlePitchResult(PitchResult(932.33)); // 2nd-harmonic flash
+      n.handlePitchResult(PitchResult(932.33)); // ...persists 2 frames
+      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(466.16));
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'A♯4',
+          reason: 'B♭4 must not jump to B♭5 on a 2nd-harmonic flash');
+      expect(s.detectedHz, closeTo(466.16, 10.0),
+          reason: 'reading must stay near 466 Hz, not climb to 932 Hz');
+    });
+
+    test('octave overtone does NOT jump up for an arbitrary note (A4 stays A4)',
+        () async {
+      // Generality: the octave-overtone confusion was reported on many notes,
+      // not just B♭. A4 (440) with sustained A5 (880) overtone frames stays A4.
       SharedPreferences.setMockInitialValues({});
       final c = _container();
       await Future.delayed(Duration.zero);
       final n = c.read(tunerProvider.notifier);
-      for (final hz in [261.63, 523.25, 261.63, 261.63, 261.63, 261.63]) {
+      for (final hz in [440.0, 880.0, 880.0, 440.0, 440.0, 440.0, 440.0]) {
+        n.handlePitchResult(PitchResult(hz));
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'A4',
+          reason: 'A4 must not jump to A5 on a 2nd-harmonic flash');
+    });
+
+    test('two-octave overtone (×4) does NOT jump the acquired note up', () async {
+      // ×4 is octave-class (two octaves) and shares the same ambiguity as ×2,
+      // so it is excluded from re-anchoring too. C4 with C6 (×4) overtone holds.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      for (final hz in [261.63, 1046.5, 1046.5, 261.63, 261.63, 261.63, 261.63]) {
         n.handlePitchResult(PitchResult(hz));
       }
       expect(c.read(tunerProvider).closestNoteName, 'C4',
-          reason: 'a single octave overtone glitch must not jump to C5');
+          reason: 'C4 must not jump to C6 on a two-octave overtone flash');
     });
 
     test('clean fundamental-first acquisition is unaffected (no added lag)',

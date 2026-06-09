@@ -766,14 +766,19 @@ class TunerNotifier extends Notifier<TunerState> {
     _reanchorCount = 0;
   }
 
-  // True when [low] is ≈ an integer (×2/×3/×4) sub-harmonic of [high] within
+  // True when [low] is ≈ the ÷3 sub-harmonic (a twelfth below) of [high] within
   // ~80 cents — i.e. [high] is a plausible true fundamental and [low] is the
-  // octave/twelfth-too-low misread that YIN sometimes reports.
+  // twelfth-too-low misread YIN sometimes reports (e.g. C4 read as F2).
+  //
+  // ONLY the ×3 twelfth is checked — deliberately NOT the octave-class ×2/×4.
+  // Every plucked string has a strong 2nd harmonic exactly an octave up, so a
+  // higher reading at ×2 (or ×4) is ambiguous: it could be a sub-harmonic seed
+  // OR just the note's own octave overtone flashing during the attack. Treating
+  // ×2 as a sub-harmonic made acquisition jump UP an octave on that overtone
+  // (e.g. B♭4 shown as B♭5). The twelfth is a different pitch class, so a
+  // persistent ×3 relationship reliably means the seed was the sub-harmonic.
   bool _isSubHarmonic(double low, double high) {
-    for (final n in [2.0, 3.0, 4.0]) {
-      if ((1200 * log(high / (low * n)) / ln2).abs() < 80) return true;
-    }
-    return false;
+    return (1200 * log(high / (low * 3.0)) / ln2).abs() < 80;
   }
 
   void _addToHistory(double hz) {

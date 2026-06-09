@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.14+24] - 2026-06-09
+
+### Fixed
+- A plucked note is no longer occasionally shown an octave too high (e.g. B♭4 displayed as B♭5), on any note. The acquisition re-anchor added in 1.1.13 was treating a string's strong 2nd harmonic — which sounds exactly one octave up — as if it were a sub-harmonic, and jumping the display up an octave when that overtone flashed during the attack. Re-anchoring is now limited to the twelfth (÷3, a different pitch class, e.g. the C-read-as-F case), which is unambiguous; the octave-class overtones (×2, ×4) are no longer re-anchored, so the displayed octave stays put. The C-read-as-F fix from 1.1.13 is unchanged.
+
 ## [1.1.13+23] - 2026-06-06
 
 ### Fixed
