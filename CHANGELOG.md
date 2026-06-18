@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.1.15+25] - 2026-06-18
+
+### Changed
+- iOS and Android now use separate, independently-tuned pitch-detection algorithms instead of one shared one. They had been cross-interfering: tuning detection for Android (slower devices) was degrading accuracy on iOS, where notes were misread as wrong or wrong-octave pitches. Each platform's detector is now frozen to the version that worked well in its own store — iOS to the App Store 1.1.10 behavior, Android to the Play Store 1.1.11 behavior — and kept independent so future tuning of one platform can't regress the other. The recent iOS-targeted detection experiments (the bass-interval, sub-harmonic, and octave-guard tweaks) are rolled back in favor of iOS's known-good store algorithm.
+
 ## [1.1.14+24] - 2026-06-09
 
 ### Fixed

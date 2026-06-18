@@ -457,22 +457,6 @@ void main() {
           reason: 'bass 3:2 harmonic jump must be corrected, not flip the note');
     });
 
-    test('bass melodic fifth (E3→B3) is NOT collapsed by harmonic correction', () async {
-      // Regression: the original cutoff (reference < 250) treated E3 (165 Hz) as
-      // "bass" and snapped B3 (247 Hz, a fifth up) back via 247 × 2/3 ≈ 165 —
-      // so playing B after E showed E with the wrong octave. The cutoff is now
-      // 130 Hz, so E3 is a well-locked fundamental and the fifth must switch.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(164.81)); // E3
-      expect(c.read(tunerProvider).closestNoteName, contains('E'));
-      for (var i = 0; i < 5; i++) n.handlePitchResult(PitchResult(246.94)); // B3
-      expect(c.read(tunerProvider).closestNoteName, contains('B'),
-          reason: 'a real fifth from a 165 Hz reference must switch, not collapse to E');
-    });
-
     test('melodic fifth (A4→E5) is NOT collapsed by harmonic correction', () async {
       // The bass inter-harmonic correction must not apply above 250 Hz: A4→E5
       // is a real 3:2 jump between two strings and must switch, not snap back.
@@ -540,146 +524,6 @@ void main() {
       // Two challenges: first sets _challengeNote, second increments count
       expect(c.read(tunerProvider).closestNoteName, isNotNull);
       expect(confirmedBefore, isNotNull);
-    });
-  });
-
-  // ── harmonic correction & the 130 Hz bass cutoff ─────────────────────────
-  //
-  // _octaveCorrect pulls harmonic/sub-harmonic misreads back to the fundamental
-  // so a plucked string's overtones don't flash a wrong note. It tries octave
-  // ratios (×2 ÷2 ×4 ÷4) and twelfth ratios (×3 ÷3) everywhere, plus
-  // inter-harmonic ratios (3:2, 2:3, 4:3, 3:4) ONLY when the reference is below
-  // 130 Hz — the register where the weakest fundamentals make YIN jump between
-  // overtones. Above 130 Hz those same ratios are real melodic fourths/fifths
-  // between two strings and MUST switch. These tests pin both halves of that
-  // contract, and the cutoff itself, so it can't silently drift back to the old
-  // 250 Hz value that turned B into E.
-  group('TunerNotifier.handlePitchResult — harmonic correction & bass cutoff', () {
-    // Drive enough identical frames to fill the sliding window and clear the
-    // challenge counter, confirming a note from the given frequency.
-    void confirm(TunerNotifier n, double hz, [int frames = 6]) {
-      for (var i = 0; i < frames; i++) {
-        n.handlePitchResult(PitchResult(hz));
-      }
-    }
-
-    test('reference just BELOW 130 Hz still collapses a 3:2 inter-harmonic jump',
-        () async {
-      // Seed ~120 Hz (a weak-fundamental bass string read as an overtone), then
-      // inject its 3:2 partner ~180 Hz. Because 120 < 130 the inter-harmonic
-      // rule fires: 180 × 2/3 = 120, within 80¢, so it must HOLD near 120 Hz and
-      // not jump to 180. This is the Android weak-bass fix; it must survive the
-      // lowered cutoff.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 120.0);
-      final held = c.read(tunerProvider).closestNoteName;
-      confirm(n, 180.0, 4);
-      final s = c.read(tunerProvider);
-      expect(s.closestNoteName, held,
-          reason: 'a 3:2 jump from a <130 Hz reference is a harmonic, must hold');
-      expect(s.detectedHz, lessThan(140.0),
-          reason: 'reading must stay near 120 Hz, not climb to 180 Hz');
-    });
-
-    test('reference just ABOVE 130 Hz lets a real fifth switch', () async {
-      // Seed ~140 Hz (a well-locked fundamental), then play its fifth ~210 Hz.
-      // Because 140 > 130 the inter-harmonic rule is skipped: this is a genuine
-      // melodic fifth and must SWITCH up to ~210 Hz, not snap back to 140.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 140.0);
-      final before = c.read(tunerProvider).closestNoteName;
-      confirm(n, 210.0);
-      final s = c.read(tunerProvider);
-      expect(s.detectedHz, greaterThan(180.0),
-          reason: 'a fifth from a >130 Hz reference must switch, not collapse');
-      expect(s.closestNoteName, isNot(before));
-    });
-
-    test('descending fifth (B3→E3) switches — the reported bug, mirrored', () async {
-      // The user-reported failure was ascending B-after-E showing E. The
-      // descending direction must work too: E-after-B must show E, not stay B.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 246.94); // B3
-      expect(c.read(tunerProvider).closestNoteName, contains('B'));
-      confirm(n, 164.81); // E3
-      final s = c.read(tunerProvider);
-      expect(s.closestNoteName, contains('E'),
-          reason: 'a real descending fifth must switch, not hold B');
-      expect(s.detectedHz, lessThan(190.0),
-          reason: 'octave must follow the note down to E3 (~165 Hz)');
-    });
-
-    test('real perfect fourth (E3→A3) switches', () async {
-      // E3 (165 Hz) → A3 (220 Hz) is a 4:3 ratio. With the old 250 Hz cutoff
-      // this collapsed (165 < 250 → 220 × 3/4 ≈ 165). At 130 Hz it switches.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 164.81); // E3
-      expect(c.read(tunerProvider).closestNoteName, contains('E'));
-      confirm(n, 220.0); // A3
-      final s = c.read(tunerProvider);
-      expect(s.closestNoteName, contains('A'),
-          reason: 'a real fourth above 130 Hz must switch, not be harmonic-corrected');
-      expect(s.detectedHz, greaterThan(195.0));
-    });
-
-    test('octave harmonic (A4→A5, ×2) is corrected to the fundamental', () async {
-      // A clean octave overtone is the most common YIN error. Playing A4 (440)
-      // while YIN reports A5 (880) must hold A4, not jump an octave.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 440.0);
-      final held = c.read(tunerProvider).closestNoteName;
-      confirm(n, 880.0, 4); // A5 overtone
-      final s = c.read(tunerProvider);
-      expect(s.closestNoteName, held,
-          reason: 'an octave overtone must be corrected, not switch the note');
-      expect(s.detectedHz, lessThan(500.0),
-          reason: 'reading must stay near A4 (440 Hz), not jump to 880 Hz');
-    });
-
-    test('two-octave harmonic (A4→A6, ×4) is corrected to the fundamental',
-        () async {
-      // The ×4 factor covers the two-octave overtone: A4 (440) read as A6 (1760).
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 440.0);
-      final held = c.read(tunerProvider).closestNoteName;
-      confirm(n, 1760.0, 4); // A6 overtone
-      final s = c.read(tunerProvider);
-      expect(s.closestNoteName, held,
-          reason: 'a two-octave overtone must be corrected, not switch the note');
-      expect(s.detectedHz, lessThan(700.0));
-    });
-
-    test('isolated harmonic spike does not flash through the confirmed note',
-        () async {
-      // A single overtone frame mid-note (the common YIN glitch) must never
-      // reach the display — the confirmed note holds throughout.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 293.66); // D4
-      final held = c.read(tunerProvider).closestNoteName;
-      n.handlePitchResult(PitchResult(880.98)); // one 3rd-harmonic spike (A5)
-      expect(c.read(tunerProvider).closestNoteName, held,
-          reason: 'a single harmonic spike must not change the displayed note');
     });
   });
 
@@ -779,21 +623,6 @@ void main() {
     };
 
     instruments.forEach((name, harp) {
-      test('$name: real fifth (E3→B3) tracks up, does not collapse (B→E fix)',
-          () async {
-        final c = await withInstrument(harp);
-        final n = c.read(tunerProvider.notifier);
-        confirm(n, 164.81); // E3
-        final low = c.read(tunerProvider);
-        expect(low.detectedHz, closeTo(164.81, 6.0));
-        confirm(n, 246.94); // B3 — a fifth up
-        final high = c.read(tunerProvider);
-        expect(high.detectedHz, greaterThan(200.0),
-            reason: '$name: the fifth must track to ~247 Hz, not collapse to 165');
-        expect(high.closestNoteName, isNot(low.closestNoteName),
-            reason: '$name: the note label must change on a real interval');
-      });
-
       test('$name: octave overtone is corrected (A3 held, A4 ignored)', () async {
         final c = await withInstrument(harp);
         final n = c.read(tunerProvider.notifier);
@@ -834,135 +663,100 @@ void main() {
     });
   });
 
-  // ── sub-harmonic acquisition (anti-octave-lock) ──────────────────────────
+  // ── platform-specific correctors (iOS vs Android) ────────────────────────
   //
-  // A sub-harmonic misread reads LOW (C4 → C4÷3 = F2 ≈ 87 Hz). If it seeds the
-  // empty history first — common in the noisy pluck attack — the real higher
-  // fundamental was being folded DOWN onto it and the note locked to the wrong
-  // (lower) string, or wouldn't switch until re-plucked. The acquisition
-  // re-anchor pulls history UP to the persistent higher fundamental. These
-  // tests cover the seed-first case (distinct from the established-note tests
-  // above, which verify a held note still rejects a sub-harmonic without
-  // drifting).
-  group('TunerNotifier.handlePitchResult — sub-harmonic acquisition', () {
-    void confirm(TunerNotifier n, double hz, [int frames = 6]) {
+  // iOS and Android run independently-tuned detection algorithms, frozen to
+  // their respective store versions (App Store v1.1.10 / Play Store v1.1.11)
+  // and selected by _detectionAlgo. Under `flutter test` the host is neither
+  // platform, so the dispatcher defaults to Android; these tests pin each
+  // algorithm explicitly via setDetectionAlgoForTest.
+  group('TunerNotifier.handlePitchResult — platform correctors', () {
+    void feed(TunerNotifier n, double hz, int frames) {
       for (var i = 0; i < frames; i++) {
         n.handlePitchResult(PitchResult(hz));
       }
     }
 
-    test('chromatic: F2 sub-harmonic seeds first, C4 still wins', () async {
-      // The reported bug: play C, see F. One stray F2 (sub-3rd) lands first,
-      // then the real C4 stream — must re-anchor up and confirm C4, not F2.
+    test('dispatch differs: iOS confirms acquisition faster than Android', () async {
+      // iOS confirms a freshly acquired note as soon as the stability window
+      // fills (3 frames); Android additionally gates acquisition behind the
+      // challenge counter. After exactly 3 identical frames iOS shows the note
+      // and Android does not — proving the dispatcher picks different algorithms.
+      SharedPreferences.setMockInitialValues({});
+      final cIos = _container();
+      final cAnd = _container();
+      await Future.delayed(Duration.zero);
+      final nIos = cIos.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      final nAnd = cAnd.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.android);
+      feed(nIos, 440.0, 3);
+      feed(nAnd, 440.0, 3);
+      expect(cIos.read(tunerProvider).closestNoteName, 'A4',
+          reason: 'iOS confirms acquisition once the stability window fills');
+      expect(cAnd.read(tunerProvider).closestNoteName, isNull,
+          reason: 'Android still needs challenge frames after 3 stable frames');
+    });
+
+    test('iOS: octave overtone is corrected (A4 held against A5)', () async {
       SharedPreferences.setMockInitialValues({});
       final c = _container();
       await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      n.handlePitchResult(PitchResult(87.21)); // F2 sub-harmonic seeds history
-      confirm(n, 261.63); // real C4 stream
-      final s = c.read(tunerProvider);
-      expect(s.closestNoteName, 'C4',
-          reason: 'real C4 must win over the F2 sub-harmonic that seeded first');
-      expect(s.detectedHz, closeTo(261.63, 8.0),
-          reason: 'reading must re-anchor up to ~261 Hz, not lock at ~87 Hz');
-    });
-
-    test('chromatic: alternating F2/C4 readings still resolve to C4', () async {
-      // YIN bouncing between the fundamental and its sub-3rd harmonic. The
-      // re-anchor must accumulate evidence across the intervening sub-harmonic
-      // frames and still land on C4.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      for (final hz in [87.21, 261.63, 87.21, 261.63, 261.63, 261.63, 261.63]) {
-        n.handlePitchResult(PitchResult(hz));
-      }
-      expect(c.read(tunerProvider).closestNoteName, 'C4',
-          reason: 'alternating sub-harmonic/fundamental must resolve to C4');
-    });
-
-    test('harp mode: F2 sub-harmonic seeds first, C string still wins', () async {
-      // Same fix must hold with a harp selected (label is register-format).
-      // Lever harp (E♭ major) has a real C string; pedal harp is all-flat and
-      // would snap 261.63 Hz to D♭4, so we use lever harp for a clean C label.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(const Duration(milliseconds: 20));
-      final n = c.read(tunerProvider.notifier);
-      await n.setSelectedHarp(HarpType.leverHarp);
-      n.handlePitchResult(PitchResult(87.21)); // F2 sub-harmonic
-      confirm(n, 261.63); // real C4
-      final s = c.read(tunerProvider);
-      expect(s.detectedHz, closeTo(261.63, 8.0),
-          reason: 'harp mode must re-anchor up to ~261 Hz too');
-      expect(s.closestNoteName, contains('C'),
-          reason: 'closest string must be a C, not an F');
-      expect(s.closestNoteName, isNot(contains('F')),
-          reason: 'must not lock to the F2 sub-harmonic');
-    });
-
-    test('octave 2nd-harmonic flashes do NOT jump the acquired note up (B♭4 stays B♭4)',
-        () async {
-      // Reported regression: plucking a note flashes its strong 2nd harmonic
-      // (an octave up) for a frame or two during the attack. The re-anchor must
-      // NOT treat the octave as a sub-harmonic and jump up — the octave is
-      // ambiguous (a note's 2nd harmonic IS its octave). Only the non-octave
-      // twelfth (×3) re-anchors, so even SUSTAINED octave-overtone frames hold.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container(); // chromatic; A♯4 = B♭4 enharmonic
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      n.handlePitchResult(PitchResult(466.16)); // B♭4 fundamental seeds
-      n.handlePitchResult(PitchResult(932.33)); // 2nd-harmonic flash
-      n.handlePitchResult(PitchResult(932.33)); // ...persists 2 frames
-      for (var i = 0; i < 4; i++) n.handlePitchResult(PitchResult(466.16));
-      final s = c.read(tunerProvider);
-      expect(s.closestNoteName, 'A♯4',
-          reason: 'B♭4 must not jump to B♭5 on a 2nd-harmonic flash');
-      expect(s.detectedHz, closeTo(466.16, 10.0),
-          reason: 'reading must stay near 466 Hz, not climb to 932 Hz');
-    });
-
-    test('octave overtone does NOT jump up for an arbitrary note (A4 stays A4)',
-        () async {
-      // Generality: the octave-overtone confusion was reported on many notes,
-      // not just B♭. A4 (440) with sustained A5 (880) overtone frames stays A4.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      for (final hz in [440.0, 880.0, 880.0, 440.0, 440.0, 440.0, 440.0]) {
-        n.handlePitchResult(PitchResult(hz));
-      }
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 440.0, 4);
+      expect(c.read(tunerProvider).closestNoteName, 'A4');
+      feed(n, 880.0, 3); // A5 octave overtone
       expect(c.read(tunerProvider).closestNoteName, 'A4',
-          reason: 'A4 must not jump to A5 on a 2nd-harmonic flash');
+          reason: 'iOS octave-corrects a ×2 overtone back to the fundamental');
     });
 
-    test('two-octave overtone (×4) does NOT jump the acquired note up', () async {
-      // ×4 is octave-class (two octaves) and shares the same ambiguity as ×2,
-      // so it is excluded from re-anchoring too. C4 with C6 (×4) overtone holds.
+    test('iOS: a non-octave far reading is dropped, not switched mid-note', () async {
+      // iOS corrects ONLY octaves; a far non-octave reading (e.g. a 3rd
+      // harmonic) returns null and the frame is dropped, so a held note isn't
+      // knocked off by a stray harmonic without a silence gap.
       SharedPreferences.setMockInitialValues({});
       final c = _container();
       await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      for (final hz in [261.63, 1046.5, 1046.5, 261.63, 261.63, 261.63, 261.63]) {
-        n.handlePitchResult(PitchResult(hz));
-      }
-      expect(c.read(tunerProvider).closestNoteName, 'C4',
-          reason: 'C4 must not jump to C6 on a two-octave overtone flash');
-    });
-
-    test('clean fundamental-first acquisition is unaffected (no added lag)',
-        () async {
-      // Regression guard: when the fundamental seeds first (the normal case),
-      // the re-anchor never fires and acquisition is unchanged.
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      final n = c.read(tunerProvider.notifier);
-      confirm(n, 261.63, 5);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 261.63, 4); // C4
       expect(c.read(tunerProvider).closestNoteName, 'C4');
+      feed(n, 784.0, 3); // C4's 3rd harmonic ≈ G5
+      expect(c.read(tunerProvider).closestNoteName, 'C4',
+          reason: 'iOS drops a non-octave harmonic frame, holding the note');
+    });
+
+    test('iOS: switches to a new note after a silence gap clears state', () async {
+      // iOS resets detection state on the first silence frame, so a new note
+      // plucked after the previous one decays acquires fresh.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 164.81, 4); // E3
+      expect(c.read(tunerProvider).closestNoteName, 'E3');
+      n.handlePitchResult(null); // silence → iOS clears state on the first null
+      feed(n, 246.94, 4); // B3 — fresh acquisition
+      expect(c.read(tunerProvider).closestNoteName, 'B3',
+          reason: 'iOS acquires the new note fresh after a silence gap');
+    });
+
+    test('Android: 3rd-harmonic reading is corrected in-stream, holds the note',
+        () async {
+      // Android corrects ×3 without needing a silence gap, so a 3rd-harmonic
+      // flash on a held note does not switch it.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.android);
+      feed(n, 261.63, 6); // C4
+      expect(c.read(tunerProvider).closestNoteName, 'C4');
+      feed(n, 784.0, 4); // 3rd harmonic ≈ G5
+      expect(c.read(tunerProvider).closestNoteName, 'C4',
+          reason: 'Android ×3-corrects the harmonic in-stream');
     });
   });
 

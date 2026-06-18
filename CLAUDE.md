@@ -158,6 +158,16 @@ When adding a new `{placeholder}` to an existing ARB key: update all 6 locale fi
 
 When a `ref.listen<TunerState>` callback drives side effects (e.g. showing a snackbar), enumerate all state transitions that should trigger the effect — not just initial activation. Re-enabling a toggle while the relevant feature is already active is a valid state transition that won't fire unless handled explicitly (e.g. a `reminderTurnedOn` case alongside the `listeningStarted` case).
 
+## Platform-Split Pitch Detection (IMPORTANT)
+
+iOS and Android run **separate, independently-tuned pitch correctors**, frozen to their respective store versions. They diverged because Android's slow-device tuning (harmonic correction, hysteresis) degraded iOS detection. Do **not** re-merge them or "fix" one platform's behavior in the other's path.
+
+- The split lives in `TunerNotifier._onPitchResult`, which dispatches on `_detectionAlgo` (`DetectionAlgo.ios` / `.android`) to `_onPitchResultIos` (App Store **v1.1.10**) or `_onPitchResultAndroid` (Play Store **v1.1.11**). Each has its own `_octaveCorrect*` and `_challengeNeeded*`.
+  - **iOS corrector:** octave-only correction (`[2.0, 0.5]`), whole-ring stability gate, instant first-acquisition, first-null state reset. Relies on the natural silence gap between plucks to switch notes.
+  - **Android corrector:** full harmonic correction (octave/twelfth/two-octave + bass inter-harmonic `< 250 Hz`), sliding stability window, null-frame tolerance, challenge-gated acquisition.
+- Only the **corrector** is split. The mic/YIN service (`PitchDetectionService`) is shared.
+- `_detectionAlgo` defaults from `Platform.isIOS`. Under `flutter test` the host is **neither** iOS nor Android, so it falls back to the Android corrector; tests pin a platform with `setDetectionAlgoForTest(DetectionAlgo.ios|android)`. Always test platform-specific detection behavior with an explicit `setDetectionAlgoForTest`.
+
 ## Android Audio Notes
 
 On Android, `AudioRecord` (mic) and `MediaPlayer` (tone) conflict for audio routing: if both are active simultaneously, output is silently routed to the earpiece. The fix in `TunerNotifier.playReferenceString` pauses the mic subscription while the tone plays and restarts it automatically after 2.3 s via `_micRestartTimer`.
