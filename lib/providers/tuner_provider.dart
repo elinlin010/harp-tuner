@@ -17,6 +17,11 @@ import '../utils/music_utils.dart';
 
 enum TunerMode { auto, reference }
 
+/// Selects which platform-specific pitch corrector runs. iOS and Android ship
+/// separate, independently-tuned detection algorithms (frozen to their
+/// respective store versions) so tuning one platform can't regress the other.
+enum DetectionAlgo { ios, android }
+
 // ── Tuner state ───────────────────────────────────────────────────────────────
 
 class TunerState {
@@ -116,16 +121,13 @@ class TunerNotifier extends Notifier<TunerState> {
   SharedPreferences? _prefs;
 
   static const _historyLen      = 8;
-  // 3-reading sliding window for the stability gate and pitch estimate. The
-  // median of 3 rejects single-frame outliers and keeps the cents reading
-  // steady; 2 (a plain average of the last two) slid every frame and let one
-  // glitch shift the note. Combined with the null-frame tolerance fix (isolated
-  // nulls don't reset history) so true/null/true gaps don't stall acquisition.
-  static const _stableNeeded    = 3;
+  static const _stableNeeded    = 3;   // 3 stable frames to confirm a note
   static const _stableCents     = 25.0;
-  // 2 challenge frames to switch confirmed note. Reduces note-skip when
-  // playing strings in sequence on slow devices where per-frame latency is high.
-  static const _challengeNeeded = 2;
+  // Challenge frames before switching note — differs by platform (see
+  // _detectionAlgo). iOS uses the App Store v1.1.10 corrector (3); Android uses
+  // the Play Store v1.1.11 corrector (2, tuned for slow-device note-skip).
+  static const _challengeNeededIos     = 3;
+  static const _challengeNeededAndroid = 2;
   static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
   static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
@@ -146,13 +148,17 @@ class TunerNotifier extends Notifier<TunerState> {
   String? _challengeNote;
   int _challengeCount = 0;
 
-  // Anti-sub-harmonic acquisition re-anchor. While no note is confirmed yet,
-  // tracks a higher candidate fundamental when the current history median looks
-  // like a sub-harmonic of it (see _onPitchResult). Reset whenever detection
-  // state is cleared.
-  double? _reanchorCandidate;
-  int _reanchorCount = 0;
-  static const _reanchorNeeded = 2;
+  // Which platform's detection corrector to run. iOS and Android ship different,
+  // independently-tuned pitch correctors (the algorithms diverged when Android's
+  // slow-device fixes degraded iOS, so they are now kept separate — see
+  // _onPitchResultIos / _onPitchResultAndroid). Defaults from the host platform;
+  // dart:io Platform is neither iOS nor Android under `flutter test`, so it
+  // falls back to the Android corrector there and tests override per-case.
+  DetectionAlgo _detectionAlgo =
+      Platform.isIOS ? DetectionAlgo.ios : DetectionAlgo.android;
+
+  @visibleForTesting
+  void setDetectionAlgoForTest(DetectionAlgo algo) => _detectionAlgo = algo;
 
   // On Android, AudioRecord and AudioTrack/MediaPlayer conflict for audio
   // routing: while the mic is active, speaker output is routed to the earpiece.
@@ -270,7 +276,6 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
-    _resetReanchor();
     state = state.copyWith(isListening: false, clearPitch: true);
   }
 
@@ -350,7 +355,6 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
-    _resetReanchor();
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
 
@@ -434,7 +438,6 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
-    _resetReanchor();
     if (state.detectedHz != null && state.selectedHarp == null) {
       // No harp selected: recalculate chromatic note name with new preference.
       final info = MusicUtils.frequencyToNoteInfo(
@@ -556,34 +559,37 @@ class TunerNotifier extends Notifier<TunerState> {
 
   // ── Pitch processing ───────────────────────────────────────────────────────
 
+  // Dispatch to the platform-specific corrector. iOS and Android ship
+  // independently-tuned algorithms frozen to their respective store versions.
   void _onPitchResult(PitchResult? result) {
+    if (_detectionAlgo == DetectionAlgo.ios) {
+      _onPitchResultIos(result);
+    } else {
+      _onPitchResultAndroid(result);
+    }
+  }
+
+  // ── iOS corrector (App Store v1.1.10) ─────────────────────────────────────
+  // Frozen to the iOS store version: octave-only correction, whole-ring
+  // stability gate, instant first-acquisition, and a first-null reset. Kept
+  // separate from the Android corrector so platform tuning never crosses over.
+  void _onPitchResultIos(PitchResult? result) {
     if (result == null) {
       _silenceCount++;
-      // Isolated nulls are NOT treated as note ends. On slow Android devices
-      // YIN emits null frames intermittently while a string is still ringing
-      // (true/null/true/null), and _silenceCount resets to 0 on every pitched
-      // frame — so a single null must not disturb history or the acquisition
-      // counter, or notes could never confirm. Detection state is only reset
-      // on SUSTAINED silence (the note has genuinely stopped).
-      if (_silenceCount == _kStaleFrames) {
-        // ~1.4s of continuous silence: the note has stopped. Clear detection
-        // state so the next note acquires fresh, and dim the display.
+      if (_silenceCount == 1) {
+        // First silence frame: reset detection state immediately so the next
+        // note has a clean history and no hysteresis blocking. Display stays
+        // fully bright until _kStaleFrames to avoid flicker between notes.
         _freqHistory.clear();
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
-        _resetReanchor();
-        if (!state.isStale && state.cents != null) {
-          state = state.copyWith(isStale: true);
-        }
+      } else if (_silenceCount == _kStaleFrames && !state.isStale) {
+        // Sustained silence: dim the display to signal stale reading
+        if (state.cents != null) state = state.copyWith(isStale: true);
       } else if (_silenceCount >= _kHoldFrames) {
-        // ~2s of silence: wipe the display too.
+        // Long silence: wipe the display too
         _silenceCount = 0;
-        _freqHistory.clear();
-        _confirmedNote = null;
-        _challengeNote = null;
-        _challengeCount = 0;
-        _resetReanchor();
         state = state.copyWith(clearPitch: true); // also resets isStale
       }
       return;
@@ -605,7 +611,147 @@ class TunerNotifier extends Notifier<TunerState> {
       final med = _median(_freqHistory);
       final centsDiff = 1200 * log(hz / med) / ln2;
       if (centsDiff.abs() > 150) {
-        final corrected = _octaveCorrect(hz, med);
+        final corrected = _octaveCorrectIos(hz, med);
+        if (corrected == null) return;
+        _addToHistory(corrected);
+      } else {
+        _addToHistory(hz);
+      }
+    } else {
+      _addToHistory(hz);
+    }
+
+    // Stability gate (over the whole history ring)
+    if (_freqHistory.length < _stableNeeded) return;
+    if (_centSpread(_freqHistory) > _stableCents) return;
+
+    final stableHz = _median(_freqHistory);
+
+    // ── Reference mode: measure cents relative to the pinned string ──────────
+    if (state.tunerMode == TunerMode.reference && state.referenceString == null) {
+      return;
+    }
+    if (state.tunerMode == TunerMode.reference && state.referenceString != null) {
+      final refHz    = state.referenceString!.frequencyAt(state.a4Hz.toDouble());
+      final refCents = (1200 * log(stableHz / refHz) / ln2).clamp(-100.0, 100.0);
+      state = state.copyWith(
+        isStale: false,
+        detectedHz: stableHz,
+        closestNoteName: state.referenceString!.label,
+        cents: refCents,
+      );
+      return;
+    }
+
+    // ── Auto mode: find the closest note ────────────────────────────────────
+    final String noteName;
+    final double centsVal;
+    if (state.selectedHarp != null) {
+      final harpStrings = HarpPresets.stringsFor(
+        state.selectedHarp!,
+        leverStringCount: state.leverStringCount,
+      );
+      final closest = MusicUtils.closestString(stableHz, harpStrings);
+      if (closest == null) return;
+      noteName = closest.label;
+      centsVal = MusicUtils.centsFromTarget(
+          stableHz, closest.frequencyAt(state.a4Hz.toDouble()));
+    } else {
+      final info = MusicUtils.frequencyToNoteInfo(
+        stableHz,
+        preferFlats: state.preferFlats,
+        pedalHarp: false,
+        a4Hz: state.a4Hz.toDouble(),
+      );
+      noteName = info.noteName;
+      centsVal = info.cents;
+    }
+
+    // Hysteresis: instant first acquisition, challenge-gated switching.
+    if (_confirmedNote == null || _confirmedNote == noteName) {
+      _confirmedNote = noteName;
+      _challengeNote = null;
+      _challengeCount = 0;
+      state = state.copyWith(
+        isStale: false,
+        detectedHz: stableHz,
+        closestNoteName: noteName,
+        cents: centsVal,
+      );
+    } else {
+      if (_challengeNote == noteName) {
+        _challengeCount++;
+      } else {
+        _challengeNote = noteName;
+        _challengeCount = 1;
+      }
+      if (_challengeCount >= _challengeNeededIos) {
+        _confirmedNote = noteName;
+        _challengeNote = null;
+        _challengeCount = 0;
+        state = state.copyWith(
+          isStale: false,
+          detectedHz: stableHz,
+          closestNoteName: noteName,
+          cents: centsVal,
+        );
+      }
+    }
+  }
+
+  // ── Android corrector (Play Store v1.1.11) ────────────────────────────────
+  // Frozen to the Android store version: full harmonic correction (octave,
+  // twelfth, two-octave, plus bass inter-harmonic < 250 Hz), sliding stability
+  // window, null-frame tolerance, and challenge-gated acquisition — tuned for
+  // slow Android devices. Kept separate from the iOS corrector.
+  void _onPitchResultAndroid(PitchResult? result) {
+    if (result == null) {
+      _silenceCount++;
+      // Isolated nulls are NOT treated as note ends. On slow Android devices
+      // YIN emits null frames intermittently while a string is still ringing
+      // (true/null/true/null), and _silenceCount resets to 0 on every pitched
+      // frame — so a single null must not disturb history or the acquisition
+      // counter, or notes could never confirm. Detection state is only reset
+      // on SUSTAINED silence (the note has genuinely stopped).
+      if (_silenceCount == _kStaleFrames) {
+        // ~1.4s of continuous silence: the note has stopped. Clear detection
+        // state so the next note acquires fresh, and dim the display.
+        _freqHistory.clear();
+        _confirmedNote = null;
+        _challengeNote = null;
+        _challengeCount = 0;
+        if (!state.isStale && state.cents != null) {
+          state = state.copyWith(isStale: true);
+        }
+      } else if (_silenceCount >= _kHoldFrames) {
+        // ~2s of silence: wipe the display too.
+        _silenceCount = 0;
+        _freqHistory.clear();
+        _confirmedNote = null;
+        _challengeNote = null;
+        _challengeCount = 0;
+        state = state.copyWith(clearPitch: true); // also resets isStale
+      }
+      return;
+    }
+
+    // Suppress pitch updates briefly after playing a reference tone so the
+    // speaker output doesn't confuse the pitch detector.
+    if (_suppressUntil != null && DateTime.now().isBefore(_suppressUntil!)) {
+      return;
+    }
+
+    // Signal returned — reset silence tracking
+    _silenceCount = 0;
+
+    final hz = result.frequency;
+
+    // Octave correction + outlier rejection
+    if (_freqHistory.isNotEmpty) {
+      final med = _median(_freqHistory);
+      final centsDiff = 1200 * log(hz / med) / ln2;
+      if (centsDiff.abs() > 150) {
+        final corrected = _octaveCorrectAndroid(hz, med);
         if (corrected == null) {
           // Too far for harmonic correction — a genuine note change, not a YIN
           // harmonic error (those are corrected above). Clear the stale history
@@ -615,39 +761,6 @@ class TunerNotifier extends Notifier<TunerState> {
           // at most one or two challenge frames and never reaches the display.
           _freqHistory.clear();
           _addToHistory(hz);
-          _resetReanchor();
-        } else if (_confirmedNote == null && hz > med && _isSubHarmonic(med, hz)) {
-          // Anti-sub-harmonic re-anchor (acquisition only). A sub-harmonic
-          // misread reads LOW — e.g. C4 (261 Hz) read as C4÷3 = F2 (87 Hz). If
-          // that wrong low value seeds the empty history first, _octaveCorrect
-          // would fold the real, higher fundamental DOWN onto it (261 × 1/3 ≈
-          // 87) and the note locks to the wrong (lower) string, or never
-          // switches until re-plucked. While no note is confirmed yet, a stream
-          // of readings that are a higher integer multiple of the median means
-          // the median is the sub-harmonic and hz is the true fundamental:
-          // re-anchor UP to hz instead of folding down. Persistence
-          // (_reanchorNeeded frames) stops a single stray ×2 overtone from
-          // jumping an octave. A confirmed/held note skips this entirely — it
-          // rejects overtones via _octaveCorrect and must not drift.
-          if (_reanchorCandidate != null &&
-              (1200 * log(hz / _reanchorCandidate!) / ln2).abs() < 80) {
-            _reanchorCount++;
-          } else {
-            _reanchorCandidate = hz;
-            _reanchorCount = 1;
-          }
-          if (_reanchorCount >= _reanchorNeeded) {
-            // The higher fundamental has persisted — discard the sub-harmonic
-            // seed and re-anchor history to it. Falls through to the stability
-            // gate, which re-accumulates from the corrected pitch.
-            _freqHistory.clear();
-            _addToHistory(hz);
-            _resetReanchor();
-          } else {
-            // Not yet persistent: hold this frame OUT of history so it isn't
-            // folded down and used to reinforce the sub-harmonic seed.
-            return;
-          }
         } else {
           _addToHistory(corrected);
         }
@@ -724,7 +837,7 @@ class TunerNotifier extends Notifier<TunerState> {
     }
 
     // Confirm / switch with hysteresis. A candidate note must persist for
-    // _challengeNeeded consecutive stability-passing frames before it is shown.
+    // _challengeNeededAndroid consecutive stability-passing frames before shown.
     // This applies to BOTH first acquisition (no confirmed note) and switching,
     // so a brief attack-transient sub-harmonic — e.g. plucking D5 momentarily
     // reading as its sub-harmonic G before the string settles — lands at most
@@ -746,11 +859,10 @@ class TunerNotifier extends Notifier<TunerState> {
         _challengeNote = noteName;
         _challengeCount = 1;
       }
-      if (_challengeCount >= _challengeNeeded) {
+      if (_challengeCount >= _challengeNeededAndroid) {
         _confirmedNote = noteName;
         _challengeNote = null;
         _challengeCount = 0;
-        _resetReanchor();
         state = state.copyWith(
           isStale: false,
           detectedHz: stableHz,
@@ -759,26 +871,6 @@ class TunerNotifier extends Notifier<TunerState> {
         );
       }
     }
-  }
-
-  void _resetReanchor() {
-    _reanchorCandidate = null;
-    _reanchorCount = 0;
-  }
-
-  // True when [low] is ≈ the ÷3 sub-harmonic (a twelfth below) of [high] within
-  // ~80 cents — i.e. [high] is a plausible true fundamental and [low] is the
-  // twelfth-too-low misread YIN sometimes reports (e.g. C4 read as F2).
-  //
-  // ONLY the ×3 twelfth is checked — deliberately NOT the octave-class ×2/×4.
-  // Every plucked string has a strong 2nd harmonic exactly an octave up, so a
-  // higher reading at ×2 (or ×4) is ambiguous: it could be a sub-harmonic seed
-  // OR just the note's own octave overtone flashing during the attack. Treating
-  // ×2 as a sub-harmonic made acquisition jump UP an octave on that overtone
-  // (e.g. B♭4 shown as B♭5). The twelfth is a different pitch class, so a
-  // persistent ×3 relationship reliably means the seed was the sub-harmonic.
-  bool _isSubHarmonic(double low, double high) {
-    return (1200 * log(high / (low * 3.0)) / ln2).abs() < 80;
   }
 
   void _addToHistory(double hz) {
@@ -797,35 +889,41 @@ class TunerNotifier extends Notifier<TunerState> {
     return 1200 * log(s.last / s.first) / ln2;
   }
 
-  // Pulls a reading that landed on a harmonic (or sub-harmonic) of the note
-  // being played back to the fundamental in [reference]'s octave. YIN regularly
-  // latches onto the 2nd or 3rd harmonic of a plucked string — e.g. D4's 3rd
-  // harmonic ≈ A5, C4's 3rd harmonic ≈ G5, C4's sub-3rd ≈ F2 — which would
-  // otherwise be read as a different (wrong) note that snaps "in tune". Trying
-  // ×2/÷2 (octave), ×3/÷3 (twelfth) and ×4/÷4 (two octaves) covers the
-  // harmonics strong enough for YIN to misfire on. Returns null when no
-  // harmonic ratio lands within 80 cents of the reference — i.e. a genuine
-  // note change rather than a harmonic error.
-  double? _octaveCorrect(double hz, double reference) {
+  // iOS corrector (App Store v1.1.10): octave-only correction. Pulls a reading
+  // that landed exactly an octave off the held note back into [reference]'s
+  // octave. Returns null for anything that isn't a ×2/÷2 octave error — i.e. a
+  // genuine note change.
+  double? _octaveCorrectIos(double hz, double reference) {
+    for (final factor in [2.0, 0.5]) {
+      final candidate = hz * factor;
+      final cents = 1200 * log(candidate / reference) / ln2;
+      if (cents.abs() < 80) return candidate;
+    }
+    return null;
+  }
+
+  // Android corrector (Play Store v1.1.11): pulls a reading that landed on a
+  // harmonic (or sub-harmonic) of the note back to the fundamental in
+  // [reference]'s octave. YIN regularly latches onto the 2nd or 3rd harmonic of
+  // a plucked string — e.g. D4's 3rd harmonic ≈ A5, C4's 3rd ≈ G5, C4's sub-3rd
+  // ≈ F2 — which would otherwise read as a different (wrong) note that snaps
+  // "in tune". Trying ×2/÷2 (octave), ×3/÷3 (twelfth) and ×4/÷4 (two octaves)
+  // covers the harmonics strong enough for YIN to misfire on. Returns null when
+  // no harmonic ratio lands within 80 cents — i.e. a genuine note change.
+  double? _octaveCorrectAndroid(double hz, double reference) {
     for (final factor in [2.0, 0.5, 3.0, 1 / 3, 4.0, 0.25]) {
       final candidate = hz * factor;
       final cents = 1200 * log(candidate / reference) / ln2;
       if (cents.abs() < 80) return candidate;
     }
-    // The very lowest strings (~30–62 Hz fundamentals) have a weak fundamental,
-    // so YIN jumps BETWEEN harmonics frame to frame — e.g. a ~61 Hz string read
-    // as its 2nd harmonic (124 Hz) one frame and its 3rd (184 Hz) the next.
-    // Those differ by 3:2, 4:3, etc. — not a simple multiple of the fundamental
-    // — so the factors above miss them and the note flips (C♭ ↔ G♭). Snap these
-    // inter-harmonic ratios too, but ONLY when the reference is below ~130 Hz.
-    //
-    // The cutoff is deliberately just above those harmonics (124 Hz) and below
-    // real mid-bass strings: a 250 Hz cutoff (the original) swallowed the whole
-    // bass register and collapsed genuine melodic fourths/fifths — e.g. playing
-    // B3 (247 Hz) after E3 (165 Hz) snapped 247 × 2/3 ≈ 165 and showed E instead
-    // of B. References at E3 (165) and up are well-locked fundamentals, so a 3:2
-    // jump there is a real interval between two strings that must switch.
-    if (reference < 130) {
+    // Bass strings (< 250 Hz) have a weak fundamental, so YIN jumps BETWEEN
+    // harmonics frame to frame — e.g. a ~61 Hz string read as its 2nd harmonic
+    // (124 Hz) one frame and its 3rd (184 Hz) the next. Those differ by 3:2,
+    // 4:3, etc. — not a simple multiple of the fundamental — so the factors
+    // above miss them and the note flips (C♭ ↔ G♭). Snap these inter-harmonic
+    // ratios too, but ONLY in the bass: higher up the same ratios are genuine
+    // fifths/fourths between real strings (e.g. A4 → E5) that must NOT collapse.
+    if (reference < 250) {
       for (final factor in [3 / 2, 2 / 3, 4 / 3, 3 / 4]) {
         final candidate = hz * factor;
         final cents = 1200 * log(candidate / reference) / ln2;
