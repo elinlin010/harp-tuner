@@ -10,8 +10,10 @@ import '../models/harp_string_model.dart';
 import '../models/harp_type.dart';
 import '../providers/locale_provider.dart';
 import '../providers/tuner_provider.dart';
+import '../services/feedback_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import '../widgets/feedback_dialog.dart';
 import '../widgets/mode_toggle.dart';
 import '../widgets/settings_display.dart';
 import '../widgets/string_visualizer.dart';
@@ -27,6 +29,16 @@ class TunerScreen extends ConsumerStatefulWidget {
 class _TunerScreenState extends ConsumerState<TunerScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _listenBtnCtrl;
+
+  // ── Failed-session feedback nudge state ───────────────────────────────────
+  // We nudge for feedback when a tuning session ends without ever locking a
+  // note — the moment a frustrated user gives up. Gated so it's never naggy:
+  // the session must be long enough to be a real attempt, and we ask at most
+  // once per app run.
+  DateTime? _sessionStart;
+  bool _lockedThisSession = false;
+  bool _troubleNudgeShown = false;
+  static const _minSessionForNudge = Duration(seconds: 8);
 
   @override
   void initState() {
@@ -125,6 +137,58 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     );
   }
 
+  // Shown when a tuning session ends without ever locking a note. Offers a
+  // one-tap path into the feedback dialog (trigger: failedSession).
+  void _showTroubleNudge(TunerThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+
+    final bool light = theme.brightness == Brightness.light;
+    final Color bgColor = light ? theme.textPrimary : theme.surfaceHi;
+    final Color contentColor = light ? theme.bg : theme.textPrimary;
+    final Color actionColor = theme.inTune;
+
+    messenger.showSnackBar(
+      SnackBar(
+        backgroundColor: bgColor,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(10)),
+          side: light
+              ? BorderSide.none
+              : BorderSide(color: theme.inTune, width: 1.5),
+        ),
+        duration: const Duration(seconds: 8),
+        content: Row(
+          children: [
+            Expanded(
+              child: Text(l10n.feedbackTroubleTitle,
+                  style: theme.sans(16, color: contentColor)),
+            ),
+            const SizedBox(width: 16),
+            Semantics(
+              button: true,
+              label: l10n.feedbackTroubleBtn,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  messenger.hideCurrentSnackBar();
+                  showFeedbackDialog(context, FeedbackTrigger.failedSession);
+                },
+                child: Text(
+                  l10n.feedbackTroubleBtn,
+                  style: theme.sans(18,
+                      weight: FontWeight.w700, color: actionColor),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   HarpStringModel? _closestString(
       List<HarpStringModel> strings, double? hz, int a4Hz) {
     if (hz == null || strings.isEmpty) return null;
@@ -171,6 +235,25 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
         _showTuningReminderSnackBar(next.selectedHarp!, theme);
       } else if (stoppedListening || (reminderTurnedOff && next.isListening)) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      }
+
+      // ── Failed-session feedback nudge ──────────────────────────────────
+      if (startedListening) {
+        _sessionStart = DateTime.now();
+        _lockedThisSession = false;
+      }
+      // Any real pitch lock this session disqualifies the "trouble" nudge.
+      if (next.isListening && next.detectedHz != null) {
+        _lockedThisSession = true;
+      }
+      if (stoppedListening &&
+          !_lockedThisSession &&
+          !_troubleNudgeShown &&
+          FeedbackService.instance.isAvailable &&
+          _sessionStart != null &&
+          DateTime.now().difference(_sessionStart!) >= _minSessionForNudge) {
+        _troubleNudgeShown = true;
+        _showTroubleNudge(theme);
       }
     });
 
@@ -250,6 +333,29 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                         ),
                       ),
                     ),
+                    // Feedback button — always-visible entry point into the
+                    // feedback dialog (icon-only: the label varies by locale).
+                    if (FeedbackService.instance.isAvailable) ...[
+                      const SizedBox(width: 8),
+                      Semantics(
+                        button: true,
+                        label: AppLocalizations.of(context)!.settingsFeedbackRow,
+                        child: Material(
+                          color: theme.surfaceHi,
+                          borderRadius: BorderRadius.circular(20),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => showFeedbackDialog(
+                                context, FeedbackTrigger.mainScreen),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Icon(Icons.feedback_outlined,
+                                  size: 18, color: theme.textSecondary),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -632,9 +738,83 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                 ref.read(localeProvider.notifier).setLocale(locale),
             theme: theme,
           )),
+
+          // ── Feedback ──────────────────────────────────────────────────────
+          // Hidden until a Firebase project is wired up (flutterfire configure).
+          if (FeedbackService.instance.isAvailable) ...[
+            const SizedBox(height: 20),
+            Divider(color: theme.surfaceRim, height: 1),
+            const SizedBox(height: 12),
+            _hPad(_FeedbackRow(
+              label: l10n.settingsFeedbackRow,
+              subtitle: l10n.settingsFeedbackRowHint,
+              theme: theme,
+              onTap: () {
+                // Close the sheet, then open the dialog on the screen's
+                // navigator (still valid after the pop).
+                final navigator = Navigator.of(context);
+                navigator.pop();
+                showFeedbackDialog(navigator.context, FeedbackTrigger.settings);
+              },
+            )),
+          ],
+          const SizedBox(height: 8),
           ],
         ),
       ),
+      ),
+    );
+  }
+}
+
+// A tappable row that opens the feedback dialog (label + subtitle, chevron).
+class _FeedbackRow extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+  final TunerThemeData theme;
+
+  const _FeedbackRow({
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            children: [
+              Icon(Icons.chat_bubble_outline_rounded,
+                  size: 20, color: theme.textSecondary),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label,
+                        style: theme.sans(16,
+                            weight: FontWeight.w600, color: theme.textPrimary)),
+                    const SizedBox(height: 2),
+                    Text(subtitle,
+                        style: theme.sans(16, color: theme.textSecondary)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Icon(Icons.chevron_right_rounded,
+                  size: 22, color: theme.textDim),
+            ],
+          ),
+        ),
       ),
     );
   }

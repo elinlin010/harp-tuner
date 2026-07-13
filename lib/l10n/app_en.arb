@@ -71,5 +71,20 @@
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "STRINGS",
   "settingsDisplayHarpLever": "Lever",
-  "settingsDisplayHarpPedal": "Pedal"
+  "settingsDisplayHarpPedal": "Pedal",
+  "settingsFeedbackRow": "Send feedback",
+  "settingsFeedbackRowHint": "Help us improve Harpie",
+  "feedbackTitle": "Send feedback",
+  "feedbackHint": "What's working? What isn't?",
+  "feedbackSendBtn": "Send",
+  "feedbackCancelBtn": "Cancel",
+  "feedbackThanks": "Thanks — we read every message.",
+  "feedbackError": "Couldn't send. Please try again.",
+  "feedbackTroubleTitle": "Having trouble tuning?",
+  "feedbackTroubleBtn": "Tell us",
+  "feedbackRatingQuestion": "How's Harpie working for you?",
+  "feedbackRatingLoveIt": "Love it",
+  "feedbackRatingFine": "It's fine",
+  "feedbackRatingNeedsWork": "Needs work",
+  "feedbackRatingFrustrating": "Frustrating"
 }

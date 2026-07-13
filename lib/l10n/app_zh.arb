@@ -71,5 +71,20 @@
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "弦數",
   "settingsDisplayHarpLever": "撥鍵",
-  "settingsDisplayHarpPedal": "踏板"
+  "settingsDisplayHarpPedal": "踏板",
+  "settingsFeedbackRow": "发送反馈",
+  "settingsFeedbackRowHint": "帮助我们改进 Harpie",
+  "feedbackTitle": "发送反馈",
+  "feedbackHint": "哪些好用？哪些不好用？",
+  "feedbackSendBtn": "发送",
+  "feedbackCancelBtn": "取消",
+  "feedbackThanks": "谢谢——我们会阅读每一条留言。",
+  "feedbackError": "发送失败，请重试。",
+  "feedbackTroubleTitle": "调音遇到问题了吗？",
+  "feedbackTroubleBtn": "告诉我们",
+  "feedbackRatingQuestion": "Harpie 用起来怎么样？",
+  "feedbackRatingLoveIt": "很棒",
+  "feedbackRatingFine": "还不错",
+  "feedbackRatingNeedsWork": "有待改进",
+  "feedbackRatingFrustrating": "很糟糕"
 }

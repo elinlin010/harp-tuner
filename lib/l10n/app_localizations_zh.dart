@@ -170,6 +170,51 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsDisplayHarpPedal => '踏板';
+
+  @override
+  String get settingsFeedbackRow => '发送反馈';
+
+  @override
+  String get settingsFeedbackRowHint => '帮助我们改进 Harpie';
+
+  @override
+  String get feedbackTitle => '发送反馈';
+
+  @override
+  String get feedbackHint => '哪些好用？哪些不好用？';
+
+  @override
+  String get feedbackSendBtn => '发送';
+
+  @override
+  String get feedbackCancelBtn => '取消';
+
+  @override
+  String get feedbackThanks => '谢谢——我们会阅读每一条留言。';
+
+  @override
+  String get feedbackError => '发送失败，请重试。';
+
+  @override
+  String get feedbackTroubleTitle => '调音遇到问题了吗？';
+
+  @override
+  String get feedbackTroubleBtn => '告诉我们';
+
+  @override
+  String get feedbackRatingQuestion => 'Harpie 用起来怎么样？';
+
+  @override
+  String get feedbackRatingLoveIt => '很棒';
+
+  @override
+  String get feedbackRatingFine => '还不错';
+
+  @override
+  String get feedbackRatingNeedsWork => '有待改进';
+
+  @override
+  String get feedbackRatingFrustrating => '很糟糕';
 }
 
 /// The translations for Chinese, as used in Taiwan (`zh_TW`).
@@ -338,4 +383,49 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsDisplayHarpPedal => '踏板';
+
+  @override
+  String get settingsFeedbackRow => '傳送意見';
+
+  @override
+  String get settingsFeedbackRowHint => '協助我們改進 Harpie';
+
+  @override
+  String get feedbackTitle => '傳送意見';
+
+  @override
+  String get feedbackHint => '哪些好用？哪些不好用？';
+
+  @override
+  String get feedbackSendBtn => '傳送';
+
+  @override
+  String get feedbackCancelBtn => '取消';
+
+  @override
+  String get feedbackThanks => '謝謝——我們會閱讀每一則訊息。';
+
+  @override
+  String get feedbackError => '傳送失敗，請重試。';
+
+  @override
+  String get feedbackTroubleTitle => '調音遇到問題嗎？';
+
+  @override
+  String get feedbackTroubleBtn => '告訴我們';
+
+  @override
+  String get feedbackRatingQuestion => 'Harpie 用起來如何？';
+
+  @override
+  String get feedbackRatingLoveIt => '很棒';
+
+  @override
+  String get feedbackRatingFine => '還不錯';
+
+  @override
+  String get feedbackRatingNeedsWork => '有待改進';
+
+  @override
+  String get feedbackRatingFrustrating => '很糟糕';
 }

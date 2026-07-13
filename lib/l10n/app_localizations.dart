@@ -414,6 +414,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pedal'**
   String get settingsDisplayHarpPedal;
+
+  /// No description provided for @settingsFeedbackRow.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback'**
+  String get settingsFeedbackRow;
+
+  /// No description provided for @settingsFeedbackRowHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Help us improve Harpie'**
+  String get settingsFeedbackRowHint;
+
+  /// No description provided for @feedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Send feedback'**
+  String get feedbackTitle;
+
+  /// No description provided for @feedbackHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s working? What isn\'t?'**
+  String get feedbackHint;
+
+  /// No description provided for @feedbackSendBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Send'**
+  String get feedbackSendBtn;
+
+  /// No description provided for @feedbackCancelBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get feedbackCancelBtn;
+
+  /// No description provided for @feedbackThanks.
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks — we read every message.'**
+  String get feedbackThanks;
+
+  /// No description provided for @feedbackError.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send. Please try again.'**
+  String get feedbackError;
+
+  /// No description provided for @feedbackTroubleTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Having trouble tuning?'**
+  String get feedbackTroubleTitle;
+
+  /// No description provided for @feedbackTroubleBtn.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell us'**
+  String get feedbackTroubleBtn;
+
+  /// No description provided for @feedbackRatingQuestion.
+  ///
+  /// In en, this message translates to:
+  /// **'How\'s Harpie working for you?'**
+  String get feedbackRatingQuestion;
+
+  /// No description provided for @feedbackRatingLoveIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Love it'**
+  String get feedbackRatingLoveIt;
+
+  /// No description provided for @feedbackRatingFine.
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s fine'**
+  String get feedbackRatingFine;
+
+  /// No description provided for @feedbackRatingNeedsWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs work'**
+  String get feedbackRatingNeedsWork;
+
+  /// No description provided for @feedbackRatingFrustrating.
+  ///
+  /// In en, this message translates to:
+  /// **'Frustrating'**
+  String get feedbackRatingFrustrating;
 }
 
 class _AppLocalizationsDelegate

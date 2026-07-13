@@ -71,5 +71,20 @@
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "SAITEN",
   "settingsDisplayHarpLever": "Haken",
-  "settingsDisplayHarpPedal": "Pedal"
+  "settingsDisplayHarpPedal": "Pedal",
+  "settingsFeedbackRow": "Feedback senden",
+  "settingsFeedbackRowHint": "Hilf uns, Harpie zu verbessern",
+  "feedbackTitle": "Feedback senden",
+  "feedbackHint": "Was funktioniert? Was nicht?",
+  "feedbackSendBtn": "Senden",
+  "feedbackCancelBtn": "Abbrechen",
+  "feedbackThanks": "Danke – wir lesen jede Nachricht.",
+  "feedbackError": "Senden fehlgeschlagen. Bitte erneut versuchen.",
+  "feedbackTroubleTitle": "Probleme beim Stimmen?",
+  "feedbackTroubleBtn": "Sag es uns",
+  "feedbackRatingQuestion": "Wie gut funktioniert Harpie für dich?",
+  "feedbackRatingLoveIt": "Super",
+  "feedbackRatingFine": "Ganz okay",
+  "feedbackRatingNeedsWork": "Verbesserungswürdig",
+  "feedbackRatingFrustrating": "Frustrierend"
 }

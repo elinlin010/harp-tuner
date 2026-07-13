@@ -71,5 +71,20 @@
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "CORDES",
   "settingsDisplayHarpLever": "Celtique",
-  "settingsDisplayHarpPedal": "Pédales"
+  "settingsDisplayHarpPedal": "Pédales",
+  "settingsFeedbackRow": "Envoyer un commentaire",
+  "settingsFeedbackRowHint": "Aidez-nous à améliorer Harpie",
+  "feedbackTitle": "Envoyer un commentaire",
+  "feedbackHint": "Qu'est-ce qui marche ? Qu'est-ce qui ne marche pas ?",
+  "feedbackSendBtn": "Envoyer",
+  "feedbackCancelBtn": "Annuler",
+  "feedbackThanks": "Merci — nous lisons chaque message.",
+  "feedbackError": "Échec de l'envoi. Veuillez réessayer.",
+  "feedbackTroubleTitle": "Des difficultés à accorder ?",
+  "feedbackTroubleBtn": "Dites-le-nous",
+  "feedbackRatingQuestion": "Harpie vous convient-il ?",
+  "feedbackRatingLoveIt": "J'adore",
+  "feedbackRatingFine": "Ça va",
+  "feedbackRatingNeedsWork": "À améliorer",
+  "feedbackRatingFrustrating": "Frustrant"
 }

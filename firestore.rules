@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Anonymous in-app feedback. Create-only with a message size cap; the
+    // console is the only reader. See plan/FEEDBACK-SETUP.md.
+    match /feedback/{doc} {
+      allow create: if request.resource.data.message is string
+                    && request.resource.data.message.size() <= 2000;
+      allow read, update, delete: if false;
+    }
+  }
+}
