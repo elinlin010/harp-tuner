@@ -173,4 +173,50 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get settingsDisplayHarpPedal => 'Pédales';
+
+  @override
+  String get settingsFeedbackRow => 'Envoyer un commentaire';
+
+  @override
+  String get settingsFeedbackRowHint => 'Aidez-nous à améliorer Harpie';
+
+  @override
+  String get feedbackTitle => 'Envoyer un commentaire';
+
+  @override
+  String get feedbackHint =>
+      'Qu\'est-ce qui marche ? Qu\'est-ce qui ne marche pas ?';
+
+  @override
+  String get feedbackSendBtn => 'Envoyer';
+
+  @override
+  String get feedbackCancelBtn => 'Annuler';
+
+  @override
+  String get feedbackThanks => 'Merci — nous lisons chaque message.';
+
+  @override
+  String get feedbackError => 'Échec de l\'envoi. Veuillez réessayer.';
+
+  @override
+  String get feedbackTroubleTitle => 'Des difficultés à accorder ?';
+
+  @override
+  String get feedbackTroubleBtn => 'Dites-le-nous';
+
+  @override
+  String get feedbackRatingQuestion => 'Harpie vous convient-il ?';
+
+  @override
+  String get feedbackRatingLoveIt => 'J\'adore';
+
+  @override
+  String get feedbackRatingFine => 'Ça va';
+
+  @override
+  String get feedbackRatingNeedsWork => 'À améliorer';
+
+  @override
+  String get feedbackRatingFrustrating => 'Frustrant';
 }

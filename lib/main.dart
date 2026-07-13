@@ -5,10 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/locale_provider.dart';
 import 'screens/tuner_screen.dart';
+import 'services/feedback_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/theme_provider.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
@@ -18,6 +19,10 @@ void main() {
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
   ));
+  // Attempt Firebase init for in-app feedback. Non-fatal: if no Firebase
+  // project is configured yet (run `flutterfire configure`), feedback is
+  // silently disabled and the rest of the app runs normally.
+  await FeedbackService.instance.tryInitialize();
   runApp(const ProviderScope(child: HarpTunerApp()));
 }
 

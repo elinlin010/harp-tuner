@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.1.15+25
+version: 1.2.0+26
 
 environment:
   sdk: ^3.11.0
@@ -42,6 +42,13 @@ dependencies:
   mic_stream: ^0.7.0
   pitch_detector_dart: any
   permission_handler: ^12.0.1
+
+  # Anonymous in-app feedback (see lib/services/feedback_service.dart).
+  # Firebase init is guarded in main.dart; missing config degrades to a no-op.
+  firebase_core: ^3.6.0
+  cloud_firestore: ^5.4.0
+  package_info_plus: ^8.0.0
+  device_info_plus: ^11.0.0
 
 dependency_overrides:
   # Force permission_handler to 12.x for iOS 26 compatibility.

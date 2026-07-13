@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "125023640622",
+    "project_id": "harpie-app",
+    "storage_bucket": "harpie-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:125023640622:android:4771572fe6ca74e28613bf",
+        "android_client_info": {
+          "package_name": "com.career010.harpie"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB3sr-HGYe8ypaPHCn5q6OL47MeOA8pxgM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

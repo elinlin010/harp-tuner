@@ -71,5 +71,20 @@
   "settingsDisplayLabelA4": "A4",
   "settingsDisplayLabelStrings": "CORDE",
   "settingsDisplayHarpLever": "Celtica",
-  "settingsDisplayHarpPedal": "A pedali"
+  "settingsDisplayHarpPedal": "A pedali",
+  "settingsFeedbackRow": "Invia feedback",
+  "settingsFeedbackRowHint": "Aiutaci a migliorare Harpie",
+  "feedbackTitle": "Invia feedback",
+  "feedbackHint": "Cosa funziona? Cosa no?",
+  "feedbackSendBtn": "Invia",
+  "feedbackCancelBtn": "Annulla",
+  "feedbackThanks": "Grazie — leggiamo ogni messaggio.",
+  "feedbackError": "Invio non riuscito. Riprova.",
+  "feedbackTroubleTitle": "Problemi con l'accordatura?",
+  "feedbackTroubleBtn": "Dillo a noi",
+  "feedbackRatingQuestion": "Come ti trovi con Harpie?",
+  "feedbackRatingLoveIt": "Lo adoro",
+  "feedbackRatingFine": "Va bene",
+  "feedbackRatingNeedsWork": "Da migliorare",
+  "feedbackRatingFrustrating": "Frustrante"
 }
