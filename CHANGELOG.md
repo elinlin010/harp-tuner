@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.2.0+26] - 2026-07-13
+
+### Added
+- In-app feedback. Send feedback from a new button on the main screen or from Settings, with an optional 4-level satisfaction rating (Love it / It's fine / Needs work / Frustrating). A prompt also appears if a tuning session ends without ever locking a note. Feedback is anonymous (no account, no tracking) and includes app/device context to help diagnose issues. Available in all 6 languages.
+
 ## [1.1.15+25] - 2026-06-18
 
 ### Changed
