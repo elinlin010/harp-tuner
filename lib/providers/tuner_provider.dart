@@ -148,6 +148,11 @@ class TunerNotifier extends Notifier<TunerState> {
   String? _challengeNote;
   int _challengeCount = 0;
 
+  // iOS corrector only: last far (>150¢ from median, non-octave) frame,
+  // held pending. A genuine note change must show two consecutive agreeing
+  // far frames before the history is flushed; a lone outlier is dropped.
+  double? _pendingFarHz;
+
   // Which platform's detection corrector to run. iOS and Android ship different,
   // independently-tuned pitch correctors (the algorithms diverged when Android's
   // slow-device fixes degraded iOS, so they are now kept separate — see
@@ -276,6 +281,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
+    _pendingFarHz = null;
     state = state.copyWith(isListening: false, clearPitch: true);
   }
 
@@ -355,6 +361,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _confirmedNote = null;
     _challengeNote = null;
     _challengeCount = 0;
+    _pendingFarHz = null;
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
 
@@ -584,6 +591,7 @@ class TunerNotifier extends Notifier<TunerState> {
         _confirmedNote = null;
         _challengeNote = null;
         _challengeCount = 0;
+        _pendingFarHz = null;
       } else if (_silenceCount == _kStaleFrames && !state.isStale) {
         // Sustained silence: dim the display to signal stale reading
         if (state.cents != null) state = state.copyWith(isStale: true);
@@ -612,9 +620,37 @@ class TunerNotifier extends Notifier<TunerState> {
       final centsDiff = 1200 * log(hz / med) / ln2;
       if (centsDiff.abs() > 150) {
         final corrected = _octaveCorrectIos(hz, med);
-        if (corrected == null) return;
-        _addToHistory(corrected);
+        if (corrected != null) {
+          _pendingFarHz = null;
+          _addToHistory(corrected);
+        } else if (_pendingFarHz != null &&
+            (1200 * log(hz / _pendingFarHz!) / ln2).abs() < 150) {
+          // Second consecutive far frame agreeing with the first — a genuine
+          // note change, not a stray glitch. This is the only switch path when
+          // the previous string is still ringing: YIN keeps emitting pitched
+          // frames, so the first-silence reset never fires. Flush the stale
+          // history so the new note accumulates cleanly, and reset the
+          // challenge counter so disjoint wrong-note bursts can't ratchet it
+          // up across flushes. In auto mode the challenge gate below still
+          // demands _challengeNeededIos consecutive stable candidates before
+          // the display moves; in reference mode the 3-frame stability window
+          // is the only filter — intentional, so the pinned string's gauge
+          // recovers without a silence gap.
+          _freqHistory.clear();
+          _addToHistory(_pendingFarHz!);
+          _addToHistory(hz);
+          _pendingFarHz = null;
+          _challengeNote = null;
+          _challengeCount = 0;
+        } else {
+          // First far frame: a lone outlier (harmonic glitch, attack
+          // transient) must not disturb the smoothing ring. Hold it pending;
+          // it only counts if the very next frame agrees with it.
+          _pendingFarHz = hz;
+          return;
+        }
       } else {
+        _pendingFarHz = null;
         _addToHistory(hz);
       }
     } else {
