@@ -711,10 +711,11 @@ void main() {
           reason: 'iOS octave-corrects a ×2 overtone back to the fundamental');
     });
 
-    test('iOS: a non-octave far reading is dropped, not switched mid-note', () async {
+    test('iOS: a brief non-octave harmonic flash does not switch the note', () async {
       // iOS corrects ONLY octaves; a far non-octave reading (e.g. a 3rd
-      // harmonic) returns null and the frame is dropped, so a held note isn't
-      // knocked off by a stray harmonic without a silence gap.
+      // harmonic) starts a fresh candidate, but the challenge gate demands
+      // _challengeNeededIos stable frames — a brief harmonic flash never
+      // accumulates enough and the held note stays on screen.
       SharedPreferences.setMockInitialValues({});
       final c = _container();
       await Future.delayed(Duration.zero);
@@ -725,6 +726,108 @@ void main() {
       feed(n, 784.0, 3); // C4's 3rd harmonic ≈ G5
       expect(c.read(tunerProvider).closestNoteName, 'C4',
           reason: 'iOS drops a non-octave harmonic frame, holding the note');
+    });
+
+    test('iOS: switches to a new note with NO silence gap in between', () async {
+      // User-reported pain: plucking the next string while the previous one
+      // still rings means YIN never emits a null frame, so the first-silence
+      // reset never fires. A genuine note change (non-octave, >150¢ away) must
+      // still flush the stale history and switch once the new note is stable —
+      // otherwise the corrector deadlocks on the old note until BOTH strings
+      // are damped.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 440.0, 4); // A4 confirmed
+      expect(c.read(tunerProvider).closestNoteName, 'A4');
+      feed(n, 523.25, 6); // C5 plucked while A4 rings — no null frame between
+      expect(c.read(tunerProvider).closestNoteName, 'C5',
+          reason: 'a genuine note change must not require a silence gap');
+    });
+
+    test('iOS: a lone outlier frame does not disturb a held note', () async {
+      // A single far glitch frame (stray harmonic, attack transient) must be
+      // dropped without flushing the smoothing ring — the needle keeps
+      // tracking the held note instead of freezing while the ring rebuilds.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 440.0, 4); // A4 confirmed
+      n.handlePitchResult(PitchResult(784.0)); // one glitch frame
+      n.handlePitchResult(PitchResult(441.0)); // held note continues
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'A4');
+      expect(s.detectedHz, closeTo(440.0, 6.0),
+          reason: 'a lone glitch must not flush the ring or freeze updates');
+    });
+
+    test('iOS: disjoint wrong-note bursts do not ratchet the challenge gate',
+        () async {
+      // Bursts of a wrong note shorter than the challenge gate, separated by
+      // frames of the still-sounding confirmed note, must not accumulate
+      // challenge frames across flushes and eventually steal the display.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 440.0, 4); // A4 confirmed
+      for (var burst = 0; burst < 3; burst++) {
+        feed(n, 523.25, 4); // short C5 burst — challenge reaches at most 2
+        feed(n, 440.0, 2); // A4 still sounding between bursts
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'A4',
+          reason: 'challenge frames must not accumulate across flushes');
+    });
+
+    test('iOS: alternating far frames do not flap the display', () async {
+      // While two strings ring at once, YIN can ping-pong between them. Each
+      // far frame re-flushes the history, so the ring never reaches the
+      // stability window and the display holds the last confirmed note
+      // instead of flapping between the two.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 440.0, 4); // A4 confirmed
+      expect(c.read(tunerProvider).closestNoteName, 'A4');
+      for (var i = 0; i < 6; i++) {
+        n.handlePitchResult(PitchResult(i.isEven ? 523.25 : 440.0));
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'A4',
+          reason: 'ping-ponging frames must hold the confirmed note, not flap');
+    });
+
+    test('iOS reference mode: gauge recovers after a no-silence note change',
+        () async {
+      // Reference mode pins a target string; the gauge shows cents relative
+      // to it. Plucking the pinned string while a neighbouring string still
+      // rings must re-lock onto the new pitch (via the history flush) — the
+      // v1.1.10 baseline dropped those frames and the gauge stayed stuck.
+      SharedPreferences.setMockInitialValues({});
+      const refString =
+          HarpStringModel(index: 1, note: NoteName.a, octave: 4);
+      final c = _container(
+        overrideState: const TunerState(
+          tunerMode: TunerMode.reference,
+          referenceString: refString,
+          a4Hz: 440,
+        ),
+      );
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 293.66, 4); // neighbouring D4 still ringing — gauge pegged low
+      feed(n, 442.0, 3); // pinned A4 plucked slightly sharp, no null frame
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, refString.label);
+      expect(s.cents, closeTo(7.85, 1.5), // 1200·log2(442/440)
+          reason: 'reference gauge must re-lock without a silence gap');
     });
 
     test('iOS: switches to a new note after a silence gap clears state', () async {
