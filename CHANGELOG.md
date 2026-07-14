@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.2.1+27] - 2026-07-14
+
+### Fixed
+- iOS: switching strings no longer requires damping the previous one first. Plucking the next string while the last one was still ringing could leave the display stuck on the old note until both strings were silenced — the detector treated every reading of the new note as a stray outlier and waited for a silence gap that never came. A genuine note change now re-locks within a few frames even while the previous string rings, in both auto and reference mode. Overtone rejection is unchanged: a brief harmonic flash on a held note still never switches the display. Android was not affected.
+
 ## [1.2.0+26] - 2026-07-13
 
 ### Added
