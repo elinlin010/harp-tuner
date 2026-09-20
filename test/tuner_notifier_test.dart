@@ -4,9 +4,21 @@ import 'package:harp_tuner/models/harp_string_model.dart';
 import 'package:harp_tuner/models/harp_type.dart';
 import 'package:harp_tuner/providers/tuner_provider.dart';
 import 'package:harp_tuner/services/pitch_detection_service.dart';
+import 'package:harp_tuner/services/screen_wake_service.dart';
+import 'package:harp_tuner/services/tone_player_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
+
+// Keeps the real wakelock plugin (which always fails under `flutter test`, and
+// logs each failure) out of tests that only care about pitch handling.
+class _NoopScreenWake extends ScreenWakeService {
+  @override
+  Future<void> enable() async {}
+
+  @override
+  Future<void> disable() async {}
+}
 
 class _FakeNotifier extends TunerNotifier {
   final TunerState? _overrideState;
@@ -15,6 +27,8 @@ class _FakeNotifier extends TunerNotifier {
   @override
   TunerState build() {
     final s = super.build();
+    injectServicesForTest(PitchDetectionService(), TonePlayerService(),
+        screenWake: _NoopScreenWake());
     if (_overrideState != null) {
       state = _overrideState!;
       return _overrideState!;
@@ -25,9 +39,7 @@ class _FakeNotifier extends TunerNotifier {
 
 ProviderContainer _container({TunerState? overrideState}) {
   final c = ProviderContainer(
-    overrides: overrideState != null
-        ? [tunerProvider.overrideWith(() => _FakeNotifier(overrideState))]
-        : [],
+    overrides: [tunerProvider.overrideWith(() => _FakeNotifier(overrideState))],
   );
   addTearDown(c.dispose);
   return c;

@@ -43,6 +43,7 @@ lib/
   services/
     pitch_detection_service.dart  # Mic input + pitch detection (real implementation)
     tone_player_service.dart      # Reference tone playback (real implementation)
+    screen_wake_service.dart      # Holds the screen awake while listening (wakelock_plus)
   screens/
     harp_select_screen.dart    # Harp type picker (entry screen)
     tuner_screen.dart          # Main tuner UI + settings bottom sheet

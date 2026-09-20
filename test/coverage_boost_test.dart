@@ -90,16 +90,21 @@ class _FakeScreenWake extends ScreenWakeService {
 class _FakeServiceNotifier extends TunerNotifier {
   final _FakePitchService _fakeService;
   final _FakeTonePlayer _fakePlayer;
-  final _FakeScreenWake? _fakeScreenWake;
+  final _FakeScreenWake _fakeScreenWake;
   final TunerState? _override;
 
+  // Defaults to a fake so tests that don't care about wake state still keep the
+  // real plugin (and its failure logging) out of the suite.
   _FakeServiceNotifier(this._fakeService, this._fakePlayer,
-      [this._override, this._fakeScreenWake]);
+      {TunerState? override, _FakeScreenWake? screenWake})
+      : _override = override,
+        _fakeScreenWake = screenWake ?? _FakeScreenWake();
 
   @override
   TunerState build() {
     final s = super.build();
-    injectServicesForTest(_fakeService, _fakePlayer, _fakeScreenWake);
+    injectServicesForTest(_fakeService, _fakePlayer,
+        screenWake: _fakeScreenWake);
     if (_override != null) {
       state = _override!;
       return _override!;
@@ -116,8 +121,8 @@ ProviderContainer _containerWithFakes(
 }) {
   final c = ProviderContainer(
     overrides: [
-      tunerProvider.overrideWith(
-          () => _FakeServiceNotifier(svc, tone, overrideState, screenWake)),
+      tunerProvider.overrideWith(() => _FakeServiceNotifier(svc, tone,
+          override: overrideState, screenWake: screenWake)),
     ],
   );
   addTearDown(c.dispose);
@@ -261,6 +266,42 @@ void main() {
       await n.startListening();
       await n.playReferenceString(kString);
       expect(wake.disableCount, 0);
+    });
+
+    test('releases the screen when the mic errors mid-session', () async {
+      // The stream onError handler routes through stopListening(), so an
+      // interrupted mic must not leave the screen pinned awake.
+      SharedPreferences.setMockInitialValues({});
+      final svc = _FakePitchService(permissionResult: true);
+      final wake = _FakeScreenWake();
+      final c = _containerWithFakes(svc, _FakeTonePlayer(), screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.enableCount, 1);
+
+      svc.emitError(const PitchServiceError(
+          isPermissionError: false, message: 'mic lost'));
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(c.read(tunerProvider).isListening, isFalse);
+      expect(wake.disableCount, 1);
+    });
+
+    test('releases the screen when the provider is disposed while listening',
+        () async {
+      // ref.onDispose is the last line of defence: the tuner provider is
+      // app-scoped, so this is the app-teardown path.
+      SharedPreferences.setMockInitialValues({});
+      final wake = _FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.disableCount, 0);
+
+      c.dispose();
+
+      expect(wake.disableCount, 1);
     });
   });
 

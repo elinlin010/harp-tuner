@@ -117,10 +117,10 @@ class TunerNotifier extends Notifier<TunerState> {
 
   @visibleForTesting
   void injectServicesForTest(PitchDetectionService s, TonePlayerService t,
-      [ScreenWakeService? w]) {
+      {ScreenWakeService? screenWake}) {
     _service = s;
     _tonePlayer = t;
-    if (w != null) _screenWake = w;
+    if (screenWake != null) _screenWake = screenWake;
   }
   SharedPreferences? _prefs;
 
@@ -188,7 +188,7 @@ class TunerNotifier extends Notifier<TunerState> {
       _pitchSub?.cancel();
       _service.dispose();
       _tonePlayer.dispose();
-      _screenWake.disable();
+      unawaited(_screenWake.disable());
     });
     _loadPrefs();
     return const TunerState();
@@ -248,7 +248,7 @@ class TunerNotifier extends Notifier<TunerState> {
       clearPitch: true,
     );
 
-    _screenWake.enable();
+    unawaited(_screenWake.enable());
     _attachMicSubscription();
   }
 
@@ -282,7 +282,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _pitchSub?.cancel();
     _pitchSub = null;
     _service.stop();
-    _screenWake.disable();
+    unawaited(_screenWake.disable());
     _freqHistory.clear();
     _silenceCount = 0;
     _confirmedNote = null;

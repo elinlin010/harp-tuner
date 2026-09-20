@@ -7,6 +7,10 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 /// `isIdleTimerDisabled` on iOS. Both are scoped to the foreground window by
 /// the OS: backgrounding the app suspends the effect and resuming restores it,
 /// so no app-lifecycle handling is needed here.
+///
+/// TunerNotifier does not await these futures, so the catch must stay: a
+/// rethrow would surface as an unhandled async error, including from
+/// `ref.onDispose` where nothing can catch it.
 class ScreenWakeService {
   Future<void> enable() => _toggle(true);
 
