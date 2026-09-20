@@ -7,6 +7,7 @@ import 'package:harp_tuner/models/harp_string_model.dart';
 import 'package:harp_tuner/models/harp_type.dart';
 import 'package:harp_tuner/providers/tuner_provider.dart';
 import 'package:harp_tuner/services/pitch_detection_service.dart';
+import 'package:harp_tuner/services/screen_wake_service.dart';
 import 'package:harp_tuner/services/tone_player_service.dart';
 import 'package:harp_tuner/theme/app_theme.dart';
 import 'package:harp_tuner/theme/theme_provider.dart';
@@ -75,17 +76,30 @@ class _FakeTonePlayer extends TonePlayerService {
   void dispose() {}
 }
 
+class _FakeScreenWake extends ScreenWakeService {
+  int enableCount = 0;
+  int disableCount = 0;
+
+  @override
+  Future<void> enable() async => enableCount++;
+
+  @override
+  Future<void> disable() async => disableCount++;
+}
+
 class _FakeServiceNotifier extends TunerNotifier {
   final _FakePitchService _fakeService;
   final _FakeTonePlayer _fakePlayer;
+  final _FakeScreenWake? _fakeScreenWake;
   final TunerState? _override;
 
-  _FakeServiceNotifier(this._fakeService, this._fakePlayer, [this._override]);
+  _FakeServiceNotifier(this._fakeService, this._fakePlayer,
+      [this._override, this._fakeScreenWake]);
 
   @override
   TunerState build() {
     final s = super.build();
-    injectServicesForTest(_fakeService, _fakePlayer);
+    injectServicesForTest(_fakeService, _fakePlayer, _fakeScreenWake);
     if (_override != null) {
       state = _override!;
       return _override!;
@@ -98,11 +112,12 @@ ProviderContainer _containerWithFakes(
   _FakePitchService svc,
   _FakeTonePlayer tone, {
   TunerState? overrideState,
+  _FakeScreenWake? screenWake,
 }) {
   final c = ProviderContainer(
     overrides: [
       tunerProvider.overrideWith(
-          () => _FakeServiceNotifier(svc, tone, overrideState)),
+          () => _FakeServiceNotifier(svc, tone, overrideState, screenWake)),
     ],
   );
   addTearDown(c.dispose);
@@ -194,6 +209,58 @@ void main() {
       c.read(tunerProvider.notifier).toggleListening();
       await Future.delayed(Duration.zero);
       expect(c.read(tunerProvider).isListening, isTrue);
+    });
+  });
+
+  // ── Screen wake ───────────────────────────────────────────────────────────
+
+  group('TunerNotifier screen wake', () {
+    test('holds the screen awake while listening', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = _FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.enableCount, 1);
+      expect(wake.disableCount, 0);
+    });
+
+    test('releases the screen when listening stops', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = _FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      await n.startListening();
+      n.stopListening();
+      expect(wake.disableCount, 1);
+    });
+
+    test('permission denied never holds the screen', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = _FakeScreenWake();
+      final c = _containerWithFakes(
+          _FakePitchService(permissionResult: false), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.enableCount, 0);
+    });
+
+    test('stays held while a reference tone pauses the mic', () async {
+      // Android pauses the mic subscription during tone playback without
+      // leaving the listening session — the screen must not sleep mid-tune.
+      SharedPreferences.setMockInitialValues({});
+      final wake = _FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      await n.startListening();
+      await n.playReferenceString(kString);
+      expect(wake.disableCount, 0);
     });
   });
 

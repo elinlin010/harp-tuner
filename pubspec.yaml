@@ -42,6 +42,7 @@ dependencies:
   mic_stream: ^0.7.0
   pitch_detector_dart: any
   permission_handler: ^12.0.1
+  wakelock_plus: ^1.3.3
 
   # Anonymous in-app feedback (see lib/services/feedback_service.dart).
   # Firebase init is guarded in main.dart; missing config degrades to a no-op.

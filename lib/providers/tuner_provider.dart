@@ -10,6 +10,7 @@ import '../data/harp_presets.dart';
 import '../models/harp_string_model.dart';
 import '../models/harp_type.dart';
 import '../services/pitch_detection_service.dart';
+import '../services/screen_wake_service.dart';
 import '../services/tone_player_service.dart';
 import '../utils/music_utils.dart';
 
@@ -111,12 +112,15 @@ class TunerState {
 class TunerNotifier extends Notifier<TunerState> {
   PitchDetectionService _service    = PitchDetectionService();
   TonePlayerService     _tonePlayer = TonePlayerService();
+  ScreenWakeService     _screenWake = ScreenWakeService();
   StreamSubscription<PitchResult?>? _pitchSub;
 
   @visibleForTesting
-  void injectServicesForTest(PitchDetectionService s, TonePlayerService t) {
+  void injectServicesForTest(PitchDetectionService s, TonePlayerService t,
+      [ScreenWakeService? w]) {
     _service = s;
     _tonePlayer = t;
+    if (w != null) _screenWake = w;
   }
   SharedPreferences? _prefs;
 
@@ -184,6 +188,7 @@ class TunerNotifier extends Notifier<TunerState> {
       _pitchSub?.cancel();
       _service.dispose();
       _tonePlayer.dispose();
+      _screenWake.disable();
     });
     _loadPrefs();
     return const TunerState();
@@ -243,6 +248,7 @@ class TunerNotifier extends Notifier<TunerState> {
       clearPitch: true,
     );
 
+    _screenWake.enable();
     _attachMicSubscription();
   }
 
@@ -276,6 +282,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _pitchSub?.cancel();
     _pitchSub = null;
     _service.stop();
+    _screenWake.disable();
     _freqHistory.clear();
     _silenceCount = 0;
     _confirmedNote = null;
