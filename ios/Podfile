@@ -1,5 +1,12 @@
 # Uncomment this line to define a global platform for your project
-platform :ios, '13.0'
+#
+# App Store Connect validation now rejects any binary (including embedded pod
+# frameworks) built below iOS 15.0 — "the range of supported deployment target
+# versions is 15.0 to 27.0.x". This line alone does not raise third-party pods:
+# CocoaPods honors each pod's own podspec minimum unless post_install forces it
+# (see below), which is why abseil/BoringSSL-GRPC/gRPC/etc previously shipped
+# at 9.0–12.0 despite this being 13.0.
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -39,5 +46,10 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      # Force every pod target to the same floor as the app, regardless of
+      # what its own podspec declares. See the platform comment above.
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+    end
   end
 end
