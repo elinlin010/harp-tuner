@@ -183,6 +183,9 @@ class TunerNotifier extends Notifier<TunerState> {
   // the speaker bleed doesn't confuse the pitch detector.
   DateTime? _suppressUntil;
 
+  // True while startListening() awaits the permission round-trip.
+  bool _startInFlight = false;
+
   bool _disposed = false;
 
   @override
@@ -239,9 +242,19 @@ class TunerNotifier extends Notifier<TunerState> {
   // ── Listening ──────────────────────────────────────────────────────────────
 
   Future<void> startListening() async {
-    if (state.isListening) return;
+    if (state.isListening || _startInFlight) return;
 
-    final granted = await _service.requestPermission();
+    // The permission check always costs a platform round-trip, even when
+    // already granted. Without this guard a second tap during that gap passes
+    // the isListening check too, and its continuation can re-arm the mic and
+    // the wakelock after the user has since pressed stop.
+    _startInFlight = true;
+    final bool granted;
+    try {
+      granted = await _service.requestPermission();
+    } finally {
+      _startInFlight = false;
+    }
     if (!granted) {
       state = state.copyWith(permissionDenied: true);
       return;
@@ -295,6 +308,16 @@ class TunerNotifier extends Notifier<TunerState> {
     _challengeCount = 0;
     _pendingFarHz = null;
     state = state.copyWith(isListening: false, clearPitch: true);
+  }
+
+  /// Re-asserts the screen wakelock if a tuning session is still active.
+  ///
+  /// iOS's `isIdleTimerDisabled` is a process-global property that the plugin
+  /// sets once and never re-applies, so an interruption (a call, a lock) can
+  /// leave a live session without its wakelock. Android's window flag survives
+  /// on its own; the call is idempotent on both, so re-asserting is free.
+  void reassertScreenWake() {
+    if (state.isListening) unawaited(_screenWake.enable());
   }
 
   void toggleListening() {

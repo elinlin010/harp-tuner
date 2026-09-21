@@ -68,8 +68,9 @@ dev_dependencies:
   shared_preferences_platform_interface: ^2.4.0
   fake_async: ^1.3.3
   # Test-only: lets screen_wake_service_test swap the wakelock platform.
-  # Matches what wakelock_plus itself requires — pinning higher would raise the
-  # project's Flutter floor for a test dependency.
+  # Tracks wakelock_plus's own ^1.2.3 rather than pinning higher, so this dev
+  # dep never dictates resolution. (The Flutter floor still moved to >=3.41.0 —
+  # pub resolves the interface to 1.6.0 for wakelock_plus regardless.)
   wakelock_plus_platform_interface: ^1.2.3
 
 # For information on the generic Dart part of this file, see the

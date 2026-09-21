@@ -77,6 +77,17 @@ class _FakeTonePlayer extends TonePlayerService {
   void dispose() {}
 }
 
+// Holds requestPermission() open so a second startListening() lands inside the
+// await gap, the way a fast double-tap does on a real device.
+class _SlowPermissionService extends _FakePitchService {
+  final _gate = Completer<bool>();
+
+  void grantPermission() => _gate.complete(true);
+
+  @override
+  Future<bool> requestPermission() => _gate.future;
+}
+
 class _FakeServiceNotifier extends TunerNotifier {
   final _FakePitchService _fakeService;
   final _FakeTonePlayer _fakePlayer;
@@ -293,6 +304,52 @@ void main() {
 
       c.dispose();
 
+      expect(wake.disableCount, 1);
+    });
+
+    test('reassertScreenWake re-enables only while listening', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+
+      // Idle: a resume must not pin the screen of a user who isn't tuning.
+      n.reassertScreenWake();
+      expect(wake.enableCount, 0);
+
+      await n.startListening();
+      n.reassertScreenWake();
+      expect(wake.enableCount, 2);
+
+      n.stopListening();
+      n.reassertScreenWake();
+      expect(wake.enableCount, 2);
+    });
+
+    test('a second start during the permission gap cannot re-arm after stop',
+        () async {
+      // The permission check is a platform round-trip on every call. Two taps
+      // inside that gap both pass the isListening guard; without the in-flight
+      // guard the loser's continuation re-enables the wakelock after stop.
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final svc = _SlowPermissionService();
+      final c = _containerWithFakes(svc, _FakeTonePlayer(), screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+
+      final first = n.startListening();
+      final second = n.startListening(); // lands mid-permission-check
+      svc.grantPermission();
+      await Future.wait([first, second]);
+
+      n.stopListening();
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(c.read(tunerProvider).isListening, isFalse);
+      expect(wake.enableCount, 1, reason: 'the second tap must be dropped');
       expect(wake.disableCount, 1);
     });
   });
