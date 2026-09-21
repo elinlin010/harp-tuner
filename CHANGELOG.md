@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.3.0+28] - 2026-09-21
+
+### Added
+- The screen now stays awake while the tuner is listening. Tuning string by string means long stretches without touching the phone, so the display used to dim and lock in the middle of a session. The screen is held awake only while a session is actually running: it is released the moment you stop tuning, so the display is never kept on in the background or after you put the app down. Tapping strings in reference mode keeps the session alive, so the screen stays on while you work through a tone at a time. If something interrupts you — a call, locking the phone, switching apps — the hold is re-established when you come back, so an interrupted session doesn't quietly lose it and start dimming again.
+
 ## [1.2.1+27] - 2026-07-14
 
 ### Fixed
