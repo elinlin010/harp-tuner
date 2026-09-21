@@ -7,12 +7,13 @@ import 'package:harp_tuner/models/harp_string_model.dart';
 import 'package:harp_tuner/models/harp_type.dart';
 import 'package:harp_tuner/providers/tuner_provider.dart';
 import 'package:harp_tuner/services/pitch_detection_service.dart';
-import 'package:harp_tuner/services/screen_wake_service.dart';
 import 'package:harp_tuner/services/tone_player_service.dart';
 import 'package:harp_tuner/theme/app_theme.dart';
 import 'package:harp_tuner/theme/theme_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+
+import 'support/fake_screen_wake.dart';
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
@@ -76,34 +77,25 @@ class _FakeTonePlayer extends TonePlayerService {
   void dispose() {}
 }
 
-class _FakeScreenWake extends ScreenWakeService {
-  int enableCount = 0;
-  int disableCount = 0;
-
-  @override
-  Future<void> enable() async => enableCount++;
-
-  @override
-  Future<void> disable() async => disableCount++;
-}
-
 class _FakeServiceNotifier extends TunerNotifier {
   final _FakePitchService _fakeService;
   final _FakeTonePlayer _fakePlayer;
-  final _FakeScreenWake _fakeScreenWake;
+  final FakeScreenWake _fakeScreenWake;
   final TunerState? _override;
 
   // Defaults to a fake so tests that don't care about wake state still keep the
-  // real plugin (and its failure logging) out of the suite.
+  // real plugin, and its failure logging, out of this file.
   _FakeServiceNotifier(this._fakeService, this._fakePlayer,
-      {TunerState? override, _FakeScreenWake? screenWake})
+      {TunerState? override, FakeScreenWake? screenWake})
       : _override = override,
-        _fakeScreenWake = screenWake ?? _FakeScreenWake();
+        _fakeScreenWake = screenWake ?? FakeScreenWake();
 
   @override
   TunerState build() {
     final s = super.build();
-    injectServicesForTest(_fakeService, _fakePlayer,
+    injectServicesForTest(
+        pitchDetection: _fakeService,
+        tonePlayer: _fakePlayer,
         screenWake: _fakeScreenWake);
     if (_override != null) {
       state = _override!;
@@ -117,7 +109,7 @@ ProviderContainer _containerWithFakes(
   _FakePitchService svc,
   _FakeTonePlayer tone, {
   TunerState? overrideState,
-  _FakeScreenWake? screenWake,
+  FakeScreenWake? screenWake,
 }) {
   final c = ProviderContainer(
     overrides: [
@@ -222,7 +214,7 @@ void main() {
   group('TunerNotifier screen wake', () {
     test('holds the screen awake while listening', () async {
       SharedPreferences.setMockInitialValues({});
-      final wake = _FakeScreenWake();
+      final wake = FakeScreenWake();
       final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
           screenWake: wake);
       await Future.delayed(Duration.zero);
@@ -233,7 +225,7 @@ void main() {
 
     test('releases the screen when listening stops', () async {
       SharedPreferences.setMockInitialValues({});
-      final wake = _FakeScreenWake();
+      final wake = FakeScreenWake();
       final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
           screenWake: wake);
       await Future.delayed(Duration.zero);
@@ -245,7 +237,7 @@ void main() {
 
     test('permission denied never holds the screen', () async {
       SharedPreferences.setMockInitialValues({});
-      final wake = _FakeScreenWake();
+      final wake = FakeScreenWake();
       final c = _containerWithFakes(
           _FakePitchService(permissionResult: false), _FakeTonePlayer(),
           screenWake: wake);
@@ -258,7 +250,7 @@ void main() {
       // Android pauses the mic subscription during tone playback without
       // leaving the listening session — the screen must not sleep mid-tune.
       SharedPreferences.setMockInitialValues({});
-      final wake = _FakeScreenWake();
+      final wake = FakeScreenWake();
       final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
           screenWake: wake);
       await Future.delayed(Duration.zero);
@@ -273,7 +265,7 @@ void main() {
       // interrupted mic must not leave the screen pinned awake.
       SharedPreferences.setMockInitialValues({});
       final svc = _FakePitchService(permissionResult: true);
-      final wake = _FakeScreenWake();
+      final wake = FakeScreenWake();
       final c = _containerWithFakes(svc, _FakeTonePlayer(), screenWake: wake);
       await Future.delayed(Duration.zero);
       await c.read(tunerProvider.notifier).startListening();
@@ -292,7 +284,7 @@ void main() {
       // ref.onDispose is the last line of defence: the tuner provider is
       // app-scoped, so this is the app-teardown path.
       SharedPreferences.setMockInitialValues({});
-      final wake = _FakeScreenWake();
+      final wake = FakeScreenWake();
       final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
           screenWake: wake);
       await Future.delayed(Duration.zero);

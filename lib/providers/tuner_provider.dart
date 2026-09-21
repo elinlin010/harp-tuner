@@ -115,11 +115,16 @@ class TunerNotifier extends Notifier<TunerState> {
   ScreenWakeService     _screenWake = ScreenWakeService();
   StreamSubscription<PitchResult?>? _pitchSub;
 
+  /// Replaces the named services; anything omitted keeps its real
+  /// implementation. Tests that only stub one service pass only that one.
   @visibleForTesting
-  void injectServicesForTest(PitchDetectionService s, TonePlayerService t,
-      {ScreenWakeService? screenWake}) {
-    _service = s;
-    _tonePlayer = t;
+  void injectServicesForTest({
+    PitchDetectionService? pitchDetection,
+    TonePlayerService? tonePlayer,
+    ScreenWakeService? screenWake,
+  }) {
+    if (pitchDetection != null) _service = pitchDetection;
+    if (tonePlayer != null) _tonePlayer = tonePlayer;
     if (screenWake != null) _screenWake = screenWake;
   }
   SharedPreferences? _prefs;

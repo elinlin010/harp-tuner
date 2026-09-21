@@ -142,6 +142,7 @@ All core features are shipped:
 - **Reference mode**: tap a string to hear it and tune to it; gauge shows cents relative to that string
 - **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language, showTuningReminder
 - **Tuning reminder**: on mic start, a floating snackbar prompts pedal harp users to set pedals to flat and lever harp users to disengage levers. Dismissed via "Got it" or mic stop. Toggle in settings (`showTuningReminder`, persisted via SharedPreferences key `tuner_show_tuning_reminder`).
+- **Screen stays awake while listening**: `wakelock_plus` via `ScreenWakeService`, acquired in `startListening()` and released in `stopListening()` and `ref.onDispose`. Keyed to `isListening` intent, not the mic subscription, so the Android reference-tone path (which pauses the mic) keeps the hold. Platform failures are logged and swallowed. No app-lifecycle handling: Android's `FLAG_KEEP_SCREEN_ON` and iOS's `isIdleTimerDisabled` are both foreground-scoped by the OS.
 
 ## Versioning
 

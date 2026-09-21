@@ -8,9 +8,9 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 /// the OS: backgrounding the app suspends the effect and resuming restores it,
 /// so no app-lifecycle handling is needed here.
 ///
-/// TunerNotifier does not await these futures, so the catch must stay: a
-/// rethrow would surface as an unhandled async error, including from
-/// `ref.onDispose` where nothing can catch it.
+/// Never throws: the wakelock is best-effort, and callers treat it that way —
+/// some (provider teardown) have nowhere to catch. Platform failures are
+/// logged and ignored.
 class ScreenWakeService {
   Future<void> enable() => _toggle(true);
 

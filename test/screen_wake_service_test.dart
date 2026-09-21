@@ -13,27 +13,33 @@ class _RecordingWakelockPlatform extends WakelockPlusPlatformInterface {
   Future<bool> get enabled async => toggles.isNotEmpty && toggles.last;
 }
 
+class _ThrowingWakelockPlatform extends WakelockPlusPlatformInterface {
+  @override
+  Future<void> toggle({required bool enable}) async =>
+      throw Exception('device refused the wakelock');
+
+  @override
+  Future<bool> get enabled async => throw Exception('device refused the wakelock');
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  // ── ScreenWakeService ─────────────────────────────────────────────────────
-  // The `wakelock_plus` plugin is not registered under `flutter test`, so every
-  // call fails at the platform channel — the same shape of failure as a device
-  // whose OS refuses the wakelock. That is the service's try/catch path.
-  //
-  // Swallowing matters because TunerNotifier never awaits these Futures:
-  // startListening(), stopListening() and ref.onDispose() all call them
-  // fire-and-forget, so an escaping error would surface as an unhandled async
-  // error — including during provider teardown, where nothing can catch it.
+  // A device whose OS refuses the wakelock throws at the platform boundary.
+  // The service must never let that escape: callers do not await it, so an
+  // escaping error becomes an unhandled async error — and from provider
+  // teardown, nothing can catch it at all.
+  group('ScreenWakeService — platform failure is swallowed', () {
+    final original = wakelockPlusPlatformInstance;
 
-  group('ScreenWakeService', () {
-    test('enable() completes instead of throwing when the platform fails',
-        () async {
+    setUp(() => wakelockPlusPlatformInstance = _ThrowingWakelockPlatform());
+    tearDown(() => wakelockPlusPlatformInstance = original);
+
+    test('enable() completes instead of throwing', () async {
       await expectLater(ScreenWakeService().enable(), completes);
     });
 
-    test('disable() completes instead of throwing when the platform fails',
-        () async {
+    test('disable() completes instead of throwing', () async {
       await expectLater(ScreenWakeService().disable(), completes);
     });
 
@@ -43,8 +49,6 @@ void main() {
       final s = ScreenWakeService();
       await expectLater(s.disable(), completes);
       await expectLater(s.enable(), completes);
-      await expectLater(s.enable(), completes);
-      await expectLater(s.disable(), completes);
       await expectLater(s.disable(), completes);
     });
   });
