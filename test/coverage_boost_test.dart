@@ -13,6 +13,8 @@ import 'package:harp_tuner/theme/theme_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import 'support/fake_screen_wake.dart';
+
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
 // ── Fake service implementations ─────────────────────────────────────────────
@@ -75,17 +77,37 @@ class _FakeTonePlayer extends TonePlayerService {
   void dispose() {}
 }
 
+// Holds requestPermission() open so a second startListening() lands inside the
+// await gap, the way a fast double-tap does on a real device.
+class _SlowPermissionService extends _FakePitchService {
+  final _gate = Completer<bool>();
+
+  void grantPermission() => _gate.complete(true);
+
+  @override
+  Future<bool> requestPermission() => _gate.future;
+}
+
 class _FakeServiceNotifier extends TunerNotifier {
   final _FakePitchService _fakeService;
   final _FakeTonePlayer _fakePlayer;
+  final FakeScreenWake _fakeScreenWake;
   final TunerState? _override;
 
-  _FakeServiceNotifier(this._fakeService, this._fakePlayer, [this._override]);
+  // Defaults to a fake so tests that don't care about wake state still keep the
+  // real plugin, and its failure logging, out of this file.
+  _FakeServiceNotifier(this._fakeService, this._fakePlayer,
+      {TunerState? override, FakeScreenWake? screenWake})
+      : _override = override,
+        _fakeScreenWake = screenWake ?? FakeScreenWake();
 
   @override
   TunerState build() {
     final s = super.build();
-    injectServicesForTest(_fakeService, _fakePlayer);
+    injectServicesForTest(
+        pitchDetection: _fakeService,
+        tonePlayer: _fakePlayer,
+        screenWake: _fakeScreenWake);
     if (_override != null) {
       state = _override!;
       return _override!;
@@ -98,11 +120,12 @@ ProviderContainer _containerWithFakes(
   _FakePitchService svc,
   _FakeTonePlayer tone, {
   TunerState? overrideState,
+  FakeScreenWake? screenWake,
 }) {
   final c = ProviderContainer(
     overrides: [
-      tunerProvider.overrideWith(
-          () => _FakeServiceNotifier(svc, tone, overrideState)),
+      tunerProvider.overrideWith(() => _FakeServiceNotifier(svc, tone,
+          override: overrideState, screenWake: screenWake)),
     ],
   );
   addTearDown(c.dispose);
@@ -194,6 +217,140 @@ void main() {
       c.read(tunerProvider.notifier).toggleListening();
       await Future.delayed(Duration.zero);
       expect(c.read(tunerProvider).isListening, isTrue);
+    });
+  });
+
+  // ── Screen wake ───────────────────────────────────────────────────────────
+
+  group('TunerNotifier screen wake', () {
+    test('holds the screen awake while listening', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.enableCount, 1);
+      expect(wake.disableCount, 0);
+    });
+
+    test('releases the screen when listening stops', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      await n.startListening();
+      n.stopListening();
+      expect(wake.disableCount, 1);
+    });
+
+    test('permission denied never holds the screen', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(
+          _FakePitchService(permissionResult: false), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.enableCount, 0);
+    });
+
+    test('stays held while a reference tone pauses the mic', () async {
+      // Android pauses the mic subscription during tone playback without
+      // leaving the listening session — the screen must not sleep mid-tune.
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+      await n.startListening();
+      await n.playReferenceString(kString);
+      expect(wake.disableCount, 0);
+    });
+
+    test('releases the screen when the mic errors mid-session', () async {
+      // The stream onError handler routes through stopListening(), so an
+      // interrupted mic must not leave the screen pinned awake.
+      SharedPreferences.setMockInitialValues({});
+      final svc = _FakePitchService(permissionResult: true);
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(svc, _FakeTonePlayer(), screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.enableCount, 1);
+
+      svc.emitError(const PitchServiceError(
+          isPermissionError: false, message: 'mic lost'));
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(c.read(tunerProvider).isListening, isFalse);
+      expect(wake.disableCount, 1);
+    });
+
+    test('releases the screen when the provider is disposed while listening',
+        () async {
+      // ref.onDispose is the last line of defence: the tuner provider is
+      // app-scoped, so this is the app-teardown path.
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      await c.read(tunerProvider.notifier).startListening();
+      expect(wake.disableCount, 0);
+
+      c.dispose();
+
+      expect(wake.disableCount, 1);
+    });
+
+    test('reassertScreenWake re-enables only while listening', () async {
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final c = _containerWithFakes(_FakePitchService(), _FakeTonePlayer(),
+          screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+
+      // Idle: a resume must not pin the screen of a user who isn't tuning.
+      n.reassertScreenWake();
+      expect(wake.enableCount, 0);
+
+      await n.startListening();
+      n.reassertScreenWake();
+      expect(wake.enableCount, 2);
+
+      n.stopListening();
+      n.reassertScreenWake();
+      expect(wake.enableCount, 2);
+    });
+
+    test('a second start during the permission gap cannot re-arm after stop',
+        () async {
+      // The permission check is a platform round-trip on every call. Two taps
+      // inside that gap both pass the isListening guard; without the in-flight
+      // guard the loser's continuation re-enables the wakelock after stop.
+      SharedPreferences.setMockInitialValues({});
+      final wake = FakeScreenWake();
+      final svc = _SlowPermissionService();
+      final c = _containerWithFakes(svc, _FakeTonePlayer(), screenWake: wake);
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier);
+
+      final first = n.startListening();
+      final second = n.startListening(); // lands mid-permission-check
+      svc.grantPermission();
+      await Future.wait([first, second]);
+
+      n.stopListening();
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      expect(c.read(tunerProvider).isListening, isFalse);
+      expect(wake.enableCount, 1, reason: 'the second tap must be dropped');
+      expect(wake.disableCount, 1);
     });
   });
 

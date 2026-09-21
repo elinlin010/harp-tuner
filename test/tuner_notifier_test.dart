@@ -6,6 +6,8 @@ import 'package:harp_tuner/providers/tuner_provider.dart';
 import 'package:harp_tuner/services/pitch_detection_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'support/fake_screen_wake.dart';
+
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
 class _FakeNotifier extends TunerNotifier {
@@ -15,6 +17,8 @@ class _FakeNotifier extends TunerNotifier {
   @override
   TunerState build() {
     final s = super.build();
+    // Only the wakelock is stubbed; these tests exercise the real pitch path.
+    injectServicesForTest(screenWake: FakeScreenWake());
     if (_overrideState != null) {
       state = _overrideState!;
       return _overrideState!;
@@ -25,9 +29,7 @@ class _FakeNotifier extends TunerNotifier {
 
 ProviderContainer _container({TunerState? overrideState}) {
   final c = ProviderContainer(
-    overrides: overrideState != null
-        ? [tunerProvider.overrideWith(() => _FakeNotifier(overrideState))]
-        : [],
+    overrides: [tunerProvider.overrideWith(() => _FakeNotifier(overrideState))],
   );
   addTearDown(c.dispose);
   return c;

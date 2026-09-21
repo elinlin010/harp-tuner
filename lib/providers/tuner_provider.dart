@@ -10,6 +10,7 @@ import '../data/harp_presets.dart';
 import '../models/harp_string_model.dart';
 import '../models/harp_type.dart';
 import '../services/pitch_detection_service.dart';
+import '../services/screen_wake_service.dart';
 import '../services/tone_player_service.dart';
 import '../utils/music_utils.dart';
 
@@ -111,12 +112,20 @@ class TunerState {
 class TunerNotifier extends Notifier<TunerState> {
   PitchDetectionService _service    = PitchDetectionService();
   TonePlayerService     _tonePlayer = TonePlayerService();
+  ScreenWakeService     _screenWake = ScreenWakeService();
   StreamSubscription<PitchResult?>? _pitchSub;
 
+  /// Replaces the named services; anything omitted keeps its real
+  /// implementation. Tests that only stub one service pass only that one.
   @visibleForTesting
-  void injectServicesForTest(PitchDetectionService s, TonePlayerService t) {
-    _service = s;
-    _tonePlayer = t;
+  void injectServicesForTest({
+    PitchDetectionService? pitchDetection,
+    TonePlayerService? tonePlayer,
+    ScreenWakeService? screenWake,
+  }) {
+    if (pitchDetection != null) _service = pitchDetection;
+    if (tonePlayer != null) _tonePlayer = tonePlayer;
+    if (screenWake != null) _screenWake = screenWake;
   }
   SharedPreferences? _prefs;
 
@@ -174,6 +183,9 @@ class TunerNotifier extends Notifier<TunerState> {
   // the speaker bleed doesn't confuse the pitch detector.
   DateTime? _suppressUntil;
 
+  // True while startListening() awaits the permission round-trip.
+  bool _startInFlight = false;
+
   bool _disposed = false;
 
   @override
@@ -184,6 +196,7 @@ class TunerNotifier extends Notifier<TunerState> {
       _pitchSub?.cancel();
       _service.dispose();
       _tonePlayer.dispose();
+      unawaited(_screenWake.disable());
     });
     _loadPrefs();
     return const TunerState();
@@ -229,9 +242,19 @@ class TunerNotifier extends Notifier<TunerState> {
   // ── Listening ──────────────────────────────────────────────────────────────
 
   Future<void> startListening() async {
-    if (state.isListening) return;
+    if (state.isListening || _startInFlight) return;
 
-    final granted = await _service.requestPermission();
+    // The permission check always costs a platform round-trip, even when
+    // already granted. Without this guard a second tap during that gap passes
+    // the isListening check too, and its continuation can re-arm the mic and
+    // the wakelock after the user has since pressed stop.
+    _startInFlight = true;
+    final bool granted;
+    try {
+      granted = await _service.requestPermission();
+    } finally {
+      _startInFlight = false;
+    }
     if (!granted) {
       state = state.copyWith(permissionDenied: true);
       return;
@@ -243,6 +266,7 @@ class TunerNotifier extends Notifier<TunerState> {
       clearPitch: true,
     );
 
+    unawaited(_screenWake.enable());
     _attachMicSubscription();
   }
 
@@ -276,6 +300,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _pitchSub?.cancel();
     _pitchSub = null;
     _service.stop();
+    unawaited(_screenWake.disable());
     _freqHistory.clear();
     _silenceCount = 0;
     _confirmedNote = null;
@@ -283,6 +308,16 @@ class TunerNotifier extends Notifier<TunerState> {
     _challengeCount = 0;
     _pendingFarHz = null;
     state = state.copyWith(isListening: false, clearPitch: true);
+  }
+
+  /// Re-asserts the screen wakelock if a tuning session is still active.
+  ///
+  /// iOS's `isIdleTimerDisabled` is a process-global property that the plugin
+  /// sets once and never re-applies, so an interruption (a call, a lock) can
+  /// leave a live session without its wakelock. Android's window flag survives
+  /// on its own; the call is idempotent on both, so re-asserting is free.
+  void reassertScreenWake() {
+    if (state.isListening) unawaited(_screenWake.enable());
   }
 
   void toggleListening() {

@@ -43,6 +43,7 @@ lib/
   services/
     pitch_detection_service.dart  # Mic input + pitch detection (real implementation)
     tone_player_service.dart      # Reference tone playback (real implementation)
+    screen_wake_service.dart      # Holds the screen awake while listening (wakelock_plus)
   screens/
     harp_select_screen.dart    # Harp type picker (entry screen)
     tuner_screen.dart          # Main tuner UI + settings bottom sheet
@@ -141,6 +142,7 @@ All core features are shipped:
 - **Reference mode**: tap a string to hear it and tune to it; gauge shows cents relative to that string
 - **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language, showTuningReminder
 - **Tuning reminder**: on mic start, a floating snackbar prompts pedal harp users to set pedals to flat and lever harp users to disengage levers. Dismissed via "Got it" or mic stop. Toggle in settings (`showTuningReminder`, persisted via SharedPreferences key `tuner_show_tuning_reminder`).
+- **Screen stays awake while listening**: `wakelock_plus` via `ScreenWakeService`, acquired in `startListening()` and released in `stopListening()`. Keyed to `isListening` intent, not the mic subscription, so the Android reference-tone path (which pauses the mic) keeps the hold. Platform failures are logged and swallowed. `TunerScreen` re-asserts the hold on `AppLifecycleState.resumed` (`reassertScreenWake`): Android's `FLAG_KEEP_SCREEN_ON` is a window flag that survives backgrounding on its own, but iOS's `isIdleTimerDisabled` is a process-global property the plugin sets once and never re-applies, so an interruption could otherwise leave a live session unpinned. The `ref.onDispose` release is belt-and-braces only — `tunerProvider` is not `autoDispose` and `TunerScreen` is the root route, so in practice it fires at process exit.
 
 ## Versioning
 

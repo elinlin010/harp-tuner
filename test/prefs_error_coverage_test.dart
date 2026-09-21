@@ -7,6 +7,10 @@ import 'package:harp_tuner/providers/tuner_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
 
+import 'support/fake_screen_wake.dart';
+
+// ignore_for_file: invalid_use_of_visible_for_testing_member
+
 // A SharedPreferencesStorePlatform that throws on every operation.
 // Setting isMock=true bypasses PlatformInterface.verify().
 class _ThrowingPrefsStore extends SharedPreferencesStorePlatform {
@@ -26,6 +30,17 @@ class _ThrowingPrefsStore extends SharedPreferencesStorePlatform {
   @override
   Future<bool> setValue(String valueType, String key, Object value) async =>
       throw Exception('test-prefs-throw');
+}
+
+// These tests exercise SharedPreferences failure paths; stubbing the wakelock
+// keeps an unrelated plugin out of their teardown.
+class _NoWakelockNotifier extends TunerNotifier {
+  @override
+  TunerState build() {
+    final s = super.build();
+    injectServicesForTest(screenWake: FakeScreenWake());
+    return s;
+  }
 }
 
 // Reset singleton (_completer=null) then install a throwing store so that the
@@ -68,7 +83,9 @@ void main() {
 
     setUp(() async {
       _installThrowingStore();
-      container = ProviderContainer();
+      container = ProviderContainer(
+        overrides: [tunerProvider.overrideWith(_NoWakelockNotifier.new)],
+      );
       container.read(tunerProvider); // triggers build() → _loadPrefs() throws
       await Future.delayed(Duration.zero); // let _loadPrefs() async throw
     });

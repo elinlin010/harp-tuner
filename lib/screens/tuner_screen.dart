@@ -27,7 +27,7 @@ class TunerScreen extends ConsumerStatefulWidget {
 }
 
 class _TunerScreenState extends ConsumerState<TunerScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _listenBtnCtrl;
 
   // ── Failed-session feedback nudge state ───────────────────────────────────
@@ -43,6 +43,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _listenBtnCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -68,7 +69,15 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycleState) {
+    if (lifecycleState == AppLifecycleState.resumed) {
+      ref.read(tunerProvider.notifier).reassertScreenWake();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _listenBtnCtrl.dispose();
     super.dispose();
   }
