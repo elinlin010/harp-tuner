@@ -976,111 +976,151 @@ class _ListenButton extends StatelessWidget {
     required this.theme,
   });
 
-  // Wood themes: gold leaf while listening, a gilt-rimmed card when idle.
-  BoxDecoration _woodDecoration() => isListening
-      ? BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          gradient: WoodMaterials.goldGradient,
-          border: Border.all(color: WoodMaterials.goldHighlight, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: WoodMaterials.goldShadow.withValues(
-                  alpha: 0.30 + controller.value * 0.15),
-              blurRadius: 18,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        )
-      : BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          color: theme.surface,
-          border: Border.all(color: WoodMaterials.goldRim, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        );
+  static const _radius = BorderRadius.all(Radius.circular(18));
 
+  // Idle ↔ listening runs on its own 200ms tween, retargeted only when
+  // isListening flips. The listening pulse (controller) is applied directly
+  // on top. Don't feed the pulse into an AnimatedContainer: its target then
+  // changes every frame, the implicit tween restarts every frame, and a
+  // 200ms change crawls out over about a second. Tapping Start/Stop a few
+  // times left the button visibly half-faded.
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final isWood = theme.isWood;
-    final Color fg = isListening
-        ? (isWood ? WoodMaterials.onGold : theme.inTune)
-        : theme.textSecondary;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (ctx, child) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            // Raised gold leaf gets a thin inner highlight along its top.
-            foregroundDecoration: isWood && isListening
-                ? BoxDecoration(
-                    borderRadius: BorderRadius.circular(18),
-                    gradient: WoodMaterials.goldSheen,
-                  )
-                : null,
-            decoration: isWood ? _woodDecoration() : BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              color: isListening
-                  ? theme.inTune.withValues(alpha: 0.14)
-                  : theme.surface,
-              border: Border.all(
-                color: isListening
-                    ? theme.inTune.withValues(
-                        alpha: 0.40 + controller.value * 0.20)
-                    : theme.surfaceRim,
-                width: 1.5,
-              ),
-              boxShadow: isListening
-                  ? [
-                      BoxShadow(
-                        color: theme.inTune.withValues(
-                            alpha: 0.12 + controller.value * 0.14),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      )
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(end: isListening ? 1.0 : 0.0),
+        duration:
+            reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        builder: (context, t, _) => AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) =>
+              theme.isWood ? _wood(context, t) : _flat(context, t),
+        ),
+      ),
+    );
+  }
+
+  Widget _content(BuildContext context, Color fg) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isListening ? Icons.stop_rounded : Icons.mic_rounded,
+            size: 28,
+            color: fg,
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              isListening ? l10n.tunerStopBtn : l10n.tunerStartBtn,
+              style: theme.sans(20, weight: FontWeight.w700, color: fg),
+              overflow: TextOverflow.ellipsis,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                  size: 28,
-                  color: fg,
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    isListening ? l10n.tunerStopBtn : l10n.tunerStartBtn,
-                    style: theme.sans(
-                      20,
-                      weight: FontWeight.w700,
-                      color: fg,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Flat themes: an inTune-tinted pill with a pulsing rim while listening.
+  Widget _flat(BuildContext context, double t) {
+    final idle = BoxDecoration(
+      borderRadius: _radius,
+      color: theme.surface,
+      border: Border.all(color: theme.surfaceRim, width: 1.5),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+    final listening = BoxDecoration(
+      borderRadius: _radius,
+      color: theme.inTune.withValues(alpha: 0.14),
+      border: Border.all(
+        color: theme.inTune.withValues(alpha: 0.40 + controller.value * 0.20),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: theme.inTune.withValues(alpha: 0.12 + controller.value * 0.14),
+          blurRadius: 20,
+          spreadRadius: 2,
+        ),
+      ],
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration.lerp(idle, listening, t)!,
+      child: _content(
+          context, Color.lerp(theme.textSecondary, theme.inTune, t)!),
+    );
+  }
+
+  // Wood themes: a gilt-rimmed card when idle; gold leaf while listening.
+  // The gold is its own opaque layer faded in on top of the card. Lerping
+  // the gradient itself would pass through a see-through, washed-out gold.
+  Widget _wood(BuildContext context, double t) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: _radius,
+              color: theme.surface,
+              border: Border.all(color: WoodMaterials.goldRim, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        if (t > 0)
+          Positioned.fill(
+            child: Opacity(
+              opacity: t,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: _radius,
+                  gradient: WoodMaterials.goldGradient,
+                  border:
+                      Border.all(color: WoodMaterials.goldHighlight, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: WoodMaterials.goldShadow.withValues(
+                          alpha: 0.30 + controller.value * 0.15),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                // Thin inner highlight along the top of the raised gold.
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: _radius,
+                    gradient: WoodMaterials.goldSheen,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        _content(
+          context,
+          Color.lerp(theme.textSecondary, WoodMaterials.onGold, t)!,
+        ),
+      ],
     );
   }
 }

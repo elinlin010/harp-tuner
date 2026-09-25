@@ -49,6 +49,32 @@ class _InTuneNotifier extends TunerNotifier {
   );
 }
 
+class _ToggleNotifier extends TunerNotifier {
+  @override
+  TunerState build() => const TunerState(
+    selectedHarp: HarpType.leverHarp,
+    showTuningReminder: false,
+  );
+
+  @override
+  Future<void> toggleListening() async =>
+      setStateForTest(state.copyWith(isListening: !state.isListening));
+}
+
+// Opacity of the Stop button's gold-leaf layer, or null when it's not built.
+double? _goldLayerOpacity(WidgetTester tester) {
+  final layers = tester.widgetList<Opacity>(
+    find.byWidgetPredicate(
+      (w) =>
+          w is Opacity &&
+          w.child is DecoratedBox &&
+          ((w.child as DecoratedBox).decoration as BoxDecoration).gradient ==
+              WoodMaterials.goldGradient,
+    ),
+  );
+  return layers.isEmpty ? null : layers.single.opacity;
+}
+
 void main() {
   setUpAll(() => GoogleFonts.config.allowRuntimeFetching = false);
 
@@ -348,6 +374,44 @@ void main() {
       expect(find.text('Mahogany'), findsOneWidget);
       expect(find.text('Maple'), findsNothing);
       expect(await _savedThemeId(), 'mahogany');
+    });
+
+    testWidgets('Stop turns solid gold within 200ms, even after rapid taps', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({'theme_id': 'maple'});
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            startupThemeProvider.overrideWithValue(TunerThemes.maple),
+            tunerProvider.overrideWith(_ToggleNotifier.new),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: Locale('en'),
+            home: TunerScreen(),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(_goldLayerOpacity(tester), isNull);
+
+      // Start / Stop / Start … mid-animation, ending on Start.
+      for (var i = 0; i < 7; i++) {
+        await tester.tap(find.text(i.isEven ? 'Start Tuning' : 'Stop'));
+        await tester.pump(const Duration(milliseconds: 60));
+      }
+      // The listening pulse runs every frame; it must not stretch the fade.
+      for (var i = 0; i < 13; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+      expect(_goldLayerOpacity(tester), 1.0);
+
+      await tester.tap(find.text('Stop'));
+      await tester.pump(); // rebuild; the fade starts on this frame
+      await tester.pump(const Duration(milliseconds: 250));
+      expect(_goldLayerOpacity(tester), isNull);
     });
 
     testWidgets('tapping a wood swatch selects it', (tester) async {
