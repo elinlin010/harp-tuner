@@ -442,12 +442,10 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
   }
 }
 
-// Nav-bar pills: flat themes are borderless; wood themes get a 1px gold rim.
+// Nav-bar pills share the mode toggle's border (gold on wood themes).
 ShapeBorder _pillShape(TunerThemeData theme) => RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(20),
-      side: theme.wood != null
-          ? BorderSide(color: theme.wood!.chipBorder, width: 1)
-          : BorderSide.none,
+      side: theme.chipBorder,
     );
 
 // ── Harp type localization helpers ────────────────────────────────────────────
@@ -606,9 +604,10 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
         color: wood == null ? theme.surface : null,
         borderRadius: sheetRadius,
         border: Border(
-          top: wood != null
-              ? BorderSide(color: wood.gold, width: 1.5)
-              : BorderSide(color: theme.surfaceRim, width: 1),
+          top: BorderSide(
+            color: wood?.gold ?? theme.surfaceRim,
+            width: 1.5,
+          ),
         ),
       ),
       padding: EdgeInsets.fromLTRB(0, 12, 0, 24 + bottomPad),
@@ -627,9 +626,7 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: wood != null
-                    ? wood.gold.withValues(alpha: 0.7)
-                    : theme.surfaceRim,
+                color: (wood?.gold ?? theme.surfaceRim).withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1567,9 +1564,8 @@ class _ThemePickerRow extends StatelessWidget {
             selected: t.id == currentTheme.id,
             accentColor: currentTheme.inTune,
             checkColor: currentTheme.wood?.swatchCheck ?? currentTheme.inTune,
-            labelStyle: currentTheme.isWood
-                ? currentTheme.sans(13, color: currentTheme.textSecondary)
-                : currentTheme.sans(13),
+            labelStyle:
+                currentTheme.sans(13, color: currentTheme.textSecondary),
             onTap: () => onSelect(t),
           ),
       ],
@@ -1671,9 +1667,7 @@ class _ThemeSwatch extends StatelessWidget {
             Text(
               swatch.displayName,
               style: labelStyle.copyWith(
-                color: selected
-                    ? accentColor
-                    : labelStyle.color?.withValues(alpha: 0.6),
+                color: selected ? accentColor : labelStyle.color,
                 fontWeight:
                     selected ? FontWeight.w600 : FontWeight.w400,
               ),

@@ -182,9 +182,9 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
             final paintW = maxW - 2 * hPad;
             // Subtract vertical padding so arcH/readoutH are budgeted against the
             // space actually available inside the card, not the full LayoutBuilder height.
-            // Wood themes also keep clear of the gold frame (inner line at 7px),
-            // so the arc labels never sit on it when height is tight.
-            final frameClearance = widget.theme.isWood ? 12.0 : 0.0;
+            // Keep clear of the card's frame (inner line at 7px), so the arc
+            // labels never sit on it when height is tight.
+            const frameClearance = 12.0;
             final availH = maxH - 2 * vPad - 2 * frameClearance;
             // r is fully width-derived so the arc always spans the content area.
             // arcH is independent — we only show the upper portion of the arc by
@@ -305,8 +305,8 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
 }
 
 // ── Gauge card ────────────────────────────────────────────────────────────────
-// Flat themes: a plain surfaceHi card. Wood themes: grain fill, 2px gold frame,
-// and a 1px inner frame line inset 7px.
+// A framed card: 2px outer border, a 1px frame line inset 7px, and a drop
+// shadow. Wood themes fill it with grain; flat themes with surfaceHi.
 
 class _GaugeCard extends StatelessWidget {
   final TunerThemeData theme;
@@ -325,54 +325,48 @@ class _GaugeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final wood = theme.wood;
-    if (wood == null) {
-      return AnimatedContainer(
-        duration: animDur,
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(
-          color: theme.surfaceHi,
-          borderRadius: _radius,
-        ),
-        child: child,
-      );
-    }
-    return DecoratedBox(
+    final framed = DecoratedBox(
+      position: DecorationPosition.foreground,
       decoration: BoxDecoration(
         borderRadius: _radius,
-        boxShadow: wood.gaugeShadow,
+        border: Border.all(color: theme.gaugeBorder, width: 2),
       ),
-      child: WoodSurface(
-        gradient: woodGaugeGradient(wood),
-        dark: wood.darkGrain,
-        borderRadius: _radius,
-        child: DecoratedBox(
-          position: DecorationPosition.foreground,
-          decoration: BoxDecoration(
-            borderRadius: _radius,
-            border: Border.all(color: wood.gaugeBorder, width: 2),
-          ),
-          child: Stack(
-            fit: StackFit.passthrough,
-            children: [
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: Padding(
-                    padding: const EdgeInsets.all(7),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: _innerRadius,
-                        border:
-                            Border.all(color: wood.gaugeInnerLine, width: 1),
-                      ),
-                    ),
+      child: Stack(
+        fit: StackFit.passthrough,
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Padding(
+                padding: const EdgeInsets.all(7),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: _innerRadius,
+                    border: Border.all(color: theme.gaugeInnerLine, width: 1),
                   ),
                 ),
               ),
-              child,
-            ],
+            ),
           ),
-        ),
+          child,
+        ],
       ),
+    );
+    return AnimatedContainer(
+      duration: animDur,
+      curve: Curves.easeOut,
+      decoration: BoxDecoration(
+        color: wood == null ? theme.surfaceHi : null,
+        borderRadius: _radius,
+        boxShadow: theme.gaugeShadow,
+      ),
+      child: wood == null
+          ? framed
+          : WoodSurface(
+              gradient: woodGaugeGradient(wood),
+              dark: wood.darkGrain,
+              borderRadius: _radius,
+              child: framed,
+            ),
     );
   }
 }
@@ -431,7 +425,7 @@ class _ArcPainter extends CustomPainter {
       Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = wood != null ? 2.5 : 1.5
-        ..color = wood?.arc ?? tickColor.withValues(alpha: 0.8),
+        ..color = wood?.arc ?? tickColor,
     );
 
     // ── In-tune zone (thicker highlight on the arc) ──────────────────────
@@ -705,17 +699,17 @@ class _SignalReadout extends StatelessWidget {
     final Color letterColor = !isInTune
         ? baseNoteColor
         : isWood
-            ? WoodMaterials.tuneCircleText
-            : Colors.white.withValues(alpha: 0.92);
+        ? WoodMaterials.tuneCircleText
+        : Colors.white.withValues(alpha: 0.92);
     final Color accColor = !isInTune
         ? baseNoteColor
         : isWood
-            ? WoodMaterials.tuneCircleText
-            : Colors.white.withValues(alpha: 0.87);
-    // Wood themes set the note in Outfit Light; the flat themes keep Regular.
-    final letterWeight = isWood ? FontWeight.w300 : FontWeight.w400;
-    final double letterSize = isWood ? 112 : 120;
-    final double accSize = isWood ? 48 : 52;
+        ? WoodMaterials.tuneCircleText
+        : Colors.white.withValues(alpha: 0.87);
+    // Note set in Outfit Light, as in the design prototype.
+    const letterWeight = FontWeight.w300;
+    const double letterSize = 112;
+    const double accSize = 48;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
@@ -768,8 +762,9 @@ class _SignalReadout extends StatelessWidget {
                     gradient: isInTune
                         ? WoodMaterials.tuneCircle
                         : WoodMaterials.tuneCircle.scale(0.0),
-                    boxShadow:
-                        isInTune ? WoodMaterials.tuneCircleGlow : const [],
+                    boxShadow: isInTune
+                        ? WoodMaterials.tuneCircleGlow
+                        : const [],
                   )
                 : BoxDecoration(
                     shape: BoxShape.circle,
@@ -792,9 +787,11 @@ class _SignalReadout extends StatelessWidget {
                     duration: animDur,
                     curve: Curves.easeOut,
                     style: theme
-                        .sans(letterSize,
-                            weight: letterWeight,
-                            color: letterColor)
+                        .sans(
+                          letterSize,
+                          weight: letterWeight,
+                          color: letterColor,
+                        )
                         .copyWith(height: 1),
                     child: Text(noteLetter),
                   ),
@@ -805,9 +802,11 @@ class _SignalReadout extends StatelessWidget {
                         duration: animDur,
                         curve: Curves.easeOut,
                         style: theme
-                            .sans(accSize,
-                                weight: letterWeight,
-                                color: accColor)
+                            .sans(
+                              accSize,
+                              weight: letterWeight,
+                              color: accColor,
+                            )
                             .copyWith(height: 1),
                         child: Text(noteAcc),
                       ),
@@ -864,53 +863,57 @@ class _InlineBulb extends StatelessWidget {
       label: semanticsLabel,
       value: active ? 'active' : 'inactive',
       child: AnimatedContainer(
-      duration: animDuration,
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: active ? color : Colors.transparent,
-        // null border when active — Border.all(width:0) can render a hairline on some canvases
-        border: active ? null : Border.all(
-          color: (theme.wood?.gold ?? theme.surfaceRim).withValues(alpha: 0.6),
-          width: 1.5,
+        duration: animDuration,
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: active ? color : Colors.transparent,
+          // null border when active — Border.all(width:0) can render a hairline on some canvases
+          border: active
+              ? null
+              : Border.all(
+                  color: (theme.wood?.gold ?? theme.surfaceRim).withValues(
+                    alpha: 0.6,
+                  ),
+                  width: 1.5,
+                ),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.55),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.28),
+                    blurRadius: 18,
+                    spreadRadius: 5,
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 3,
+                    spreadRadius: 0,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
         ),
-        boxShadow: active
-            ? [
-                BoxShadow(
-                  color: color.withValues(alpha: 0.55),
-                  blurRadius: 8,
-                  spreadRadius: 1,
-                ),
-                BoxShadow(
-                  color: color.withValues(alpha: 0.28),
-                  blurRadius: 18,
-                  spreadRadius: 5,
-                ),
-              ]
-            : [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.12),
-                  blurRadius: 3,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 1),
-                ),
-              ],
-      ),
-      child: Center(
-        child: AnimatedDefaultTextStyle(
-          duration: animDuration,
-          style: theme.sans(
-            symbolSize,
-            weight: FontWeight.w700,
-            color: active
-                ? Colors.white.withValues(alpha: 0.95)
-                : theme.textSecondary,
+        child: Center(
+          child: AnimatedDefaultTextStyle(
+            duration: animDuration,
+            style: theme.sans(
+              symbolSize,
+              weight: FontWeight.w700,
+              color: active
+                  ? Colors.white.withValues(alpha: 0.95)
+                  : theme.textSecondary,
+            ),
+            child: Text(symbol),
           ),
-          child: Text(symbol),
         ),
-      ),
-    ), // AnimatedContainer
+      ), // AnimatedContainer
     ); // Semantics
   }
 }

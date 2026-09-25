@@ -9,6 +9,7 @@ All notable changes to Harp Tuner are documented here.
 - The dark-mode switch now jumps to each theme's partner: Maple ↔ Mahogany, Spruce ↔ Walnut, Linen ↔ Blueprint, Milk ↔ Void.
 
 ### Changed
+- Linen, Milk, Blueprint and Void pick up the same detailing as the new design. The tuner gauge sits in a framed card: a border, a thin inner frame line and a soft shadow. The settings cards and the Settings/feedback buttons get a fine border. The note name uses a lighter weight.
 - Every theme now shows the harp neck above the strings: a rail with a tuning pin at the top of each string. The wood themes use a wood-grain rail with gold pins; Linen, Milk, Blueprint and Void use a plain rail in their own colours with silver pins. Strings are slightly thicker (3px).
 - Tapping a string in reference mode is gentler. The tapped string now lights up with a soft glow that hugs it and fades in, then fades out slowly when you move to another string. Before, a box-shaped highlight popped in around it. The string row also stays where it is when you tap, instead of sliding the string you just touched to the middle; it only scrolls if the string is partly off the edge. In auto mode the detected string is still centred.
 - New installs open on Maple. Existing installs keep the theme they already have (Linen unless you picked another) — nothing changes until you choose a wood theme in Settings → Theme.

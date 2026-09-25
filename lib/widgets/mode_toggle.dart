@@ -23,33 +23,33 @@ class ModeToggle extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.surfaceHi,
         borderRadius: BorderRadius.circular(20),
-        border: theme.wood != null
-            ? Border.all(color: theme.wood!.chipBorder, width: 1)
-            : Border.all(color: theme.surfaceRim, width: 0.5),
+        border: Border.fromBorderSide(theme.chipBorder),
       ),
-      child: Builder(builder: (context) {
-        final l10n = AppLocalizations.of(context)!;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _Tab(
-              // Tuning fork concept: graphic_eq shows frequency bars (pitch analysis)
-              icon: Icons.graphic_eq_rounded,
-              label: l10n.modeAuto,
-              active: mode == TunerMode.auto,
-              onTap: () => onChanged(TunerMode.auto),
-              theme: theme,
-            ),
-            _Tab(
-              icon: Icons.volume_up_rounded,
-              label: l10n.modeReference,
-              active: mode == TunerMode.reference,
-              onTap: () => onChanged(TunerMode.reference),
-              theme: theme,
-            ),
-          ],
-        );
-      }),
+      child: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _Tab(
+                // Tuning fork concept: graphic_eq shows frequency bars (pitch analysis)
+                icon: Icons.graphic_eq_rounded,
+                label: l10n.modeAuto,
+                active: mode == TunerMode.auto,
+                onTap: () => onChanged(TunerMode.auto),
+                theme: theme,
+              ),
+              _Tab(
+                icon: Icons.volume_up_rounded,
+                label: l10n.modeReference,
+                active: mode == TunerMode.reference,
+                onTap: () => onChanged(TunerMode.reference),
+                theme: theme,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -108,17 +108,15 @@ class _Tab extends StatelessWidget {
                 borderRadius: BorderRadius.circular(17),
                 border: active
                     ? Border.all(
-                        color: theme.inTune.withValues(alpha: 0.45), width: 0.5)
+                        color: theme.inTune.withValues(alpha: 0.45),
+                        width: 0.5,
+                      )
                     : null,
               ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 14,
-              color: active ? activeColor : theme.textDim,
-            ),
+            Icon(icon, size: 14, color: active ? activeColor : theme.textDim),
             // Label slides in/out via ClipRect + AnimatedAlign widthFactor.
             // widthFactor 0→1 collapses/expands the label width while the
             // AnimatedContainer above simultaneously adjusts the padding,
@@ -135,8 +133,11 @@ class _Tab extends StatelessWidget {
                     const SizedBox(width: 5),
                     Text(
                       label,
-                      style: theme.sans(12,
-                          weight: FontWeight.w600, color: activeColor),
+                      style: theme.sans(
+                        12,
+                        weight: FontWeight.w600,
+                        color: activeColor,
+                      ),
                     ),
                   ],
                 ),

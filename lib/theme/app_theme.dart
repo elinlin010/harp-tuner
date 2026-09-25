@@ -37,6 +37,56 @@ class TunerThemeData {
 
   bool get isWood => wood != null;
 
+  // ── Frames & borders ──────────────────────────────────────────────────────
+  //  Wood themes take these from [wood]; the flat themes derive them from
+  //  their own palette (as in the design prototype).
+
+  /// 2px outer frame of the gauge card.
+  Color get gaugeBorder => wood?.gaugeBorder ?? surfaceRim;
+
+  /// 1px frame line inset 7px inside the gauge card.
+  Color get gaugeInnerLine =>
+      wood?.gaugeInnerLine ?? surfaceRim.withValues(alpha: 0.6);
+
+  List<BoxShadow> get gaugeShadow =>
+      wood?.gaugeShadow ??
+      (brightness == Brightness.dark
+          ? const [
+              BoxShadow(
+                color: Color(0x73000000), // rgba(0,0,0,0.45)
+                blurRadius: 30,
+                offset: Offset(0, 12),
+              ),
+            ]
+          : const [
+              BoxShadow(
+                color: Color(0x1A281E0F), // rgba(40,30,15,0.10)
+                blurRadius: 24,
+                offset: Offset(0, 10),
+              ),
+            ]);
+
+  /// 1px border of the settings cards above the tuner.
+  Color get cardBorder =>
+      wood?.cardBorder ?? surfaceRim.withValues(alpha: 0.5);
+
+  List<BoxShadow> get cardShadow =>
+      wood?.cardShadow ??
+      (brightness == Brightness.dark
+          ? const <BoxShadow>[]
+          : const [
+              BoxShadow(
+                color: Color(0x14000000), // rgba(0,0,0,0.08)
+                blurRadius: 8,
+                offset: Offset(0, 2),
+              ),
+            ]);
+
+  /// Border of the pill controls (mode toggle, Settings, feedback).
+  BorderSide get chipBorder => wood != null
+      ? BorderSide(color: wood!.chipBorder, width: 1)
+      : BorderSide(color: surfaceRim, width: 0.5);
+
   /// Harp neck rail and tuning pins above the string visualizer. Wood themes
   /// take theirs from [wood]; the flat themes derive a plain rail with silver
   /// pins from their own palette.

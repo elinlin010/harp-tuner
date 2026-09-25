@@ -203,6 +203,27 @@ void main() {
       }
     });
 
+    test('flat themes get a rim-coloured gauge frame and card borders', () {
+      for (final t in [TunerThemes.linen, TunerThemes.blueprint]) {
+        expect(t.gaugeBorder, t.surfaceRim, reason: t.id);
+        expect(
+          t.gaugeInnerLine,
+          t.surfaceRim.withValues(alpha: 0.6),
+          reason: t.id,
+        );
+        expect(t.gaugeShadow, isNotEmpty, reason: t.id);
+        expect(t.chipBorder.color, t.surfaceRim, reason: t.id);
+      }
+      // Dark flat cards have no drop shadow; light ones do.
+      expect(TunerThemes.linen.cardShadow, isNotEmpty);
+      expect(TunerThemes.void_.cardShadow, isEmpty);
+      // Wood themes keep their gold values.
+      expect(
+        TunerThemes.maple.gaugeBorder,
+        TunerThemes.maple.wood!.gaugeBorder,
+      );
+    });
+
     test('theme ids are unique', () {
       final ids = TunerThemes.all.map((t) => t.id).toList();
       expect(ids.toSet().length, ids.length);
