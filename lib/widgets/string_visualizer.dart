@@ -6,14 +6,13 @@ import 'wood_surface.dart';
 
 const _kItemWidth = 52.0;
 
-// Wood themes: neck rail and tuning-pin geometry within the 116px row.
+// Neck rail and tuning-pin geometry within the 116px row.
 const _kNeckTop = 12.0;
 const _kNeckHeight = 14.0;
 const _kPinTop = 9.0;
 const _kPinSize = 9.0;
-const _kWoodStringTop = _kPinTop + _kPinSize - 3; // starts 3px under the pin
-const _kWoodStringHeight = 70.0;
-
+const _kStringTop = _kPinTop + _kPinSize - 3; // starts 3px under the pin
+const _kStringHeight = 70.0;
 
 class StringVisualizer extends StatefulWidget {
   final List<HarpStringModel> strings;
@@ -51,8 +50,7 @@ class _StringVisualizerState extends State<StringVisualizer> {
 
   void _scrollToActive() {
     if (!_scrollCtrl.hasClients) return;
-    final idx =
-        widget.strings.indexWhere((s) => s == widget.activeString);
+    final idx = widget.strings.indexWhere((s) => s == widget.activeString);
     if (idx < 0) return;
     final position = _scrollCtrl.position;
     final viewport = position.viewportDimension;
@@ -102,30 +100,44 @@ class _StringVisualizerState extends State<StringVisualizer> {
 
   @override
   Widget build(BuildContext context) {
-    final wood = widget.theme.wood;
+    final neck = widget.theme.neck;
     final list = ListView.builder(
-        controller: _scrollCtrl,
-        clipBehavior: Clip.none,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: widget.strings.length,
-        itemExtent: _kItemWidth,
-        itemBuilder: (ctx, i) {
-          final s = widget.strings[i];
-          final isActive = s == widget.activeString;
-          return _StringCell(
-            string: s,
-            isActive: isActive,
-            stringColor: _stringColor(s.note),
-            theme: widget.theme,
-            onTap: widget.onTap != null ? () => widget.onTap!(s) : null,
-          );
-        },
-      );
-    if (wood == null) return SizedBox(height: 116, child: list);
+      controller: _scrollCtrl,
+      clipBehavior: Clip.none,
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      itemCount: widget.strings.length,
+      itemExtent: _kItemWidth,
+      itemBuilder: (ctx, i) {
+        final s = widget.strings[i];
+        final isActive = s == widget.activeString;
+        return _StringCell(
+          string: s,
+          isActive: isActive,
+          stringColor: _stringColor(s.note),
+          theme: widget.theme,
+          onTap: widget.onTap != null ? () => widget.onTap!(s) : null,
+        );
+      },
+    );
 
-    // Wood themes: the strings hang from a harp neck rail that stays put while
-    // the strings scroll beneath it.
+    final railFill = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: neck.colors,
+    );
+    final railEdges = DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: neck.edgeTop, width: 1),
+          bottom: BorderSide(color: neck.edgeBottom, width: 1),
+        ),
+      ),
+    );
+
+    // The strings hang from a harp neck rail that stays put while the
+    // strings scroll beneath it. Wood themes add grain to the rail.
     return SizedBox(
       height: 116,
       child: Stack(
@@ -137,31 +149,22 @@ class _StringVisualizerState extends State<StringVisualizer> {
             height: _kNeckHeight,
             child: DecoratedBox(
               decoration: BoxDecoration(
+                gradient: neck.grain ? null : railFill,
                 boxShadow: [
                   BoxShadow(
-                    color: wood.neckShadow,
+                    color: neck.shadow,
                     blurRadius: 6,
                     offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: WoodSurface(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: wood.neck,
-                ),
-                dark: wood.neckDarkGrain,
-                child: DecoratedBox(
-                  position: DecorationPosition.foreground,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: wood.neckEdgeTop, width: 1),
-                      bottom: BorderSide(color: wood.neckEdgeBottom, width: 1),
-                    ),
-                  ),
-                ),
-              ),
+              child: neck.grain
+                  ? WoodSurface(
+                      gradient: railFill,
+                      dark: neck.darkGrain,
+                      child: railEdges,
+                    )
+                  : railEdges,
             ),
           ),
           Positioned.fill(child: list),
@@ -232,43 +235,49 @@ class _StringCell extends StatelessWidget {
   }
 
   Widget _label(Duration animDuration) => AnimatedDefaultTextStyle(
-        duration: animDuration,
-        style: theme.sans(
-          isActive ? 13 : 12,
-          weight: isActive ? FontWeight.w700 : FontWeight.w400,
-          color: isActive
-              ? stringColor
-              : (!_isDark &&
-                      (string.note == NoteName.c ||
-                          string.note == NoteName.f))
-                  ? stringColor.withValues(alpha: 0.70)
-                  : theme.textSecondary,
-        ),
-        child: Text(string.label, textAlign: TextAlign.center),
-      );
+    duration: animDuration,
+    style: theme.sans(
+      isActive ? 13 : 12,
+      weight: isActive ? FontWeight.w700 : FontWeight.w400,
+      color: isActive
+          ? stringColor
+          : (!_isDark &&
+                (string.note == NoteName.c || string.note == NoteName.f))
+          ? stringColor.withValues(alpha: 0.70)
+          : theme.textSecondary,
+    ),
+    child: Text(string.label, textAlign: TextAlign.center),
+  );
 
-  // Wood themes: a gold tuning pin on the neck, the string hanging from it.
-  Widget _woodCell(Duration animDuration, bool reduceMotion) {
-    return Column(
+  @override
+  Widget build(BuildContext context) {
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final animDuration = reduceMotion
+        ? Duration.zero
+        : const Duration(milliseconds: 200);
+    final neck = theme.neck;
+
+    // A tuning pin on the neck, the string hanging from it.
+    final cell = Column(
       children: [
         SizedBox(
           width: _kItemWidth,
-          height: _kWoodStringTop + _kWoodStringHeight + 3,
+          height: _kStringTop + _kStringHeight + 3,
           child: Stack(
             alignment: Alignment.topCenter,
             children: [
               // Glow
               Positioned(
-                top: _kWoodStringTop,
-                child: _glow(_kWoodStringHeight, reduceMotion),
+                top: _kStringTop,
+                child: _glow(_kStringHeight, reduceMotion),
               ),
               // String line
               Positioned(
-                top: _kWoodStringTop,
+                top: _kStringTop,
                 child: AnimatedContainer(
                   duration: animDuration,
                   width: isActive ? 4.0 : 3.0,
-                  height: _kWoodStringHeight,
+                  height: _kStringHeight,
                   decoration: BoxDecoration(
                     color: isActive
                         ? stringColor
@@ -283,74 +292,19 @@ class _StringCell extends StatelessWidget {
                 child: Container(
                   width: _kPinSize,
                   height: _kPinSize,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: WoodMaterials.goldGradient,
-                    boxShadow: [WoodMaterials.pinShadow],
+                    gradient: neck.pin,
+                    boxShadow: [neck.pinShadow],
                   ),
                 ),
               ),
             ],
           ),
         ),
-        _label(animDuration),
-      ],
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final animDuration =
-        reduceMotion ? Duration.zero : const Duration(milliseconds: 200);
-
-    if (theme.isWood) {
-      return _tappable(_woodCell(animDuration, reduceMotion));
-    }
-
-    // Dark mode: thin white/light rim makes traditional string colors legible
-    // on dark backgrounds. Glow replaces the rim when active.
-    final rimBorder = (_isDark && !isActive)
-        ? Border.all(
-            color: Colors.white.withValues(alpha: 0.45),
-            width: 1.0,
-          )
-        : null;
-
-    final cell = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // String + glow
-        SizedBox(
-          width: _kItemWidth,
-          height: 80,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Glow
-              _glow(68, reduceMotion),
-              // String line
-              AnimatedContainer(
-                duration: animDuration,
-                width: isActive ? 4.0 : 2.5,
-                height: 68,
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? stringColor
-                      : stringColor.withValues(alpha: _inactiveAlpha),
-                  borderRadius: BorderRadius.circular(3),
-                  border: rimBorder,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 2),
-        // Label (note + octave, e.g. "C4")
-        // Light mode: C and F labels show a tint of their string color when
-        // inactive to reinforce the landmark identity. Dark mode uses
-        // textSecondary for all inactive labels (string colors are too dark
-        // to show on dark backgrounds).
+        // Label (note + octave). Light mode: C and F labels keep a tint of
+        // their string colour when inactive to reinforce the landmark; dark
+        // mode uses textSecondary for all inactive labels.
         _label(animDuration),
       ],
     );

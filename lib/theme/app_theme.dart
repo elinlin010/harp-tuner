@@ -37,6 +37,36 @@ class TunerThemeData {
 
   bool get isWood => wood != null;
 
+  /// Harp neck rail and tuning pins above the string visualizer. Wood themes
+  /// take theirs from [wood]; the flat themes derive a plain rail with silver
+  /// pins from their own palette.
+  HarpNeck get neck {
+    final w = wood;
+    if (w != null) {
+      return HarpNeck(
+        colors: w.neck,
+        grain: true,
+        darkGrain: w.neckDarkGrain,
+        edgeTop: w.neckEdgeTop,
+        edgeBottom: w.neckEdgeBottom,
+        shadow: w.neckShadow,
+        pin: WoodMaterials.goldGradient,
+        pinShadow: WoodMaterials.pinShadow,
+      );
+    }
+    final dark = brightness == Brightness.dark;
+    return HarpNeck(
+      colors: [surfaceHi, surfaceRim],
+      grain: false,
+      darkGrain: false,
+      edgeTop: Colors.white.withValues(alpha: dark ? 0.14 : 0.6),
+      edgeBottom: textSecondary.withValues(alpha: 0.33),
+      shadow: Colors.black.withValues(alpha: dark ? 0.5 : 0.15),
+      pin: HarpNeck.silverGradient,
+      pinShadow: HarpNeck.silverPinShadow,
+    );
+  }
+
   const TunerThemeData({
     required this.id,
     required this.displayName,
@@ -141,6 +171,47 @@ class WoodFinish {
     required this.neckShadow,
     required this.swatchCheck,
   });
+}
+
+class HarpNeck {
+  final List<Color> colors; // rail fill, top → bottom
+  final bool grain;         // wood grain over the fill
+  final bool darkGrain;
+  final Color edgeTop;      // 1px line along the top of the rail
+  final Color edgeBottom;   // 1px line along the bottom
+  final Color shadow;       // drop shadow under the rail
+  final Gradient pin;       // tuning-pin fill
+  final BoxShadow pinShadow;
+
+  const HarpNeck({
+    required this.colors,
+    required this.grain,
+    required this.darkGrain,
+    required this.edgeTop,
+    required this.edgeBottom,
+    required this.shadow,
+    required this.pin,
+    required this.pinShadow,
+  });
+
+  // Nickel tuning pins for the flat themes.
+  static const silverGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF7E7E7E),
+      Color(0xFFF2F2F2),
+      Color(0xFFA6A6A6),
+      Color(0xFFE4E4E4),
+      Color(0xFF8A8A8A),
+    ],
+    stops: [0.0, 0.35, 0.55, 0.78, 1.0],
+  );
+  static const silverPinShadow = BoxShadow(
+    color: Color(0x73000000), // rgba(0,0,0,0.45)
+    blurRadius: 2,
+    offset: Offset(0, 1),
+  );
 }
 
 class WoodMaterials {

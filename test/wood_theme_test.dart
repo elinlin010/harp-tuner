@@ -185,6 +185,24 @@ void main() {
       }
     });
 
+    test('flat themes get a plain neck rail with silver pins', () {
+      for (final t in [
+        TunerThemes.linen,
+        TunerThemes.milk,
+        TunerThemes.blueprint,
+        TunerThemes.void_,
+      ]) {
+        final neck = t.neck;
+        expect(neck.grain, isFalse, reason: t.id);
+        expect(neck.colors, [t.surfaceHi, t.surfaceRim], reason: t.id);
+        expect(neck.pin, HarpNeck.silverGradient, reason: t.id);
+      }
+      for (final t in _woods) {
+        expect(t.neck.grain, isTrue, reason: t.id);
+        expect(t.neck.pin, WoodMaterials.goldGradient, reason: t.id);
+      }
+    });
+
     test('theme ids are unique', () {
       final ids = TunerThemes.all.map((t) => t.id).toList();
       expect(ids.toSet().length, ids.length);
