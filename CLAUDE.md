@@ -76,6 +76,12 @@ lib/
 
 **Design system:** See `DESIGN.md` for the full design system. All colors/text styles come from `app_theme.dart` — do not use hard-coded colors. Use `TunerThemeData.sans()` and `TunerThemeData.label()` for all text; never hard-code `TextStyle` outside the theme. Theme is runtime-switchable via `tunerThemeProvider`.
 
+**Themes:** 8 themes, picker order light `[maple, spruce, linen, milk]`, dark `[mahogany, walnut, blueprint, void]`; the dark-mode switch uses `TunerThemes.darkModePairs`. The four wood themes carry a `WoodFinish` (`theme.wood`, `theme.isWood`) — every wood-only treatment (grain via `WoodSurface`/`WoodGrainPainter` in `widgets/wood_surface.dart`, gold frame, neck rail + tuning pins, gold-leaf buttons) is gated on it, so the flat themes keep their flat surfaces. All themes follow the design prototype's shared detailing: a framed gauge card (2px outer border, 1px line inset 7px, drop shadow; `TunerThemeData.gaugeBorder`/`gaugeInnerLine`/`gaugeShadow`), bordered settings cards and pills (`cardBorder`, `cardShadow`, `chipBorder`), a harp neck rail with tuning pins (`TunerThemeData.neck` / `HarpNeck`), the note in Outfit Light 112/48, and the active-string glow. Wood themes take these values from `WoodFinish` (gold, grain); flat themes derive them from their palette (`surfaceRim`, silver pins).
+
+**Active string (string visualizer):** the glow is fixed-size and only animates opacity (fast in, slow out). Never animate its size from zero; that reads as a box popping in. In reference mode the row does not recentre on the tapped string, because it is already under the user's finger; it only nudges a partly off-screen string into view. Auto mode centres the detected string.
+
+**First-launch theme (existing users unaffected):** `resolveStartupTheme()` in `theme_provider.dart`, awaited in `main()` and injected via `startupThemeProvider`. A saved `theme_id` always wins. Without one: any pre-wood pref key (`app_locale`, `tuner_*`) or a platform-reported update (`package_info_plus` install vs update time) ⇒ existing install ⇒ Linen; a fresh install ⇒ Maple; unknown ⇒ Linen. The result is written to `theme_id` immediately so it never flips on a later update.
+
 ## gstack Skills
 
 Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
@@ -141,6 +147,8 @@ All core features are shipped:
 - **Microphone permission**: `permission_handler` via a custom iOS method channel (`com.harptuner/mic_permission`) and Android manifest
 - **Reference mode**: tap a string to hear it and tune to it; gauge shows cents relative to that string
 - **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language, showTuningReminder
+- **Wood themes** (Maple, Spruce, Mahogany, Walnut): Maple is the default for new installs only. See "Themes" above.
+- **Store screenshots**: `tool/store_screenshots/generate.sh [locales…]` renders the real `TunerScreen` at App Store (6.9", 6.5", iPad 13") and Play (1080×1920) sizes into `store/screenshots/`. Needs `pip install pillow`; fonts are downloaded on first run.
 - **Tuning reminder**: on mic start, a floating snackbar prompts pedal harp users to set pedals to flat and lever harp users to disengage levers. Dismissed via "Got it" or mic stop. Toggle in settings (`showTuningReminder`, persisted via SharedPreferences key `tuner_show_tuning_reminder`).
 - **Screen stays awake while listening**: `wakelock_plus` via `ScreenWakeService`, acquired in `startListening()` and released in `stopListening()`. Keyed to `isListening` intent, not the mic subscription, so the Android reference-tone path (which pauses the mic) keeps the hold. Platform failures are logged and swallowed. `TunerScreen` re-asserts the hold on `AppLifecycleState.resumed` (`reassertScreenWake`): Android's `FLAG_KEEP_SCREEN_ON` is a window flag that survives backgrounding on its own, but iOS's `isIdleTimerDisabled` is a process-global property the plugin sets once and never re-applies, so an interruption could otherwise leave a live session unpinned. The `ref.onDispose` release is belt-and-braces only — `tunerProvider` is not `autoDispose` and `TunerScreen` is the root route, so in practice it fires at process exit.
 

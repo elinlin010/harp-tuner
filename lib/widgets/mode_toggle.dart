@@ -23,31 +23,33 @@ class ModeToggle extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.surfaceHi,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: theme.surfaceRim, width: 0.5),
+        border: Border.fromBorderSide(theme.chipBorder),
       ),
-      child: Builder(builder: (context) {
-        final l10n = AppLocalizations.of(context)!;
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _Tab(
-              // Tuning fork concept: graphic_eq shows frequency bars (pitch analysis)
-              icon: Icons.graphic_eq_rounded,
-              label: l10n.modeAuto,
-              active: mode == TunerMode.auto,
-              onTap: () => onChanged(TunerMode.auto),
-              theme: theme,
-            ),
-            _Tab(
-              icon: Icons.volume_up_rounded,
-              label: l10n.modeReference,
-              active: mode == TunerMode.reference,
-              onTap: () => onChanged(TunerMode.reference),
-              theme: theme,
-            ),
-          ],
-        );
-      }),
+      child: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context)!;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _Tab(
+                // Tuning fork concept: graphic_eq shows frequency bars (pitch analysis)
+                icon: Icons.graphic_eq_rounded,
+                label: l10n.modeAuto,
+                active: mode == TunerMode.auto,
+                onTap: () => onChanged(TunerMode.auto),
+                theme: theme,
+              ),
+              _Tab(
+                icon: Icons.volume_up_rounded,
+                label: l10n.modeReference,
+                active: mode == TunerMode.reference,
+                onTap: () => onChanged(TunerMode.reference),
+                theme: theme,
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }
@@ -73,6 +75,10 @@ class _Tab extends StatelessWidget {
         ? Duration.zero
         : const Duration(milliseconds: 220);
 
+    // Wood themes: the active tab is gold leaf with dark lettering.
+    final isWood = theme.isWood;
+    final activeColor = isWood ? WoodMaterials.onGold : theme.inTune;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -82,21 +88,35 @@ class _Tab extends StatelessWidget {
           horizontal: active ? 12 : 9,
           vertical: 12,
         ),
-        decoration: BoxDecoration(
-          color: active ? theme.inTune.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(17),
-          border: active
-              ? Border.all(color: theme.inTune.withValues(alpha: 0.45), width: 0.5)
-              : null,
-        ),
+        decoration: isWood
+            ? BoxDecoration(
+                gradient: active
+                    ? WoodMaterials.goldGradient
+                    : WoodMaterials.goldGradient.scale(0.0),
+                borderRadius: BorderRadius.circular(17),
+                border: Border.all(
+                  color: active
+                      ? WoodMaterials.goldHighlight
+                      : WoodMaterials.goldHighlight.withValues(alpha: 0.0),
+                  width: 0.5,
+                ),
+              )
+            : BoxDecoration(
+                color: active
+                    ? theme.inTune.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(17),
+                border: active
+                    ? Border.all(
+                        color: theme.inTune.withValues(alpha: 0.45),
+                        width: 0.5,
+                      )
+                    : null,
+              ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 14,
-              color: active ? theme.inTune : theme.textDim,
-            ),
+            Icon(icon, size: 14, color: active ? activeColor : theme.textDim),
             // Label slides in/out via ClipRect + AnimatedAlign widthFactor.
             // widthFactor 0→1 collapses/expands the label width while the
             // AnimatedContainer above simultaneously adjusts the padding,
@@ -113,8 +133,11 @@ class _Tab extends StatelessWidget {
                     const SizedBox(width: 5),
                     Text(
                       label,
-                      style: theme.sans(12,
-                          weight: FontWeight.w600, color: theme.inTune),
+                      style: theme.sans(
+                        12,
+                        weight: FontWeight.w600,
+                        color: activeColor,
+                      ),
                     ),
                   ],
                 ),

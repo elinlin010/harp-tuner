@@ -1,0 +1,1 @@
+New wood themes inspired by concert harps: Maple, Spruce, Mahogany and Walnut, with gold hardware and a harp neck above the strings. Find them in Settings → Theme. Your current theme stays as it is. All themes get a refreshed frame, and tapping a string in reference mode now glows softly instead of jumping.

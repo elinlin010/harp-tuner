@@ -18,6 +18,7 @@ import '../widgets/mode_toggle.dart';
 import '../widgets/settings_display.dart';
 import '../widgets/string_visualizer.dart';
 import '../widgets/tuner_gauge.dart';
+import '../widgets/wood_surface.dart';
 
 class TunerScreen extends ConsumerStatefulWidget {
   const TunerScreen({super.key});
@@ -291,7 +292,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
     return Scaffold(
       backgroundColor: theme.bg,
-      body: SafeArea(
+      body: ThemedPageBackground(
+        theme: theme,
+        child: SafeArea(
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -318,7 +321,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                     // Settings pill
                     Material(
                       color: theme.surfaceHi,
-                      borderRadius: BorderRadius.circular(20),
+                      shape: _pillShape(theme),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
                         onTap: () => _showSettings(context),
@@ -351,7 +354,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                         label: AppLocalizations.of(context)!.settingsFeedbackRow,
                         child: Material(
                           color: theme.surfaceHi,
-                          borderRadius: BorderRadius.circular(20),
+                          shape: _pillShape(theme),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => showFeedbackDialog(
@@ -434,9 +437,16 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
             ],
         ),
       ),
+      ),
     );
   }
 }
+
+// Nav-bar pills share the mode toggle's border (gold on wood themes).
+ShapeBorder _pillShape(TunerThemeData theme) => RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: theme.chipBorder,
+    );
 
 // ── Harp type localization helpers ────────────────────────────────────────────
 
@@ -584,11 +594,21 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
     final mq = MediaQuery.of(context);
     final bottomPad = mq.viewInsets.bottom + mq.padding.bottom;
 
-    return Container(
+    final wood = theme.wood;
+    const sheetRadius = BorderRadius.vertical(top: Radius.circular(24));
+
+    final sheet = Container(
+      // Wood themes paint the grain card behind this; the gold top edge sits
+      // on top of it.
       decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(top: BorderSide(color: theme.surfaceRim, width: 1)),
+        color: wood == null ? theme.surface : null,
+        borderRadius: sheetRadius,
+        border: Border(
+          top: BorderSide(
+            color: wood?.gold ?? theme.surfaceRim,
+            width: 1.5,
+          ),
+        ),
       ),
       padding: EdgeInsets.fromLTRB(0, 12, 0, 24 + bottomPad),
       child: ConstrainedBox(
@@ -606,7 +626,7 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.surfaceRim,
+                color: (wood?.gold ?? theme.surfaceRim).withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -773,6 +793,14 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
       ),
       ),
     );
+
+    if (wood == null) return sheet;
+    return WoodSurface(
+      color: theme.surface,
+      dark: wood.darkGrain,
+      borderRadius: sheetRadius,
+      child: sheet,
+    );
   }
 }
 
@@ -907,10 +935,19 @@ class _SheetSwitchRow extends StatelessWidget {
                       duration: animDuration,
                       width: 20,
                       height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: value ? theme.inTune : theme.textSecondary,
-                      ),
+                      // Wood themes: an "on" thumb is gold leaf.
+                      decoration: theme.isWood
+                          ? BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: value ? null : theme.textSecondary,
+                              gradient:
+                                  value ? WoodMaterials.goldGradient : null,
+                            )
+                          : BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  value ? theme.inTune : theme.textSecondary,
+                            ),
                     ),
                   ),
                 ),
@@ -939,72 +976,151 @@ class _ListenButton extends StatelessWidget {
     required this.theme,
   });
 
+  static const _radius = BorderRadius.all(Radius.circular(18));
+
+  // Idle ↔ listening runs on its own 200ms tween, retargeted only when
+  // isListening flips. The listening pulse (controller) is applied directly
+  // on top. Don't feed the pulse into an AnimatedContainer: its target then
+  // changes every frame, the implicit tween restarts every frame, and a
+  // 200ms change crawls out over about a second. Tapping Start/Stop a few
+  // times left the button visibly half-faded.
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedBuilder(
-        animation: controller,
-        builder: (ctx, child) {
-          return AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(18),
-              color: isListening
-                  ? theme.inTune.withValues(alpha: 0.14)
-                  : theme.surface,
-              border: Border.all(
-                color: isListening
-                    ? theme.inTune.withValues(
-                        alpha: 0.40 + controller.value * 0.20)
-                    : theme.surfaceRim,
-                width: 1.5,
-              ),
-              boxShadow: isListening
-                  ? [
-                      BoxShadow(
-                        color: theme.inTune.withValues(
-                            alpha: 0.12 + controller.value * 0.14),
-                        blurRadius: 20,
-                        spreadRadius: 2,
-                      )
-                    ]
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      )
-                    ],
+      child: TweenAnimationBuilder<double>(
+        tween: Tween(end: isListening ? 1.0 : 0.0),
+        duration:
+            reduceMotion ? Duration.zero : const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        builder: (context, t, _) => AnimatedBuilder(
+          animation: controller,
+          builder: (context, _) =>
+              theme.isWood ? _wood(context, t) : _flat(context, t),
+        ),
+      ),
+    );
+  }
+
+  Widget _content(BuildContext context, Color fg) {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isListening ? Icons.stop_rounded : Icons.mic_rounded,
+            size: 28,
+            color: fg,
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              isListening ? l10n.tunerStopBtn : l10n.tunerStartBtn,
+              style: theme.sans(20, weight: FontWeight.w700, color: fg),
+              overflow: TextOverflow.ellipsis,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isListening ? Icons.stop_rounded : Icons.mic_rounded,
-                  size: 28,
-                  color: isListening ? theme.inTune : theme.textSecondary,
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    isListening ? l10n.tunerStopBtn : l10n.tunerStartBtn,
-                    style: theme.sans(
-                      20,
-                      weight: FontWeight.w700,
-                      color: isListening ? theme.inTune : theme.textSecondary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Flat themes: an inTune-tinted pill with a pulsing rim while listening.
+  Widget _flat(BuildContext context, double t) {
+    final idle = BoxDecoration(
+      borderRadius: _radius,
+      color: theme.surface,
+      border: Border.all(color: theme.surfaceRim, width: 1.5),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.05),
+          blurRadius: 8,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    );
+    final listening = BoxDecoration(
+      borderRadius: _radius,
+      color: theme.inTune.withValues(alpha: 0.14),
+      border: Border.all(
+        color: theme.inTune.withValues(alpha: 0.40 + controller.value * 0.20),
+        width: 1.5,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: theme.inTune.withValues(alpha: 0.12 + controller.value * 0.14),
+          blurRadius: 20,
+          spreadRadius: 2,
+        ),
+      ],
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration.lerp(idle, listening, t)!,
+      child: _content(
+          context, Color.lerp(theme.textSecondary, theme.inTune, t)!),
+    );
+  }
+
+  // Wood themes: a gilt-rimmed card when idle; gold leaf while listening.
+  // The gold is its own opaque layer faded in on top of the card. Lerping
+  // the gradient itself would pass through a see-through, washed-out gold.
+  Widget _wood(BuildContext context, double t) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: _radius,
+              color: theme.surface,
+              border: Border.all(color: WoodMaterials.goldRim, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.08),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        if (t > 0)
+          Positioned.fill(
+            child: Opacity(
+              opacity: t,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: _radius,
+                  gradient: WoodMaterials.goldGradient,
+                  border:
+                      Border.all(color: WoodMaterials.goldHighlight, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: WoodMaterials.goldShadow.withValues(
+                          alpha: 0.30 + controller.value * 0.15),
+                      blurRadius: 18,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                // Thin inner highlight along the top of the raised gold.
+                child: const DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: _radius,
+                    gradient: WoodMaterials.goldSheen,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        _content(
+          context,
+          Color.lerp(theme.textSecondary, WoodMaterials.onGold, t)!,
+        ),
+      ],
     );
   }
 }
@@ -1484,18 +1600,20 @@ class _ThemePickerRow extends StatelessWidget {
     final filtered = TunerThemes.all
         .where((t) => t.brightness == currentTheme.brightness)
         .toList();
-    return Row(
+    // Wrap, not Row: four 56px swatches overflow a 320dp-wide phone.
+    return Wrap(
+      spacing: 16,
+      runSpacing: 12,
       children: [
         for (final t in filtered)
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _ThemeSwatch(
-              swatch: t,
-              selected: t.id == currentTheme.id,
-              accentColor: currentTheme.inTune,
-              labelStyle: currentTheme.sans(13),
-              onTap: () => onSelect(t),
-            ),
+          _ThemeSwatch(
+            swatch: t,
+            selected: t.id == currentTheme.id,
+            accentColor: currentTheme.inTune,
+            checkColor: currentTheme.wood?.swatchCheck ?? currentTheme.inTune,
+            labelStyle:
+                currentTheme.sans(13, color: currentTheme.textSecondary),
+            onTap: () => onSelect(t),
           ),
       ],
     );
@@ -1506,6 +1624,7 @@ class _ThemeSwatch extends StatelessWidget {
   final TunerThemeData swatch;
   final bool selected;
   final Color accentColor;
+  final Color checkColor;
   final TextStyle labelStyle;
   final VoidCallback onTap;
 
@@ -1513,6 +1632,7 @@ class _ThemeSwatch extends StatelessWidget {
     required this.swatch,
     required this.selected,
     required this.accentColor,
+    required this.checkColor,
     required this.labelStyle,
     required this.onTap,
   });
@@ -1522,6 +1642,7 @@ class _ThemeSwatch extends StatelessWidget {
     final animDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 200);
+    final wood = swatch.wood;
 
     return Semantics(
       label: swatch.displayName,
@@ -1542,7 +1663,8 @@ class _ThemeSwatch extends StatelessWidget {
                 border: Border.all(
                   color: selected
                       ? accentColor
-                      : swatch.surfaceRim.withValues(alpha: 0.6),
+                      : (wood != null ? WoodMaterials.goldRim : swatch.surfaceRim)
+                          .withValues(alpha: 0.6),
                   width: selected ? 2.5 : 1.5,
                 ),
                 boxShadow: selected
@@ -1555,10 +1677,20 @@ class _ThemeSwatch extends StatelessWidget {
                       ]
                     : null,
               ),
-              child: selected
+              // Wood swatches show the theme's page grain. Container insets
+              // the child by the border width, so the grain stays inside it.
+              child: CustomPaint(
+                painter: wood == null
+                    ? null
+                    : WoodGrainPainter(
+                        gradient: woodPageGradient(wood),
+                        dark: wood.darkGrain,
+                        circle: true,
+                      ),
+                child: selected
                   ? Center(
                       child: Icon(Icons.check_rounded,
-                          size: 22, color: accentColor),
+                          size: 22, color: checkColor),
                     )
                   : Center(
                       child: Container(
@@ -1566,18 +1698,23 @@ class _ThemeSwatch extends StatelessWidget {
                         height: 16,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: swatch.inTune,
+                          color: wood != null ? null : swatch.inTune,
+                          gradient: wood != null
+                              ? WoodMaterials.goldGradient
+                              : null,
+                          boxShadow: wood != null
+                              ? const [WoodMaterials.pinShadow]
+                              : null,
                         ),
                       ),
                     ),
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               swatch.displayName,
               style: labelStyle.copyWith(
-                color: selected
-                    ? accentColor
-                    : labelStyle.color?.withValues(alpha: 0.6),
+                color: selected ? accentColor : labelStyle.color,
                 fontWeight:
                     selected ? FontWeight.w600 : FontWeight.w400,
               ),
