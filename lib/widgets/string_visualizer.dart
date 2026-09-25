@@ -54,12 +54,33 @@ class _StringVisualizerState extends State<StringVisualizer> {
     final idx =
         widget.strings.indexWhere((s) => s == widget.activeString);
     if (idx < 0) return;
-    final viewport = _scrollCtrl.position.viewportDimension;
-    final target = idx * _kItemWidth - viewport / 2 + _kItemWidth / 2;
+    final position = _scrollCtrl.position;
+    final viewport = position.viewportDimension;
+    // Cell edges in scroll coordinates (the list has 20px leading padding).
+    final cellStart = 20 + idx * _kItemWidth;
+    final cellEnd = cellStart + _kItemWidth;
+
+    final double target;
+    if (widget.onTap != null) {
+      // Reference mode: the active string is the one the user just tapped,
+      // so it is already under their finger. Recentring would slide it away
+      // mid-tap. Only nudge it in when it sits partly off an edge.
+      const margin = 12.0;
+      if (cellStart < position.pixels + margin) {
+        target = cellStart - margin;
+      } else if (cellEnd > position.pixels + viewport - margin) {
+        target = cellEnd - viewport + margin;
+      } else {
+        return;
+      }
+    } else {
+      // Auto mode: the detected string may be anywhere — centre it.
+      target = cellStart + _kItemWidth / 2 - viewport / 2;
+    }
     _scrollCtrl.animateTo(
-      target.clamp(0.0, _scrollCtrl.position.maxScrollExtent),
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
+      target.clamp(0.0, position.maxScrollExtent),
+      duration: const Duration(milliseconds: 420),
+      curve: Curves.easeOutCubic,
     );
   }
 
@@ -177,20 +198,38 @@ class _StringCell extends StatelessWidget {
     };
   }
 
-  List<BoxShadow>? get _glow => isActive
-      ? [
-          BoxShadow(
-            color: stringColor.withValues(alpha: 0.55),
-            blurRadius: 18,
-            spreadRadius: 6,
-          ),
-          BoxShadow(
-            color: stringColor.withValues(alpha: 0.25),
-            blurRadius: 32,
-            spreadRadius: 10,
-          ),
-        ]
-      : null;
+  // Active-string glow: a soft light that hugs the string and fades in and
+  // out. It keeps a fixed size and only animates opacity; growing it from
+  // zero read as a box popping in. It lights up quickly and fades out
+  // slowly, like a plucked string dying away.
+  Widget _glow(double height, bool reduceMotion) {
+    return AnimatedOpacity(
+      opacity: isActive ? 1.0 : 0.0,
+      duration: reduceMotion
+          ? Duration.zero
+          : Duration(milliseconds: isActive ? 280 : 520),
+      curve: isActive ? Curves.easeOutCubic : Curves.easeInOut,
+      child: Container(
+        width: 4,
+        height: height,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(3),
+          boxShadow: [
+            BoxShadow(
+              color: stringColor.withValues(alpha: 0.45),
+              blurRadius: 10,
+              spreadRadius: 1.5,
+            ),
+            BoxShadow(
+              color: stringColor.withValues(alpha: 0.18),
+              blurRadius: 22,
+              spreadRadius: 4,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _label(Duration animDuration) => AnimatedDefaultTextStyle(
         duration: animDuration,
@@ -209,7 +248,7 @@ class _StringCell extends StatelessWidget {
       );
 
   // Wood themes: a gold tuning pin on the neck, the string hanging from it.
-  Widget _woodCell(Duration animDuration) {
+  Widget _woodCell(Duration animDuration, bool reduceMotion) {
     return Column(
       children: [
         SizedBox(
@@ -218,18 +257,10 @@ class _StringCell extends StatelessWidget {
           child: Stack(
             alignment: Alignment.topCenter,
             children: [
-              // Glow halo
+              // Glow
               Positioned(
-                top: _kWoodStringTop + (_kWoodStringHeight - 76) / 2,
-                child: AnimatedContainer(
-                  duration: animDuration,
-                  width: isActive ? 28 : 0,
-                  height: isActive ? 76 : 0,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: _glow,
-                  ),
-                ),
+                top: _kWoodStringTop,
+                child: _glow(_kWoodStringHeight, reduceMotion),
               ),
               // String line
               Positioned(
@@ -269,11 +300,13 @@ class _StringCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final animDuration = MediaQuery.disableAnimationsOf(context)
-        ? Duration.zero
-        : const Duration(milliseconds: 200);
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final animDuration =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 200);
 
-    if (theme.isWood) return _tappable(_woodCell(animDuration));
+    if (theme.isWood) {
+      return _tappable(_woodCell(animDuration, reduceMotion));
+    }
 
     // Dark mode: thin white/light rim makes traditional string colors legible
     // on dark backgrounds. Glow replaces the rim when active.
@@ -294,16 +327,8 @@ class _StringCell extends StatelessWidget {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Glow halo
-              AnimatedContainer(
-                duration: animDuration,
-                width: isActive ? 28 : 0,
-                height: isActive ? 76 : 0,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: _glow,
-                ),
-              ),
+              // Glow
+              _glow(68, reduceMotion),
               // String line
               AnimatedContainer(
                 duration: animDuration,

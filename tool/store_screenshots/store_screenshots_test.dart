@@ -153,7 +153,20 @@ class _SceneNotifier extends TunerNotifier {
 
   @override
   TunerState build() {
-    Future.microtask(() => setStateForTest(target));
+    if (target.tunerMode == TunerMode.reference) {
+      // Reference mode only nudges an off-screen string into view (it
+      // doesn't recentre under the user's finger), so centre it via auto
+      // mode first, then switch.
+      Future.microtask(
+        () => setStateForTest(target.copyWith(tunerMode: TunerMode.auto)),
+      );
+      Future.delayed(
+        const Duration(milliseconds: 600),
+        () => setStateForTest(target),
+      );
+    } else {
+      Future.microtask(() => setStateForTest(target));
+    }
     // Same listening/reminder flags as the target, so the switch doesn't
     // trigger the tuning-reminder snackbar.
     return TunerState(
@@ -446,7 +459,7 @@ void main() {
           ),
         );
         // Let the string rail finish scrolling to the active string.
-        for (var i = 0; i < 4; i++) {
+        for (var i = 0; i < 6; i++) {
           await tester.pump(const Duration(milliseconds: 200));
         }
 
