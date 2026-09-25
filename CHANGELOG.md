@@ -2,6 +2,15 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.4.0+29] - 2026-09-25
+
+### Added
+- Four wood themes inspired by concert harps — wood-grain surfaces with gold hardware: **Maple** and **Spruce** (light), **Mahogany** and **Walnut** (dark). The gauge sits in a gilded frame, the strings hang from a harp neck with gold tuning pins, and the Start/Stop button, mode toggle and switches are gold leaf. The needle and the in-tune note circle stay green, so "in tune" still reads at a glance. The wood themes come first in the theme picker.
+- The dark-mode switch now jumps to each theme's partner: Maple ↔ Mahogany, Spruce ↔ Walnut, Linen ↔ Blueprint, Milk ↔ Void.
+
+### Changed
+- New installs open on Maple. Existing installs keep the theme they already have (Linen unless you picked another) — nothing changes until you choose a wood theme in Settings → Theme.
+
 ## [1.3.0+28] - 2026-09-21
 
 ### Added

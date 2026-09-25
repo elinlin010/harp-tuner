@@ -23,7 +23,20 @@ Future<void> main() async {
   // project is configured yet (run `flutterfire configure`), feedback is
   // silently disabled and the rest of the app runs normally.
   await FeedbackService.instance.tryInitialize();
-  runApp(const ProviderScope(child: HarpTunerApp()));
+  // Resolve the theme before the first frame so the app opens on it directly
+  // (new installs default to Maple, existing installs keep Linen). The native
+  // splash covers the wait; the timeout keeps a stuck platform call from
+  // holding the app on it.
+  final startupTheme = await resolveStartupTheme()
+      .timeout(const Duration(seconds: 2))
+      .then<TunerThemeData?>((t) => t, onError: (Object e) {
+    debugPrint('main: startup theme unresolved, loading async: $e');
+    return null;
+  });
+  runApp(ProviderScope(
+    overrides: [startupThemeProvider.overrideWithValue(startupTheme)],
+    child: const HarpTunerApp(),
+  ));
 }
 
 class HarpTunerApp extends ConsumerWidget {

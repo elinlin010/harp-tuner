@@ -18,6 +18,7 @@ import '../widgets/mode_toggle.dart';
 import '../widgets/settings_display.dart';
 import '../widgets/string_visualizer.dart';
 import '../widgets/tuner_gauge.dart';
+import '../widgets/wood_surface.dart';
 
 class TunerScreen extends ConsumerStatefulWidget {
   const TunerScreen({super.key});
@@ -291,7 +292,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
     return Scaffold(
       backgroundColor: theme.bg,
-      body: SafeArea(
+      body: ThemedPageBackground(
+        theme: theme,
+        child: SafeArea(
         child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -318,7 +321,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                     // Settings pill
                     Material(
                       color: theme.surfaceHi,
-                      borderRadius: BorderRadius.circular(20),
+                      shape: _pillShape(theme),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(20),
                         onTap: () => _showSettings(context),
@@ -351,7 +354,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                         label: AppLocalizations.of(context)!.settingsFeedbackRow,
                         child: Material(
                           color: theme.surfaceHi,
-                          borderRadius: BorderRadius.circular(20),
+                          shape: _pillShape(theme),
                           child: InkWell(
                             borderRadius: BorderRadius.circular(20),
                             onTap: () => showFeedbackDialog(
@@ -434,9 +437,18 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
             ],
         ),
       ),
+      ),
     );
   }
 }
+
+// Nav-bar pills: flat themes are borderless; wood themes get a 1px gold rim.
+ShapeBorder _pillShape(TunerThemeData theme) => RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: theme.wood != null
+          ? BorderSide(color: theme.wood!.chipBorder, width: 1)
+          : BorderSide.none,
+    );
 
 // ── Harp type localization helpers ────────────────────────────────────────────
 
@@ -584,11 +596,20 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
     final mq = MediaQuery.of(context);
     final bottomPad = mq.viewInsets.bottom + mq.padding.bottom;
 
-    return Container(
+    final wood = theme.wood;
+    const sheetRadius = BorderRadius.vertical(top: Radius.circular(24));
+
+    final sheet = Container(
+      // Wood themes paint the grain card behind this; the gold top edge sits
+      // on top of it.
       decoration: BoxDecoration(
-        color: theme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(top: BorderSide(color: theme.surfaceRim, width: 1)),
+        color: wood == null ? theme.surface : null,
+        borderRadius: sheetRadius,
+        border: Border(
+          top: wood != null
+              ? BorderSide(color: wood.gold, width: 1.5)
+              : BorderSide(color: theme.surfaceRim, width: 1),
+        ),
       ),
       padding: EdgeInsets.fromLTRB(0, 12, 0, 24 + bottomPad),
       child: ConstrainedBox(
@@ -606,7 +627,9 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: theme.surfaceRim,
+                color: wood != null
+                    ? wood.gold.withValues(alpha: 0.7)
+                    : theme.surfaceRim,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -773,6 +796,14 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
       ),
       ),
     );
+
+    if (wood == null) return sheet;
+    return WoodSurface(
+      color: theme.surface,
+      dark: wood.darkGrain,
+      borderRadius: sheetRadius,
+      child: sheet,
+    );
   }
 }
 
@@ -907,10 +938,19 @@ class _SheetSwitchRow extends StatelessWidget {
                       duration: animDuration,
                       width: 20,
                       height: 20,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: value ? theme.inTune : theme.textSecondary,
-                      ),
+                      // Wood themes: an "on" thumb is gold leaf.
+                      decoration: theme.isWood
+                          ? BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: value ? null : theme.textSecondary,
+                              gradient:
+                                  value ? WoodMaterials.goldGradient : null,
+                            )
+                          : BoxDecoration(
+                              shape: BoxShape.circle,
+                              color:
+                                  value ? theme.inTune : theme.textSecondary,
+                            ),
                     ),
                   ),
                 ),
@@ -939,9 +979,41 @@ class _ListenButton extends StatelessWidget {
     required this.theme,
   });
 
+  // Wood themes: gold leaf while listening, a gilt-rimmed card when idle.
+  BoxDecoration _woodDecoration() => isListening
+      ? BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          gradient: WoodMaterials.goldGradient,
+          border: Border.all(color: WoodMaterials.goldHighlight, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: WoodMaterials.goldShadow.withValues(
+                  alpha: 0.30 + controller.value * 0.15),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        )
+      : BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: theme.surface,
+          border: Border.all(color: WoodMaterials.goldRim, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        );
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isWood = theme.isWood;
+    final Color fg = isListening
+        ? (isWood ? WoodMaterials.onGold : theme.inTune)
+        : theme.textSecondary;
     return GestureDetector(
       onTap: onTap,
       child: AnimatedBuilder(
@@ -951,7 +1023,7 @@ class _ListenButton extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
+            decoration: isWood ? _woodDecoration() : BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               color: isListening
                   ? theme.inTune.withValues(alpha: 0.14)
@@ -986,7 +1058,7 @@ class _ListenButton extends StatelessWidget {
                 Icon(
                   isListening ? Icons.stop_rounded : Icons.mic_rounded,
                   size: 28,
-                  color: isListening ? theme.inTune : theme.textSecondary,
+                  color: fg,
                 ),
                 const SizedBox(width: 12),
                 Flexible(
@@ -995,7 +1067,7 @@ class _ListenButton extends StatelessWidget {
                     style: theme.sans(
                       20,
                       weight: FontWeight.w700,
-                      color: isListening ? theme.inTune : theme.textSecondary,
+                      color: fg,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -1484,18 +1556,21 @@ class _ThemePickerRow extends StatelessWidget {
     final filtered = TunerThemes.all
         .where((t) => t.brightness == currentTheme.brightness)
         .toList();
-    return Row(
+    // Wrap, not Row: four 56px swatches overflow a 320dp-wide phone.
+    return Wrap(
+      spacing: 16,
+      runSpacing: 12,
       children: [
         for (final t in filtered)
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: _ThemeSwatch(
-              swatch: t,
-              selected: t.id == currentTheme.id,
-              accentColor: currentTheme.inTune,
-              labelStyle: currentTheme.sans(13),
-              onTap: () => onSelect(t),
-            ),
+          _ThemeSwatch(
+            swatch: t,
+            selected: t.id == currentTheme.id,
+            accentColor: currentTheme.inTune,
+            checkColor: currentTheme.wood?.swatchCheck ?? currentTheme.inTune,
+            labelStyle: currentTheme.isWood
+                ? currentTheme.sans(13, color: currentTheme.textSecondary)
+                : currentTheme.sans(13),
+            onTap: () => onSelect(t),
           ),
       ],
     );
@@ -1506,6 +1581,7 @@ class _ThemeSwatch extends StatelessWidget {
   final TunerThemeData swatch;
   final bool selected;
   final Color accentColor;
+  final Color checkColor;
   final TextStyle labelStyle;
   final VoidCallback onTap;
 
@@ -1513,6 +1589,7 @@ class _ThemeSwatch extends StatelessWidget {
     required this.swatch,
     required this.selected,
     required this.accentColor,
+    required this.checkColor,
     required this.labelStyle,
     required this.onTap,
   });
@@ -1522,6 +1599,7 @@ class _ThemeSwatch extends StatelessWidget {
     final animDuration = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
         : const Duration(milliseconds: 200);
+    final wood = swatch.wood;
 
     return Semantics(
       label: swatch.displayName,
@@ -1542,7 +1620,8 @@ class _ThemeSwatch extends StatelessWidget {
                 border: Border.all(
                   color: selected
                       ? accentColor
-                      : swatch.surfaceRim.withValues(alpha: 0.6),
+                      : (wood != null ? WoodMaterials.goldRim : swatch.surfaceRim)
+                          .withValues(alpha: 0.6),
                   width: selected ? 2.5 : 1.5,
                 ),
                 boxShadow: selected
@@ -1555,10 +1634,20 @@ class _ThemeSwatch extends StatelessWidget {
                       ]
                     : null,
               ),
-              child: selected
+              // Wood swatches show the theme's page grain. Container insets
+              // the child by the border width, so the grain stays inside it.
+              child: CustomPaint(
+                painter: wood == null
+                    ? null
+                    : WoodGrainPainter(
+                        gradient: woodPageGradient(wood),
+                        dark: wood.darkGrain,
+                        circle: true,
+                      ),
+                child: selected
                   ? Center(
                       child: Icon(Icons.check_rounded,
-                          size: 22, color: accentColor),
+                          size: 22, color: checkColor),
                     )
                   : Center(
                       child: Container(
@@ -1566,10 +1655,17 @@ class _ThemeSwatch extends StatelessWidget {
                         height: 16,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: swatch.inTune,
+                          color: wood != null ? null : swatch.inTune,
+                          gradient: wood != null
+                              ? WoodMaterials.goldGradient
+                              : null,
+                          boxShadow: wood != null
+                              ? const [WoodMaterials.pinShadow]
+                              : null,
                         ),
                       ),
                     ),
+              ),
             ),
             const SizedBox(height: 6),
             Text(

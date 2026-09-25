@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import 'wood_surface.dart';
 
 // Shared sweep constant — used by both layout (arcH) and painter (geometry)
 const _kGaugeSweep = 1.4; // ~80° — flat meter look matching reference
@@ -140,7 +141,9 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
   Color get _stateColor {
     if (widget.cents == null) return widget.theme.textDim;
     final c = _needleCtrl.value;
-    if (c.abs() <= _kInTuneCents) return widget.theme.inTune;
+    if (c.abs() <= _kInTuneCents) {
+      return widget.theme.wood?.tuneGreen ?? widget.theme.inTune;
+    }
     if (c > 0) return widget.theme.sharp;
     return widget.theme.flat;
   }
@@ -179,7 +182,10 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
             final paintW = maxW - 2 * hPad;
             // Subtract vertical padding so arcH/readoutH are budgeted against the
             // space actually available inside the card, not the full LayoutBuilder height.
-            final availH = maxH - 2 * vPad;
+            // Wood themes also keep clear of the gold frame (inner line at 7px),
+            // so the arc labels never sit on it when height is tight.
+            final frameClearance = widget.theme.isWood ? 12.0 : 0.0;
+            final availH = maxH - 2 * vPad - 2 * frameClearance;
             // r is fully width-derived so the arc always spans the content area.
             // arcH is independent — we only show the upper portion of the arc by
             // placing cy (the geometric pivot) below the canvas bottom in the painter.
@@ -203,20 +209,14 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
             // filling all Flexible space. Excess space falls below the button.
             final double readoutH = (availH - arcH - 16.0).clamp(0.0, 180.0);
 
-            final sectionBg = widget.theme.surfaceHi;
-
             return Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: hPad,
                 vertical: 8,
               ),
-              child: AnimatedContainer(
-                duration: animDur,
-                curve: Curves.easeOut,
-                decoration: BoxDecoration(
-                  color: sectionBg,
-                  borderRadius: BorderRadius.circular(28),
-                ),
+              child: _GaugeCard(
+                theme: widget.theme,
+                animDur: animDur,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -295,12 +295,85 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-              ), // AnimatedContainer
+              ), // _GaugeCard
             ); // Padding
           },
         ), // LayoutBuilder
       ), // AnimatedOpacity
     ); // Semantics
+  }
+}
+
+// ── Gauge card ────────────────────────────────────────────────────────────────
+// Flat themes: a plain surfaceHi card. Wood themes: grain fill, 2px gold frame,
+// and a 1px inner frame line inset 7px.
+
+class _GaugeCard extends StatelessWidget {
+  final TunerThemeData theme;
+  final Duration animDur;
+  final Widget child;
+
+  const _GaugeCard({
+    required this.theme,
+    required this.animDur,
+    required this.child,
+  });
+
+  static const _radius = BorderRadius.all(Radius.circular(28));
+  static const _innerRadius = BorderRadius.all(Radius.circular(22));
+
+  @override
+  Widget build(BuildContext context) {
+    final wood = theme.wood;
+    if (wood == null) {
+      return AnimatedContainer(
+        duration: animDur,
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: theme.surfaceHi,
+          borderRadius: _radius,
+        ),
+        child: child,
+      );
+    }
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: _radius,
+        boxShadow: wood.gaugeShadow,
+      ),
+      child: WoodSurface(
+        gradient: woodGaugeGradient(wood),
+        dark: wood.darkGrain,
+        borderRadius: _radius,
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: _radius,
+            border: Border.all(color: wood.gaugeBorder, width: 2),
+          ),
+          child: Stack(
+            fit: StackFit.passthrough,
+            children: [
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: Padding(
+                    padding: const EdgeInsets.all(7),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius: _innerRadius,
+                        border:
+                            Border.all(color: wood.gaugeInnerLine, width: 1),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              child,
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -345,7 +418,8 @@ class _ArcPainter extends CustomPainter {
     // Needle tail depth — shared with center line and pivot dot placement
     final needleTailR = r * 0.50;
 
-    final tickColor = theme.textPrimary;
+    final wood = theme.wood;
+    final tickColor = wood?.tick ?? theme.textPrimary;
     final labelColor = theme.textSecondary;
 
     // ── Track (the arc line) ──────────────────────────────────────────────
@@ -356,8 +430,8 @@ class _ArcPainter extends CustomPainter {
       false,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
-        ..color = tickColor.withValues(alpha: 0.8),
+        ..strokeWidth = wood != null ? 2.5 : 1.5
+        ..color = wood?.arc ?? tickColor.withValues(alpha: 0.8),
     );
 
     // ── In-tune zone (thicker highlight on the arc) ──────────────────────
@@ -372,7 +446,7 @@ class _ArcPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = 4
         ..strokeCap = StrokeCap.round
-        ..color = theme.inTune.withValues(alpha: 0.4),
+        ..color = wood?.zone ?? theme.inTune.withValues(alpha: 0.4),
     );
 
     // ── Ticks — OUTSIDE the arc (away from pivot), 3-tier density ────────
@@ -447,7 +521,7 @@ class _ArcPainter extends CustomPainter {
       canvas.drawPath(
         path,
         Paint()
-          ..color = theme.inTune.withValues(alpha: 0.6)
+          ..color = wood?.gold ?? theme.inTune.withValues(alpha: 0.6)
           ..style = PaintingStyle.fill,
       );
     }
@@ -622,12 +696,26 @@ class _SignalReadout extends StatelessWidget {
     final noteLetter = match?.group(2) ?? noteName;
     final noteAcc = match?.group(3) ?? '';
 
+    final isWood = theme.isWood;
+
     // On dark themes, textPrimary at 120px is too intense — use textSecondary.
     final Color baseNoteColor = theme.brightness == Brightness.dark
         ? theme.textSecondary
         : theme.textPrimary;
-    final Color letterColor = isInTune ? Colors.white.withValues(alpha: 0.92) : baseNoteColor;
-    final Color accColor    = isInTune ? Colors.white.withValues(alpha: 0.87) : baseNoteColor;
+    final Color letterColor = !isInTune
+        ? baseNoteColor
+        : isWood
+            ? WoodMaterials.tuneCircleText
+            : Colors.white.withValues(alpha: 0.92);
+    final Color accColor = !isInTune
+        ? baseNoteColor
+        : isWood
+            ? WoodMaterials.tuneCircleText
+            : Colors.white.withValues(alpha: 0.87);
+    // Wood themes set the note in Outfit Light; the flat themes keep Regular.
+    final letterWeight = isWood ? FontWeight.w300 : FontWeight.w400;
+    final double letterSize = isWood ? 112 : 120;
+    final double accSize = isWood ? 48 : 52;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
@@ -666,20 +754,31 @@ class _SignalReadout extends StatelessWidget {
           ),
           const SizedBox(width: 36),
 
-          // Note name wrapped in animated in-tune circle
+          // Note name wrapped in animated in-tune circle. Wood themes use a
+          // green enamel gradient. Neither variant has a border: animating one
+          // out left a dark ring ghost as the circle faded.
           AnimatedContainer(
             duration: animDur,
             curve: Curves.easeOut,
             width: 160,
             height: 160,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              // alpha 0 → smooth transition without colour shift
-              color: isInTune
-                  ? theme.inTune.withValues(alpha: 0.55)
-                  : theme.inTune.withValues(alpha: 0.0),
-              boxShadow: isInTune ? inTuneGlow : [],
-            ),
+            decoration: isWood
+                ? BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: isInTune
+                        ? WoodMaterials.tuneCircle
+                        : WoodMaterials.tuneCircle.scale(0.0),
+                    boxShadow:
+                        isInTune ? WoodMaterials.tuneCircleGlow : const [],
+                  )
+                : BoxDecoration(
+                    shape: BoxShape.circle,
+                    // alpha 0 → smooth transition without colour shift
+                    color: isInTune
+                        ? theme.inTune.withValues(alpha: 0.55)
+                        : theme.inTune.withValues(alpha: 0.0),
+                    boxShadow: isInTune ? inTuneGlow : [],
+                  ),
             child: FittedBox(
               fit: BoxFit.scaleDown,
               // Center alignment keeps all content corners equidistant from
@@ -693,8 +792,8 @@ class _SignalReadout extends StatelessWidget {
                     duration: animDur,
                     curve: Curves.easeOut,
                     style: theme
-                        .sans(120,
-                            weight: FontWeight.w400,
+                        .sans(letterSize,
+                            weight: letterWeight,
                             color: letterColor)
                         .copyWith(height: 1),
                     child: Text(noteLetter),
@@ -706,8 +805,8 @@ class _SignalReadout extends StatelessWidget {
                         duration: animDur,
                         curve: Curves.easeOut,
                         style: theme
-                            .sans(52,
-                                weight: FontWeight.w400,
+                            .sans(accSize,
+                                weight: letterWeight,
                                 color: accColor)
                             .copyWith(height: 1),
                         child: Text(noteAcc),
@@ -773,7 +872,7 @@ class _InlineBulb extends StatelessWidget {
         color: active ? color : Colors.transparent,
         // null border when active — Border.all(width:0) can render a hairline on some canvases
         border: active ? null : Border.all(
-          color: theme.surfaceRim.withValues(alpha: 0.6),
+          color: (theme.wood?.gold ?? theme.surfaceRim).withValues(alpha: 0.6),
           width: 1.5,
         ),
         boxShadow: active
