@@ -1020,6 +1020,13 @@ class _ListenButton extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
+            // Raised gold leaf gets a thin inner highlight along its top.
+            foregroundDecoration: isWood && isListening
+                ? BoxDecoration(
+                    borderRadius: BorderRadius.circular(18),
+                    gradient: WoodMaterials.goldSheen,
+                  )
+                : null,
             decoration: isWood ? _woodDecoration() : BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               color: isListening

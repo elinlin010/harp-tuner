@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -264,13 +266,47 @@ class HarpNeck {
   );
 }
 
+/// Makes a [LinearGradient] run at a fixed CSS angle (0° = to top, 90° = to
+/// right), independent of the box's aspect ratio, like CSS
+/// `linear-gradient(<angle>, …)`. Use with `begin: centerLeft,
+/// end: centerRight`.
+class CssAngleGradientTransform extends GradientTransform {
+  final double degrees;
+
+  const CssAngleGradientTransform(this.degrees);
+
+  @override
+  Matrix4 transform(Rect bounds, {TextDirection? textDirection}) {
+    final a = degrees * pi / 180;
+    // CSS gradient-line length for this box, then map the horizontal
+    // centerLeft→centerRight line onto it: scale about the centre, rotate.
+    final length = (bounds.width * sin(a)).abs() + (bounds.height * cos(a)).abs();
+    final c = bounds.center;
+    return Matrix4.identity()
+      ..translateByDouble(c.dx, c.dy, 0, 1)
+      ..rotateZ(a - pi / 2)
+      ..scaleByDouble(length / bounds.width, 1, 1, 1)
+      ..translateByDouble(-c.dx, -c.dy, 0, 1);
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is CssAngleGradientTransform && other.degrees == degrees;
+
+  @override
+  int get hashCode => degrees.hashCode;
+}
+
 class WoodMaterials {
   WoodMaterials._();
 
   // Gold leaf — tuning pins, active mode tab, Stop button, toggle thumbs.
+  // A fixed 135° sheen (CSS angle) whatever the shape: a corner-to-corner
+  // gradient would turn into near-vertical stripes on the wide Stop button.
   static const goldGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+    transform: CssAngleGradientTransform(135),
     colors: [
       Color(0xFF8A6420),
       Color(0xFFE6C66E),
@@ -282,6 +318,14 @@ class WoodMaterials {
   );
 
   static const goldHighlight = Color(0xFFF2D98A); // 1px rim on gold fills
+
+  /// Inner top highlight on raised gold fills (CSS inset 0 1px 0 white 50%).
+  static const goldSheen = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: [Color(0x80FFFFFF), Color(0x00FFFFFF)],
+    stops: [0.0, 0.04],
+  );
   static const goldRim = Color(0xFFB8892E); // idle button, wood swatches
   static const onGold = Color(0xFF2B1709); // text/icons on gold fills
   static const goldShadow = Color(0x66785014); // rgba(120,80,20,0.4)

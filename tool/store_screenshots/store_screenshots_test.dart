@@ -403,6 +403,10 @@ void main() {
         );
         view.padding = insets;
         view.viewPadding = insets;
+        // flutter_test draws shadows unblurred by default (for stable
+        // goldens). Store shots must match the device: blur them. Restored
+        // before the test ends; the binding checks it.
+        debugDisableShadows = false;
         // Pins the needle and every pulse to a steady frame.
         tester.platformDispatcher.accessibilityFeaturesTestValue =
             const FakeAccessibilityFeatures(disableAnimations: true);
@@ -501,6 +505,7 @@ void main() {
           image.dispose();
           return data!.buffer.asUint8List();
         });
+        debugDisableShadows = true;
         final file = File('$_outDir/${device.id}/$_localeArg/${scene.id}.png');
         // Sync IO: async IO never completes inside the fake-async test zone.
         file.parent.createSync(recursive: true);
