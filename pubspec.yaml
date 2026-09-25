@@ -52,6 +52,12 @@ dependencies:
   device_info_plus: ^11.0.0
 
 dependency_overrides:
+  # mic_stream 0.7.2 (pub.dev, unmaintained) imports the removed v1-embedding
+  # class io.flutter.plugin.common.PluginRegistry.Registrar, which no longer
+  # exists in current Flutter SDKs and breaks the Android build. The import
+  # was dead code (never used), so we vendor a patched copy with it removed.
+  mic_stream:
+    path: third_party/mic_stream
   # Force permission_handler to 12.x for iOS 26 compatibility.
   # mic_stream declares ^10.0.0 but uses no APIs that changed in v12.
   permission_handler: ^12.0.1
