@@ -1,38 +1,31 @@
+// Patched for Gradle 9 / AGP 9: upstream declares jcenter() (removed in
+// Gradle 9) and an AGP 3.5 buildscript. The host app supplies AGP and
+// repositories, so this file only configures the library.
 group 'com.code.aaron.micstream'
 version '1.0'
-
-buildscript {
-    repositories {
-        google()
-        jcenter()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:3.5.0'
-    }
-}
-
-rootProject.allprojects {
-    repositories {
-        google()
-        jcenter()
-    }
-}
 
 apply plugin: 'com.android.library'
 
 android {
     namespace 'com.code.aaron.micstream'
 
-    compileSdkVersion 33
+    // Flutter applies kotlin-android to every plugin (android.builtInKotlin=false),
+    // and the Kotlin stdlib it pulls in needs compileSdk 34+.
+    compileSdk 36
 
     defaultConfig {
-        minSdkVersion 16
-        targetSdkVersion 33
+        minSdk 16
+        targetSdk 33
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    lintOptions {
+    // Match the Kotlin JVM target (17); AGP 9 defaults Java to 11.
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
         disable 'InvalidPackage'
     }
 }
