@@ -358,9 +358,16 @@ Future<void> _loadFallbackFonts() async {
   Future<ByteData> read(String path) async =>
       ByteData.sublistView(await File(path).readAsBytes());
 
+  // The app bundles its ♭/♮/♯ font (pubspec `fonts:`); flutter_test doesn't
+  // load pubspec fonts, so register it here.
+  final accidentals = FontLoader('NoteAccidentals');
+  for (final w in [300, 400, 500, 600, 700]) {
+    accidentals.addFont(read('assets/fonts/NoteAccidentals-$w.ttf'));
+  }
+  await accidentals.load();
+
   // google_fonts styles fall back to the bare family name. Registering a CJK
-  // face there supplies ♭/♯ and Chinese glyphs, as the OS fallback does on
-  // device.
+  // face there supplies Chinese glyphs, as the OS fallback does on device.
   final cjk = _localeArg == 'zh' ? 'NotoSansSC' : 'NotoSansTC';
   final fallback = FontLoader('Outfit');
   for (final w in [400, 500, 700]) {

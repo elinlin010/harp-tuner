@@ -103,6 +103,24 @@ flutter:
   assets:
     - assets/icon/
 
+  # ♭ ♮ ♯ only: a ~2 KB-per-weight subset of Noto Sans TC (SIL OFL 1.1,
+  # assets/fonts/OFL.txt). Outfit has no accidentals, so without this each
+  # platform substitutes its own fallback font with different shapes and
+  # metrics. NoteText positions these glyphs by their measured ink bounds.
+  fonts:
+    - family: NoteAccidentals
+      fonts:
+        - asset: assets/fonts/NoteAccidentals-300.ttf
+          weight: 300
+        - asset: assets/fonts/NoteAccidentals-400.ttf
+          weight: 400
+        - asset: assets/fonts/NoteAccidentals-500.ttf
+          weight: 500
+        - asset: assets/fonts/NoteAccidentals-600.ttf
+          weight: 600
+        - asset: assets/fonts/NoteAccidentals-700.ttf
+          weight: 700
+
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
