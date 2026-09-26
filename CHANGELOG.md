@@ -2,6 +2,16 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.4.1+30] - 2026-09-26
+
+### Fixed
+- iOS: the Stop button is solid gold again. It could look washed out or half-transparent, especially after tapping Start/Stop a few times.
+- The glow on the detected or tapped string is easier to see again. The new themes had made it too faint.
+- ♭ and ♯ now look the same on iPhone, Android and iPad, in the gauge's big note, the string labels and the settings. They are set small at the top right of the letter. They used to come from each phone's own fallback font, so their size and position varied, and on iPhone the big note could sit off-centre.
+
+### Changed
+- Android build tooling upgraded to Gradle 9.3.1 / AGP 9.1.0 / Kotlin 2.4.0.
+
 ## [1.4.0+29] - 2026-09-25
 
 ### Added
