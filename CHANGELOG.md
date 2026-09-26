@@ -2,12 +2,22 @@
 
 All notable changes to Harp Tuner are documented here.
 
-## [1.4.2+30] - 2026-09-26
+## [1.4.2+31] - 2026-09-26
 
 ### Changed
 - Under-the-hood update to the app's build tooling. Nothing changes in how tuning works.
-- Android: builds on Gradle 9.3.1 with Android Gradle Plugin 9.1.0 and Kotlin 2.4.0, using the Android Gradle Plugin's built-in Kotlin support. The audio, preferences, screen-wake, app-info and device-info plugins are updated to versions that support it (device_info_plus 13, package_info_plus 10, wakelock_plus 1.8, audioplayers 6.8).
+- Android: switches to the Android Gradle Plugin's built-in Kotlin support. The audio, preferences, screen-wake, app-info and device-info plugins are updated to versions that support it (device_info_plus 13, package_info_plus 10, wakelock_plus 1.8, audioplayers 6.8).
 - iOS: the microphone plugin and the permission plugin are now ready for Swift Package Manager. The app itself still builds with CocoaPods, so Firebase keeps the same iOS 15.0 packaging that App Store Connect accepts.
+
+## [1.4.1+30] - 2026-09-26
+
+### Fixed
+- iOS: the Stop button is solid gold again. It could look washed out or half-transparent, especially after tapping Start/Stop a few times.
+- The glow on the detected or tapped string is easier to see again. The new themes had made it too faint.
+- ♭ and ♯ now look the same on iPhone, Android and iPad, in the gauge's big note, the string labels and the settings. They are set small at the top right of the letter. They used to come from each phone's own fallback font, so their size and position varied, and on iPhone the big note could sit off-centre.
+
+### Changed
+- Android build tooling upgraded to Gradle 9.3.1 / AGP 9.1.0 / Kotlin 2.4.0.
 
 ## [1.4.0+29] - 2026-09-25
 

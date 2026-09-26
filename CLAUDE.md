@@ -71,7 +71,7 @@ lib/
 
 **Settings sheet patterns:**
 - Row layout for label + control: use `Expanded` on the label (left-aligned) and wrap controls in a `Row(mainAxisSize: MainAxisSize.min)` (right-aligned).
-- Accidentals in subtitles: use `_accText()` helper in `tuner_screen.dart` — renders ♭/♯ at 68% size, bottom-aligned, using `WidgetSpan` + `PlaceholderAlignment.bottom`. Do NOT apply to primary labels (toggle row labels, section headers).
+- Accidentals in note names: use `NoteText` (`lib/widgets/note_text.dart`). It sets ♭/♮/♯ as a web-`<sup>`-style superscript: 58% of the text size (43% for the gauge's big note), drawn in the bundled `NoteAccidentals` font, side bearings trimmed, ink top just above the cap top. Do NOT apply to primary labels where ♭ is an icon (e.g. the "♭  Always show flats" toggle).
 - Touch targets: wrap icons in `GestureDetector(behavior: HitTestBehavior.opaque)` for reliable hit testing on small targets. Add `Semantics(button: true, label: ...)` for accessibility.
 
 **Design system:** See `DESIGN.md` for the full design system. All colors/text styles come from `app_theme.dart` — do not use hard-coded colors. Use `TunerThemeData.sans()` and `TunerThemeData.label()` for all text; never hard-code `TextStyle` outside the theme. Theme is runtime-switchable via `tunerThemeProvider`.
@@ -136,7 +136,10 @@ In QA mode, flag any code that doesn't match `DESIGN.md`.
 
 **Touch targets: 44pt minimum, always opaque.** Wrap small tap surfaces in `GestureDetector(behavior: HitTestBehavior.opaque)` so taps on transparent areas still register. Add `Semantics(button: true, label: ...)` on icon-only buttons.
 
-**Accidentals (♭ ♯) in subtitles — use `_accText()`.** Flat and sharp symbols are tall glyphs that disrupt line rhythm when rendered at body size. Use the `_accText()` helper in `tuner_screen.dart` to render them at 68% size, bottom-aligned. Exception: primary labels and toggle row labels should keep them full size for legibility.
+**Accidentals (♭ ♮ ♯) — always `NoteText`, superscript top-right.** Every note name the app shows uses it: the gauge's big note, string labels ("3A♭"), and settings subtitles ("G2–E♭7 · E♭ maj", "e.g. B♭ instead of A♯"). Exception: a ♭ used as an icon in a primary label keeps full size.
+- Outfit has no ♭/♯. Without a bundled font each platform substitutes a different fallback with different shapes and metrics. `assets/fonts/NoteAccidentals-*.ttf` is a ~2 KB-per-weight Noto Sans TC subset (♭♮♯ only, SIL OFL), declared in `pubspec.yaml`.
+- Position by **ink**, not the em box. These glyphs are full-width with the ink in the middle ~45%, and ♯'s ink sits lower in its box than ♭'s. `NoteText` holds the measured ink bounds; if you swap the font, re-measure them (fontTools `BoundsPen`).
+- flutter_test doesn't load pubspec fonts; the store-screenshot harness registers `NoteAccidentals` itself.
 
 ## Implemented Features
 

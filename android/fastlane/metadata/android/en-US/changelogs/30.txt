@@ -1,1 +1,1 @@
-Behind-the-scenes update: Harpie now builds with the latest Android and iOS tools. Tuning works exactly as before.
+The Stop button is solid again on iPhone, and the glow on the active string is easier to see. ♭ and ♯ now look the same on every device: small, at the top right of the note.
