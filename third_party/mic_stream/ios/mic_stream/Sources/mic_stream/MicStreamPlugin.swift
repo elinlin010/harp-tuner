@@ -7,11 +7,11 @@ enum AudioFormat : Int { case ENCODING_PCM_8BIT=3, ENCODING_PCM_16BIT=2 }
 enum ChannelConfig : Int { case CHANNEL_IN_MONO=16	, CHANNEL_IN_STEREO=12 }
 enum AudioSource : Int { case DEFAULT }
 
-public class SwiftMicStreamPlugin: NSObject, FlutterStreamHandler, FlutterPlugin, AVCaptureAudioDataOutputSampleBufferDelegate {
+public class MicStreamPlugin: NSObject, FlutterStreamHandler, FlutterPlugin, AVCaptureAudioDataOutputSampleBufferDelegate {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterEventChannel(name:"aaron.code.com/mic_stream", binaryMessenger: registrar.messenger())
         let methodChannel = FlutterMethodChannel(name: "aaron.code.com/mic_stream_method_channel", binaryMessenger: registrar.messenger())
-        let instance = SwiftMicStreamPlugin()
+        let instance = MicStreamPlugin()
         channel.setStreamHandler(instance);
         registrar.addMethodCallDelegate(instance, channel: methodChannel)
     }
