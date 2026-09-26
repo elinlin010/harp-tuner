@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
+import 'note_text.dart';
 import 'wood_surface.dart';
 
 // Shared sweep constant — used by both layout (arcH) and painter (geometry)
@@ -701,15 +702,12 @@ class _SignalReadout extends StatelessWidget {
         : isWood
         ? WoodMaterials.tuneCircleText
         : Colors.white.withValues(alpha: 0.92);
-    final Color accColor = !isInTune
-        ? baseNoteColor
-        : isWood
-        ? WoodMaterials.tuneCircleText
-        : Colors.white.withValues(alpha: 0.87);
-    // Note set in Outfit Light, as in the design prototype.
+    // Note set in Outfit Light, as in the design prototype. The accidental
+    // is a NoteText superscript at 48/112 of the letter, like every other
+    // note name in the app.
     const letterWeight = FontWeight.w300;
     const double letterSize = 112;
-    const double accSize = 48;
+    const double accScale = 48 / 112;
 
     final l10n = AppLocalizations.of(context)!;
     final animDur = MediaQuery.disableAnimationsOf(context)
@@ -779,39 +777,16 @@ class _SignalReadout extends StatelessWidget {
               // Center alignment keeps all content corners equidistant from
               // the circle edge, preventing corner clipping on any device.
               alignment: Alignment.center,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AnimatedDefaultTextStyle(
-                    duration: animDur,
-                    curve: Curves.easeOut,
-                    style: theme
-                        .sans(
-                          letterSize,
-                          weight: letterWeight,
-                          color: letterColor,
-                        )
-                        .copyWith(height: 1),
-                    child: Text(noteLetter),
-                  ),
-                  if (noteAcc.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: AnimatedDefaultTextStyle(
-                        duration: animDur,
-                        curve: Curves.easeOut,
-                        style: theme
-                            .sans(
-                              accSize,
-                              weight: letterWeight,
-                              color: accColor,
-                            )
-                            .copyWith(height: 1),
-                        child: Text(noteAcc),
-                      ),
-                    ),
-                ],
+              child: AnimatedDefaultTextStyle(
+                duration: animDur,
+                curve: Curves.easeOut,
+                style: theme
+                    .sans(letterSize, weight: letterWeight, color: letterColor)
+                    .copyWith(height: 1),
+                child: NoteText(
+                  '$noteLetter$noteAcc',
+                  accidentalScale: accScale,
+                ),
               ),
             ),
           ),

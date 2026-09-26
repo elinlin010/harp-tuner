@@ -3,6 +3,7 @@ import 'package:flutter/semantics.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:harp_tuner/l10n/app_localizations.dart';
 import 'package:harp_tuner/theme/app_theme.dart';
+import 'package:harp_tuner/widgets/note_text.dart';
 import 'package:harp_tuner/widgets/tuner_gauge.dart';
 
 // ignore_for_file: prefer_function_declarations_over_variables
@@ -151,7 +152,9 @@ void main() {
       await tester.pumpWidget(_gauge(cents: 0, noteName: 'G♯4'));
       await tester.pump();
 
-      expect(find.text('G'), findsOneWidget);
+      // The note is one NoteText: letter + superscript accidental.
+      expect(find.byWidgetPredicate((w) => w is NoteText && w.text == 'G♯'),
+          findsOneWidget);
     });
 
     testWidgets('note name with accidental renders accidental separately',
@@ -159,8 +162,16 @@ void main() {
       await tester.pumpWidget(_gauge(cents: 5, noteName: 'B♭3'));
       await tester.pump();
 
-      expect(find.text('B'), findsOneWidget);
-      expect(find.text('♭'), findsWidgets); // symbol + bulb both have ♭
+      expect(find.byWidgetPredicate((w) => w is NoteText && w.text == 'B♭'),
+          findsOneWidget);
+      // The accidental is drawn in the bundled NoteAccidentals font.
+      expect(
+        find.byWidgetPredicate((w) =>
+            w is Text &&
+            w.data == '♭' &&
+            w.style?.fontFamily == NoteText.fontFamily),
+        findsOneWidget,
+      );
     });
 
     testWidgets('em-dash fallback renders without error', (tester) async {
