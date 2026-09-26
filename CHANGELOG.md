@@ -2,6 +2,13 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.4.2+31] - 2026-09-26
+
+### Changed
+- Under-the-hood update to the app's build tooling. Nothing changes in how tuning works.
+- Android: switches to the Android Gradle Plugin's built-in Kotlin support. The audio, preferences, screen-wake, app-info and device-info plugins are updated to versions that support it (device_info_plus 13, package_info_plus 10, wakelock_plus 1.8, audioplayers 6.8).
+- iOS: the microphone plugin and the permission plugin are now ready for Swift Package Manager. The app itself still builds with CocoaPods, so Firebase keeps the same iOS 15.0 packaging that App Store Connect accepts.
+
 ## [1.4.1+30] - 2026-09-26
 
 ### Fixed
