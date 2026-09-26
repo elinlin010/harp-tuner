@@ -1106,11 +1106,17 @@ class _ListenButton extends StatelessWidget {
                     ),
                   ],
                 ),
-                // Thin inner highlight along the top of the raised gold.
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: _radius,
-                    gradient: WoodMaterials.goldSheen,
+                // 1px inner highlight along the top of the raised gold,
+                // inset past the rounded corners.
+                child: const Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 1, 16, 0),
+                    child: SizedBox(
+                      height: 1,
+                      width: double.infinity,
+                      child: ColoredBox(color: WoodMaterials.goldSheen),
+                    ),
                   ),
                 ),
               ),

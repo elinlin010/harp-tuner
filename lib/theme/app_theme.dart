@@ -320,12 +320,10 @@ class WoodMaterials {
   static const goldHighlight = Color(0xFFF2D98A); // 1px rim on gold fills
 
   /// Inner top highlight on raised gold fills (CSS inset 0 1px 0 white 50%).
-  static const goldSheen = LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
-    colors: [Color(0x80FFFFFF), Color(0x00FFFFFF)],
-    stops: [0.0, 0.04],
-  );
+  /// Drawn as a 1px line, not a short gradient: a two-colour gradient with
+  /// custom stops can be stretched over the whole fill by some renderers,
+  /// washing the gold out to a pale, see-through look.
+  static const goldSheen = Color(0x80FFFFFF);
   static const goldRim = Color(0xFFB8892E); // idle button, wood swatches
   static const onGold = Color(0xFF2B1709); // text/icons on gold fills
   static const goldShadow = Color(0x66785014); // rgba(120,80,20,0.4)
