@@ -69,6 +69,11 @@ class FeedbackService {
   /// project is configured and [tryInitialize] succeeds.
   bool get isAvailable => _available;
 
+  /// Forces [isAvailable] without Firebase — for tests and store screenshots,
+  /// which render the production UI (feedback button included).
+  @visibleForTesting
+  set availableForTest(bool value) => _available = value;
+
   /// Attempts to initialize Firebase. Safe to call once at startup; never
   /// throws. On platforms/builds without Firebase config it leaves the
   /// service disabled.

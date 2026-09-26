@@ -6,6 +6,7 @@ import '../models/harp_type.dart';
 import '../providers/tuner_provider.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
+import 'wood_surface.dart';
 
 enum SettingsSection { instrument, a4, stringCount }
 
@@ -76,62 +77,86 @@ class _SettingsDisplayCard extends StatelessWidget {
     required this.theme,
   });
 
+  Widget _content() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: theme
+              .sans(10, weight: FontWeight.w600, color: theme.textSecondary)
+              .copyWith(letterSpacing: 0.8),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: theme.sans(13, weight: FontWeight.w500),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    ),
+  );
+
+  // Wood themes: grain card with a 1px gold border.
+  Widget _woodCard(WoodFinish wood) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: _radius,
+        boxShadow: theme.cardShadow,
+      ),
+      child: WoodSurface(
+        color: theme.surface,
+        dark: wood.darkGrain,
+        borderRadius: _radius,
+        child: Material(
+          type: MaterialType.transparency,
+          shape: RoundedRectangleBorder(
+            borderRadius: _radius,
+            side: BorderSide(color: theme.cardBorder, width: 1),
+          ),
+          child: InkWell(
+            borderRadius: _radius,
+            onTap: onTap,
+            child: _content(),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final wood = theme.wood;
+    if (wood != null) {
+      return Semantics(
+        button: true,
+        label: '$label, $value',
+        child: _woodCard(wood),
+      );
+    }
     return Semantics(
       button: true,
       label: '$label, $value',
       child: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           borderRadius: _radius,
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x14000000),
-              offset: Offset(0, 1),
-              blurRadius: 2,
-            ),
-            BoxShadow(
-              color: Color(0x1A000000),
-              offset: Offset(0, 4),
-              blurRadius: 10,
-            ),
-            BoxShadow(
-              color: Color(0x0F000000),
-              offset: Offset(0, 8),
-              blurRadius: 20,
-            ),
-          ],
+          boxShadow: theme.cardShadow,
         ),
         child: Material(
           color: theme.surface,
-          borderRadius: _radius,
+          shape: RoundedRectangleBorder(
+            borderRadius: _radius,
+            side: BorderSide(color: theme.cardBorder, width: 1),
+          ),
           child: InkWell(
             borderRadius: _radius,
             onTap: onTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    label,
-                    style: theme
-                        .sans(10, weight: FontWeight.w600, color: theme.textSecondary)
-                        .copyWith(letterSpacing: 0.8),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    value,
-                    style: theme.sans(13, weight: FontWeight.w500),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
+            child: _content(),
           ),
         ),
       ),
