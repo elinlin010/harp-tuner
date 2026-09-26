@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/harp_string_model.dart';
 import '../theme/app_theme.dart';
+import 'note_text.dart';
 import 'wood_surface.dart';
 
 const _kItemWidth = 52.0;
@@ -248,7 +249,7 @@ class _StringCell extends StatelessWidget {
           ? stringColor.withValues(alpha: 0.70)
           : theme.textSecondary,
     ),
-    child: Text(string.label, textAlign: TextAlign.center),
+    child: NoteText(string.label, textAlign: TextAlign.center),
   );
 
   @override
