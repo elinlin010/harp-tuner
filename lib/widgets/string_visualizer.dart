@@ -217,16 +217,17 @@ class _StringCell extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(3),
+          // The prototype's string glow: 0 0 18px 6px @53%, 0 0 32px 10px @25%.
           boxShadow: [
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.45),
-              blurRadius: 10,
-              spreadRadius: 1.5,
+              color: stringColor.withValues(alpha: 0.53),
+              blurRadius: 18,
+              spreadRadius: 6,
             ),
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.18),
-              blurRadius: 22,
-              spreadRadius: 4,
+              color: stringColor.withValues(alpha: 0.25),
+              blurRadius: 32,
+              spreadRadius: 10,
             ),
           ],
         ),
