@@ -217,15 +217,16 @@ class _StringCell extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(3),
-          // The prototype's string glow: 0 0 18px 6px @53%, 0 0 32px 10px @25%.
+          // The prototype's string glow geometry (0 0 18px 6px, 0 0 32px 10px), with
+          // a denser outer ring (60%) so the hit string reads at a glance.
           boxShadow: [
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.53),
+              color: stringColor.withValues(alpha: 0.60),
               blurRadius: 18,
               spreadRadius: 6,
             ),
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.25),
+              color: stringColor.withValues(alpha: 0.60),
               blurRadius: 32,
               spreadRadius: 10,
             ),
