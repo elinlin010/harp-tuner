@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/harp_string_model.dart';
 import '../theme/app_theme.dart';
+import 'note_text.dart';
 import 'wood_surface.dart';
 
 const _kItemWidth = 52.0;
@@ -217,16 +218,18 @@ class _StringCell extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(3),
+          // The prototype's string glow geometry (0 0 18px 6px, 0 0 32px 10px), with
+          // a denser outer ring (60%) so the hit string reads at a glance.
           boxShadow: [
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.45),
-              blurRadius: 10,
-              spreadRadius: 1.5,
+              color: stringColor.withValues(alpha: 0.60),
+              blurRadius: 18,
+              spreadRadius: 6,
             ),
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.18),
-              blurRadius: 22,
-              spreadRadius: 4,
+              color: stringColor.withValues(alpha: 0.60),
+              blurRadius: 32,
+              spreadRadius: 10,
             ),
           ],
         ),
@@ -246,7 +249,7 @@ class _StringCell extends StatelessWidget {
           ? stringColor.withValues(alpha: 0.70)
           : theme.textSecondary,
     ),
-    child: Text(string.label, textAlign: TextAlign.center),
+    child: NoteText(string.label, textAlign: TextAlign.center),
   );
 
   @override

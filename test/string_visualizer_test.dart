@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:harp_tuner/data/harp_presets.dart';
 import 'package:harp_tuner/models/harp_string_model.dart';
 import 'package:harp_tuner/theme/app_theme.dart';
+import 'package:harp_tuner/widgets/note_text.dart';
 import 'package:harp_tuner/widgets/string_visualizer.dart';
 
 final _strings = HarpPresets.leverHarpWithCount(34);
@@ -122,7 +123,10 @@ void main() {
       await tester.pumpWidget(_viz(onTap: (s) => tappedString = s));
       await tester.pump();
 
-      await tester.tap(find.text(second.label));
+      // Labels with an accidental render as NoteText (♭ raised, top right).
+      await tester.tap(
+        find.byWidgetPredicate((w) => w is NoteText && w.text == second.label),
+      );
       expect(tappedString, equals(second));
     });
   });

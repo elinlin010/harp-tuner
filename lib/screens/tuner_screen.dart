@@ -15,6 +15,7 @@ import '../theme/app_theme.dart';
 import '../theme/theme_provider.dart';
 import '../widgets/feedback_dialog.dart';
 import '../widgets/mode_toggle.dart';
+import '../widgets/note_text.dart';
 import '../widgets/settings_display.dart';
 import '../widgets/string_visualizer.dart';
 import '../widgets/tuner_gauge.dart';
@@ -902,8 +903,8 @@ class _SheetSwitchRow extends StatelessWidget {
                             color: theme.textPrimary)),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
-                      _accText(subtitle!,
-                          theme.sans(16, color: theme.textSecondary)),
+                      NoteText(subtitle!,
+                          style: theme.sans(16, color: theme.textSecondary)),
                     ],
                   ],
                 ),
@@ -1106,11 +1107,17 @@ class _ListenButton extends StatelessWidget {
                     ),
                   ],
                 ),
-                // Thin inner highlight along the top of the raised gold.
-                child: const DecoratedBox(
-                  decoration: BoxDecoration(
-                    borderRadius: _radius,
-                    gradient: WoodMaterials.goldSheen,
+                // 1px inner highlight along the top of the raised gold,
+                // inset past the rounded corners.
+                child: const Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 1, 16, 0),
+                    child: SizedBox(
+                      height: 1,
+                      width: double.infinity,
+                      child: ColoredBox(color: WoodMaterials.goldSheen),
+                    ),
                   ),
                 ),
               ),
@@ -1400,37 +1407,6 @@ class _TrianglePainter extends CustomPainter {
 }
 
 
-// ── Accidental text helper ────────────────────────────────────────────────────
-
-/// Renders [text] with ♭ and ♯ shown as small subscript-style symbols (~68% size,
-/// bottom-aligned to the surrounding text's descent line).
-Widget _accText(String text, TextStyle style, {TextAlign textAlign = TextAlign.start}) {
-  final accSize = (style.fontSize ?? 16) * 0.68;
-  final regex = RegExp('[♭♯]');
-  final matches = regex.allMatches(text).toList();
-  if (matches.isEmpty) return Text(text, style: style, textAlign: textAlign);
-
-  final spans = <InlineSpan>[];
-  int start = 0;
-  for (final match in matches) {
-    if (match.start > start) {
-      spans.add(TextSpan(text: text.substring(start, match.start), style: style));
-    }
-    spans.add(WidgetSpan(
-      alignment: PlaceholderAlignment.bottom,
-      child: Text(
-        match.group(0)!,
-        style: style.copyWith(fontSize: accSize, height: 1.0),
-      ),
-    ));
-    start = match.end;
-  }
-  if (start < text.length) {
-    spans.add(TextSpan(text: text.substring(start), style: style));
-  }
-  return Text.rich(TextSpan(children: spans), textAlign: textAlign);
-}
-
 // ── Lever string count slider ─────────────────────────────────────────────────
 
 class _LeverStringCountRow extends StatelessWidget {
@@ -1573,8 +1549,8 @@ class _InstrumentRow extends StatelessWidget {
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 2),
-                      _accText(subtitle!,
-                          theme.sans(14, color: theme.textSecondary)),
+                      NoteText(subtitle!,
+                          style: theme.sans(14, color: theme.textSecondary)),
                     ],
                   ],
                 ),
