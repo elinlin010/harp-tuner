@@ -910,6 +910,85 @@ void main() {
       expect(c.read(tunerProvider).closestNoteName, 'G2');
     });
 
+    test('iOS: 3rd-harmonic bursts on a bass string do not flip D to A',
+        () async {
+      // User-reported: a low D read as A. YIN hops to the 3rd harmonic (A3)
+      // for a couple of frames at a time; two agreeing frames used to pass as
+      // a genuine note change.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 73.42, 4); // D2
+      expect(c.read(tunerProvider).closestNoteName, 'D2');
+      for (var i = 0; i < 4; i++) {
+        feed(n, 220.0, 3); // 3rd harmonic
+        feed(n, 73.42, 2); // fundamental back
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'D2');
+    });
+
+    test('iOS: 5th-harmonic bursts do not flip the note (E♭ → G)', () async {
+      // User-reported: a low E♭ read as G, its 5th harmonic.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container(overrideState: const TunerState(preferFlats: true));
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 77.78, 4); // E♭2
+      expect(c.read(tunerProvider).closestNoteName, 'E♭2');
+      for (var i = 0; i < 4; i++) {
+        feed(n, 388.9, 2); // 5th harmonic, G4
+        feed(n, 77.78, 1);
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'E♭2');
+    });
+
+    test('iOS: overtones of a note held on its 2nd harmonic do not flip it',
+        () async {
+      // When the mic loses the bass fundamental the history holds the 2nd
+      // harmonic, so the 3rd harmonic sits a fifth above it (×1.5).
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 146.83, 4); // D2's 2nd harmonic, D3
+      for (var i = 0; i < 4; i++) {
+        feed(n, 220.0, 3); // D2's 3rd harmonic, A3
+        feed(n, 146.83, 1);
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'D3');
+    });
+
+    test('iOS: a string plucked on an overtone pitch still switches while '
+        'the held one rings', () async {
+      // A3 is D2's 3rd harmonic, but a sustained A3 is a real A3 pluck.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 73.42, 4); // D2
+      feed(n, 220.0, 10); // A3 plucked, no silence gap
+      expect(c.read(tunerProvider).closestNoteName, 'A3');
+    });
+
+    test('iOS: a fifth up still switches while the held string rings',
+        () async {
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 293.66, 4); // D4
+      feed(n, 440.0, 10); // A4
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'A4');
+      expect(s.detectedHz, closeTo(440.0, 3.0));
+    });
+
     test('iOS: switches to a new note after a silence gap clears state', () async {
       // iOS resets detection state on the first silence frame, so a new note
       // plucked after the previous one decays acquires fresh.

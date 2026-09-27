@@ -2,6 +2,11 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.4.4+33] - 2026-09-27
+
+### Fixed
+- iOS: low strings no longer jump to a wrong note name, e.g. a bass D showing as A or E♭ showing as G. The microphone often picks up a low string's overtones (A is D's 3rd harmonic, G is E♭'s 5th), and two such readings in a row used to count as a new note. Overtone readings are now ignored unless they keep coming for about a quarter of a second, which means a string at that pitch was really plucked. In reference mode, plucking the selected string still switches right away. Android is unchanged.
+
 ## [1.4.3+32] - 2026-09-27
 
 ### Fixed
