@@ -736,9 +736,10 @@ class TunerNotifier extends Notifier<TunerState> {
         } else if (_pendingFarHz != null &&
             (1200 * log(hz / _pendingFarHz!) / ln2).abs() < 150) {
           // Second consecutive far frame agreeing with the first — a genuine
-          // note change, not a stray glitch. This is the only switch path when
-          // the previous string is still ringing: YIN keeps emitting pitched
-          // frames, so the first-silence reset never fires. Flush the stale
+          // note change, not a stray glitch. This is the main switch path when
+          // the previous string is still ringing (octave and overtone runs are
+          // the slower ones): YIN keeps emitting pitched frames, so the
+          // first-silence reset never fires. Flush the stale
           // history so the new note accumulates cleanly, and reset the
           // challenge counter so disjoint wrong-note bursts can't ratchet it
           // up across flushes. In auto mode the challenge gate below still
