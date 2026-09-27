@@ -143,6 +143,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settingsLeverHighestLabel => '最高音弦';
 
   @override
+  String get settingsLeverRangeLabel => '音域';
+
+  @override
   String settingsLeverStringCountValue(int count) {
     return '$count 弦';
   }
@@ -360,6 +363,9 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsLeverHighestLabel => '最高音弦';
+
+  @override
+  String get settingsLeverRangeLabel => '音域';
 
   @override
   String settingsLeverStringCountValue(int count) {

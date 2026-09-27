@@ -165,7 +165,7 @@ VERSION file uses Flutter format `MAJOR.MINOR.PATCH+BUILD` (e.g. `1.0.6+6`), mat
 A lever layout is a contiguous window of `HarpPresets.leverPool` (40 strings, A♭1–E♭7), given by a string count (19–40) and a top string (`TunerState.leverTopIndex`, a pool index).
 
 - **Default range** (`leverTopIndex == null`) is treble-anchored at E♭7, so the bass note varies: 40 strings = A♭1, 34 (default) = G2, 19 = A♭4. **Exception: 23 strings default to G3–A♭6 ("4G"–"1A♭")** — `HarpPresets.leverDefaultTopIndex`.
-- **Custom range:** the settings sheet's "Lowest string" / "Highest string" steppers call `setLeverRange(bottom, top)`; the count follows the span and stays within 19–40. The string-count slider keeps a custom top string and only moves it up when the pool runs out at the bass end. A range equal to the count's default is stored as `null`, so it keeps following the default.
+- **Custom range:** the settings sheet's one-line "Range" row (◀ lowest ▶ – ◀ highest ▶) calls `setLeverRange(bottom, top)`; the count follows the span and stays within 19–40. The string-count row (label · slider · value on one line) keeps a custom top string and only moves it up when the pool runs out at the bass end. A range equal to the count's default is stored as `null`, so it keeps following the default.
 - Persisted as `tuner_lever_string_count` + `tuner_lever_top_index` (removed when default). Every `HarpPresets.stringsFor` call must pass both `leverStringCount` and `leverTopIndex`.
 
 ## ARB Placeholder Changes

@@ -56,6 +56,7 @@
   "settingsLeverStringCountLabel": "弦數",
   "settingsLeverLowestLabel": "最低音弦",
   "settingsLeverHighestLabel": "最高音弦",
+  "settingsLeverRangeLabel": "音域",
   "settingsLeverStringCountValue": "{count} 弦",
   "@settingsLeverStringCountValue": {
     "placeholders": {

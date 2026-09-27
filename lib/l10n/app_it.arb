@@ -56,6 +56,7 @@
   "settingsLeverStringCountLabel": "Numero di corde",
   "settingsLeverLowestLabel": "Corda più grave",
   "settingsLeverHighestLabel": "Corda più acuta",
+  "settingsLeverRangeLabel": "Ambito",
   "settingsLeverStringCountValue": "{count} corde",
   "@settingsLeverStringCountValue": {
     "placeholders": {

@@ -56,6 +56,7 @@
   "settingsLeverStringCountLabel": "String count",
   "settingsLeverLowestLabel": "Lowest string",
   "settingsLeverHighestLabel": "Highest string",
+  "settingsLeverRangeLabel": "Range",
   "settingsLeverStringCountValue": "{count} strings",
   "@settingsLeverStringCountValue": {
     "placeholders": {

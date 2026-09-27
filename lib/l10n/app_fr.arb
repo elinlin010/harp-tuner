@@ -56,6 +56,7 @@
   "settingsLeverStringCountLabel": "Nombre de cordes",
   "settingsLeverLowestLabel": "Corde la plus grave",
   "settingsLeverHighestLabel": "Corde la plus aiguë",
+  "settingsLeverRangeLabel": "Tessiture",
   "settingsLeverStringCountValue": "{count} cordes",
   "@settingsLeverStringCountValue": {
     "placeholders": {

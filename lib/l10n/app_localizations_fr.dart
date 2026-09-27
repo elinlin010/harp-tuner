@@ -145,6 +145,9 @@ class AppLocalizationsFr extends AppLocalizations {
   String get settingsLeverHighestLabel => 'Corde la plus aiguë';
 
   @override
+  String get settingsLeverRangeLabel => 'Tessiture';
+
+  @override
   String settingsLeverStringCountValue(int count) {
     return '$count cordes';
   }

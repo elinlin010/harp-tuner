@@ -648,7 +648,7 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                     ),
                   if (type == HarpType.leverHarp &&
                       tuner.selectedHarp == HarpType.leverHarp)
-                    _LeverRangeRows(
+                    _LeverRangeRow(
                       count: tuner.leverStringCount,
                       topIndex: tuner.leverTopIndex,
                       onChanged: (bottom, top) => ref
@@ -1387,6 +1387,7 @@ class _TrianglePainter extends CustomPainter {
 
 // ── Lever string count slider ─────────────────────────────────────────────────
 
+/// Label, slider and value on one line.
 class _LeverStringCountRow extends StatelessWidget {
   final int count;
   final ValueChanged<int> onChanged;
@@ -1402,29 +1403,21 @@ class _LeverStringCountRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.settingsLeverStringCountLabel,
-                  style: theme.sans(16, weight: FontWeight.w600,
-                      color: theme.textPrimary),
-                ),
-              ),
-              Text(
-                l10n.settingsLeverStringCountValue(count),
-                style: theme.sans(16, weight: FontWeight.w600,
-                    color: theme.inTune),
-              ),
-            ],
+    final label = l10n.settingsLeverStringCountLabel;
+    return Row(
+      children: [
+        Flexible(
+          flex: 0,
+          child: Text(
+            label,
+            style: theme.sans(16,
+                weight: FontWeight.w600, color: theme.textPrimary),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
-          const SizedBox(height: 4),
-          SliderTheme(
+        ),
+        Expanded(
+          child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: theme.inTune,
               inactiveTrackColor: theme.surfaceRim,
@@ -1436,36 +1429,37 @@ class _LeverStringCountRow extends StatelessWidget {
             ),
             child: Slider(
               value: count.toDouble(),
-              min: 19,
-              max: 40,
-              divisions: 21,
+              min: HarpPresets.leverStringMin.toDouble(),
+              max: HarpPresets.leverStringMax.toDouble(),
+              divisions:
+                  HarpPresets.leverStringMax - HarpPresets.leverStringMin,
+              semanticFormatterCallback: (v) =>
+                  '$label ${l10n.settingsLeverStringCountValue(v.round())}',
               onChanged: (v) => onChanged(v.round()),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('19', style: theme.sans(11, color: theme.textSecondary)),
-              Text('40', style: theme.sans(11, color: theme.textSecondary)),
-            ],
-          ),
-        ],
-      ),
+        ),
+        Text(
+          l10n.settingsLeverStringCountValue(count),
+          style: theme.sans(16, weight: FontWeight.w600, color: theme.inTune),
+          maxLines: 1,
+        ),
+      ],
     );
   }
 }
 
-// ── Lever range (lowest / highest string) ─────────────────────────────────────
+// ── Lever range (lowest – highest string) ─────────────────────────────────────
 
-/// Two stepper rows that move the lever harp's lowest and highest string one
-/// diatonic step at a time. The string count follows the span (19–40).
-class _LeverRangeRows extends StatelessWidget {
+/// One row: label, then the lowest and highest string, each with ◀ ▶ that
+/// move it one diatonic string. The string count follows the span (19–40).
+class _LeverRangeRow extends StatelessWidget {
   final int count;
   final int? topIndex;
   final void Function(int bottomIndex, int topIndex) onChanged;
   final TunerThemeData theme;
 
-  const _LeverRangeRows({
+  const _LeverRangeRow({
     required this.count,
     required this.topIndex,
     required this.onChanged,
@@ -1480,11 +1474,20 @@ class _LeverRangeRows extends StatelessWidget {
     final pool = HarpPresets.leverPool;
     final canGrow = c < HarpPresets.leverStringMax;
     final canShrink = c > HarpPresets.leverStringMin;
-    return Column(
+    return Row(
       children: [
-        _LeverNoteStepperRow(
+        Expanded(
+          child: Text(
+            l10n.settingsLeverRangeLabel,
+            style: theme.sans(16,
+                weight: FontWeight.w600, color: theme.textPrimary),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
+          ),
+        ),
+        _LeverNoteStepper(
           key: const ValueKey('lever-lowest'),
-          label: l10n.settingsLeverLowestLabel,
+          semanticLabel: l10n.settingsLeverLowestLabel,
           string: pool[bottom],
           onDown: bottom > 0 && canGrow
               ? () => onChanged(bottom - 1, top)
@@ -1492,9 +1495,10 @@ class _LeverRangeRows extends StatelessWidget {
           onUp: canShrink ? () => onChanged(bottom + 1, top) : null,
           theme: theme,
         ),
-        _LeverNoteStepperRow(
+        Text('–', style: theme.sans(16, color: theme.textSecondary)),
+        _LeverNoteStepper(
           key: const ValueKey('lever-highest'),
-          label: l10n.settingsLeverHighestLabel,
+          semanticLabel: l10n.settingsLeverHighestLabel,
           string: pool[top],
           onDown: canShrink ? () => onChanged(bottom, top - 1) : null,
           onUp: top < pool.length - 1 && canGrow
@@ -1507,16 +1511,16 @@ class _LeverRangeRows extends StatelessWidget {
   }
 }
 
-class _LeverNoteStepperRow extends StatelessWidget {
-  final String label;
+class _LeverNoteStepper extends StatelessWidget {
+  final String semanticLabel;
   final HarpStringModel string;
   final VoidCallback? onDown;
   final VoidCallback? onUp;
   final TunerThemeData theme;
 
-  const _LeverNoteStepperRow({
+  const _LeverNoteStepper({
     super.key,
-    required this.label,
+    required this.semanticLabel,
     required this.string,
     required this.onDown,
     required this.onUp,
@@ -1526,36 +1530,23 @@ class _LeverNoteStepperRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: theme.sans(16,
-                weight: FontWeight.w600, color: theme.textPrimary),
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+        _StepBtn(pointRight: false, onTap: onDown, theme: theme),
+        SizedBox(
+          width: 44,
+          child: Semantics(
+            label: '$semanticLabel ${string.label}',
+            excludeSemantics: true,
+            child: NoteText(
+              string.label,
+              textAlign: TextAlign.center,
+              style: theme.sans(16,
+                  weight: FontWeight.w600, color: theme.inTune),
+            ),
           ),
         ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _StepBtn(pointRight: false, onTap: onDown, theme: theme),
-            SizedBox(
-              width: 72,
-              child: Semantics(
-                label: '$label ${string.label}',
-                excludeSemantics: true,
-                child: NoteText(
-                  string.label,
-                  textAlign: TextAlign.center,
-                  style: theme.sans(16,
-                      weight: FontWeight.w600, color: theme.inTune),
-                ),
-              ),
-            ),
-            _StepBtn(pointRight: true, onTap: onUp, theme: theme),
-          ],
-        ),
+        _StepBtn(pointRight: true, onTap: onUp, theme: theme),
       ],
     );
   }
