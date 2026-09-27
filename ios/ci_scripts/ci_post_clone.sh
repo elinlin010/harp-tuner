@@ -2,7 +2,10 @@
 set -e
 
 # ── Install Flutter ────────────────────────────────────────────────────────────
-FLUTTER_VERSION="3.41.6"
+# Must satisfy the `sdks:` floor in pubspec.lock (currently Dart >=3.12,
+# Flutter >=3.44). Bump this whenever a dependency upgrade raises that floor,
+# or `flutter pub get` below fails with "version solving failed".
+FLUTTER_VERSION="3.47.5"
 FLUTTER_DIR="$HOME/flutter"
 
 if [ ! -d "$FLUTTER_DIR" ]; then
@@ -12,7 +15,8 @@ if [ ! -d "$FLUTTER_DIR" ]; then
     "$FLUTTER_DIR"
 fi
 
-export PATH="$PATH:$FLUTTER_DIR/bin"
+export PATH="$FLUTTER_DIR/bin:$PATH"
+flutter --version
 
 # ── Flutter setup ──────────────────────────────────────────────────────────────
 # Run from repo root (Xcode Cloud sets CI_PRIMARY_REPOSITORY_PATH)
