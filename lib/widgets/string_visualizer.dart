@@ -99,6 +99,28 @@ class _StringVisualizerState extends State<StringVisualizer> {
     };
   }
 
+  // The colour a string lights up in when active. The light woods override
+  // it (WoodFinish.activeC/F/Natural): their strings are dark, and a dark
+  // string with a dark halo dims rather than lights.
+  Color _litColor(NoteName note) {
+    final wood = widget.theme.wood;
+    final lit = switch (note) {
+      NoteName.c => wood?.activeC,
+      NoteName.f => wood?.activeF,
+      _ => wood?.activeNatural,
+    };
+    return lit ?? _stringColor(note);
+  }
+
+  (Color, double) _glowFor(NoteName note) {
+    final wood = widget.theme.wood;
+    final natural = note != NoteName.c && note != NoteName.f;
+    if (natural && wood?.activeNaturalGlow != null) {
+      return (wood!.activeNaturalGlow!, wood.activeNaturalGlowOpacity);
+    }
+    return (_litColor(note), 0.60);
+  }
+
   @override
   Widget build(BuildContext context) {
     final neck = widget.theme.neck;
@@ -116,6 +138,8 @@ class _StringVisualizerState extends State<StringVisualizer> {
           string: s,
           isActive: isActive,
           stringColor: _stringColor(s.note),
+          litColor: _litColor(s.note),
+          glow: _glowFor(s.note),
           theme: widget.theme,
           onTap: widget.onTap != null ? () => widget.onTap!(s) : null,
         );
@@ -181,6 +205,8 @@ class _StringCell extends StatelessWidget {
   final HarpStringModel string;
   final bool isActive;
   final Color stringColor;
+  final Color litColor; // line colour while active
+  final (Color, double) glow; // glow colour + opacity
   final TunerThemeData theme;
   final VoidCallback? onTap;
 
@@ -188,6 +214,8 @@ class _StringCell extends StatelessWidget {
     required this.string,
     required this.isActive,
     required this.stringColor,
+    required this.litColor,
+    required this.glow,
     required this.theme,
     this.onTap,
   });
@@ -206,11 +234,7 @@ class _StringCell extends StatelessWidget {
   // out. It keeps a fixed size and only animates opacity; growing it from
   // zero read as a box popping in. It lights up quickly and fades out
   // slowly, like a plucked string dying away.
-  //
-  // Wood themes glow gold (WoodFinish.stringGlow): their light-theme strings
-  // are dark, and a halo in the string's own colour dimmed instead of lit.
   Widget _glow(double height, bool reduceMotion) {
-    final glowColor = theme.wood?.stringGlow ?? stringColor;
     return AnimatedOpacity(
       opacity: isActive ? 1.0 : 0.0,
       duration: reduceMotion
@@ -226,12 +250,12 @@ class _StringCell extends StatelessWidget {
           // a denser outer ring (60%) so the hit string reads at a glance.
           boxShadow: [
             BoxShadow(
-              color: glowColor.withValues(alpha: 0.60),
+              color: glow.$1.withValues(alpha: glow.$2),
               blurRadius: 18,
               spreadRadius: 6,
             ),
             BoxShadow(
-              color: glowColor.withValues(alpha: 0.60),
+              color: glow.$1.withValues(alpha: glow.$2),
               blurRadius: 32,
               spreadRadius: 10,
             ),
@@ -287,7 +311,7 @@ class _StringCell extends StatelessWidget {
                   height: _kStringHeight,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? stringColor
+                        ? litColor
                         : stringColor.withValues(alpha: _inactiveAlpha),
                     borderRadius: BorderRadius.circular(3),
                   ),

@@ -6,7 +6,7 @@ All notable changes to Harp Tuner are documented here.
 
 ### Fixed
 - iOS: plucking the same note an octave away (e.g. G5 while G4 still rings) now switches to the new octave. It used to stay on the old one until both strings were silenced. A note whose pluck first reads an octave high now also settles on the right octave. A brief overtone flash on a held note still never changes the octave, and the lowest strings (below 130 Hz) still hold their octave. Android is unchanged.
-- Wood themes: the glow on the detected or tapped string is now a bright gold. It used the string's own colour, which is dark on Maple and Spruce, so the highlight looked dim.
+- Maple and Spruce: the detected or tapped string now lights up the way it does on the dark wood themes. It turns coral (C), sky blue (F) or white with an orange glow (other strings). Before, it switched to its dark string colour, so the highlight looked dimmed.
 
 ## [1.4.2+31] - 2026-09-26
 

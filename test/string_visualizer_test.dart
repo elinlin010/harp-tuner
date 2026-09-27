@@ -196,14 +196,48 @@ void main() {
         .toSet()
         .toList();
 
-    for (final t in TunerThemes.all.where((t) => t.isWood)) {
-      testWidgets('${t.id}: glows gold, not the (dark) string colour', (
+    // Colours of the active string line (the 4px-wide one).
+    Set<Color> activeLines(WidgetTester tester) => tester
+        .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+        .where((c) => c.constraints?.maxWidth == 4.0)
+        .map((c) => (c.decoration as BoxDecoration).color!)
+        .toSet();
+
+    for (final t in [TunerThemes.maple, TunerThemes.spruce]) {
+      final w = t.wood!;
+      testWidgets('${t.id}: the active string lights up, not dims', (
         tester,
       ) async {
+        final c = _strings.firstWhere((s) => s.note == NoteName.c);
+        final f = _strings.firstWhere((s) => s.note == NoteName.f);
+        final nat = _strings.firstWhere(
+          (s) => s.note != NoteName.c && s.note != NoteName.f,
+        );
+        for (final (s, lit) in [
+          (c, w.activeC!),
+          (f, w.activeF!),
+          (nat, w.activeNatural!),
+        ]) {
+          await tester.pumpWidget(_viz(activeString: s, theme: t));
+          await tester.pump(const Duration(milliseconds: 400));
+          expect(activeLines(tester), {lit}, reason: s.label);
+        }
+        // Glows: coral C, blue F, and the dense orange natural halo.
+        expect(glowColors(tester).toSet(), {
+          w.activeC!.withValues(alpha: 1),
+          w.activeF!.withValues(alpha: 1),
+          w.activeNaturalGlow!.withValues(alpha: 1),
+        });
+      });
+    }
+
+    for (final t in [TunerThemes.mahogany, TunerThemes.walnut]) {
+      testWidgets('${t.id}: keeps the string-colour glow', (tester) async {
         await tester.pumpWidget(_viz(activeString: _first, theme: t));
         await tester.pump(const Duration(milliseconds: 400));
         expect(glowColors(tester).toSet(), {
-          t.wood!.stringGlow.withValues(alpha: 1),
+          for (final c in [t.stringC, t.stringF, t.stringNatural])
+            c.withValues(alpha: 1),
         });
       });
     }

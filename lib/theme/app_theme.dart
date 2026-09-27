@@ -200,10 +200,18 @@ class WoodFinish {
   /// Check mark on the selected theme swatch.
   final Color swatchCheck;
 
-  /// Glow around the active string. A bright gold light rather than the
-  /// string's own colour: the light wood strings are dark (red, near-black,
-  /// brown), and a halo in those colours reads as a shadow, not a highlight.
-  final Color stringGlow;
+  /// Colour the active string lights up in (line and glow), per string
+  /// family. Null keeps the string's own colour, which already reads as light
+  /// on the dark woods. The light woods' strings are dark (red, near-black,
+  /// brown), and at full strength they dimmed instead of lit.
+  final Color? activeC;
+  final Color? activeF;
+  final Color? activeNatural;
+
+  /// Glow behind a lit natural string when it differs from the line: a
+  /// near-white line needs a denser amber halo to stand off the pale grain.
+  final Color? activeNaturalGlow;
+  final double activeNaturalGlowOpacity;
 
   const WoodFinish({
     required this.page,
@@ -227,7 +235,11 @@ class WoodFinish {
     required this.neckEdgeBottom,
     required this.neckShadow,
     required this.swatchCheck,
-    required this.stringGlow,
+    this.activeC,
+    this.activeF,
+    this.activeNatural,
+    this.activeNaturalGlow,
+    this.activeNaturalGlowOpacity = 0.60,
   });
 }
 
@@ -529,7 +541,11 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFF9A7228),
       neckShadow: Color(0x4D5A3714),
       swatchCheck: Color(0xFF5E3F20),
-      stringGlow: Color(0xFFFFCF4A),
+      activeC: Color(0xFFFF5A4A),
+      activeF: Color(0xFF4A90E2),
+      activeNatural: Color(0xFFFFFFFF),
+      activeNaturalGlow: Color(0xFFFF9800),
+      activeNaturalGlowOpacity: 0.95,
     ),
   );
 
@@ -585,7 +601,11 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFFD4AF5A),
       neckShadow: Color(0x59281405),
       swatchCheck: Color(0xFF5E3F20),
-      stringGlow: Color(0xFFFFCF4A),
+      activeC: Color(0xFFFF5A4A),
+      activeF: Color(0xFF4A90E2),
+      activeNatural: Color(0xFFFFFFFF),
+      activeNaturalGlow: Color(0xFFFF9800),
+      activeNaturalGlowOpacity: 0.95,
     ),
   );
 
@@ -641,7 +661,6 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFFE6C66E),
       neckShadow: Color(0x80000000),
       swatchCheck: Color(0xFFF6DE92),
-      stringGlow: Color(0xFFFFDB78),
     ),
   );
 
@@ -697,7 +716,6 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFFE6C66E),
       neckShadow: Color(0x80000000),
       swatchCheck: Color(0xFFF6DE92),
-      stringGlow: Color(0xFFFFDB78),
     ),
   );
 
