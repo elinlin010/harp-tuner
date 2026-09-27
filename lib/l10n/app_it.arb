@@ -54,6 +54,8 @@
     }
   },
   "settingsLeverStringCountLabel": "Numero di corde",
+  "settingsLeverLowestLabel": "Corda più grave",
+  "settingsLeverHighestLabel": "Corda più acuta",
   "settingsLeverStringCountValue": "{count} corde",
   "@settingsLeverStringCountValue": {
     "placeholders": {

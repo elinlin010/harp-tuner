@@ -54,6 +54,8 @@
     }
   },
   "settingsLeverStringCountLabel": "弦數",
+  "settingsLeverLowestLabel": "最低音弦",
+  "settingsLeverHighestLabel": "最高音弦",
   "settingsLeverStringCountValue": "{count} 弦",
   "@settingsLeverStringCountValue": {
     "placeholders": {

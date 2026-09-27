@@ -31,17 +31,40 @@ class HarpPresets {
     return strings;
   }
 
-  /// Lever (Celtic) harp with configurable string count (19–40).
-  /// The full pool of 40 strings runs A♭1–E♭7; the treble end (E♭7) is fixed
-  /// and smaller counts shorten the bass range.
-  static List<HarpStringModel> leverHarpWithCount(int count) {
-    final pool = _buildRange(
-      startOctave: 1, startNote: NoteName.a,
-      endOctave: 7,   endNote: NoteName.e,
-      flatNotes: {NoteName.e, NoteName.a, NoteName.b},
-    );
-    final clamped = count.clamp(19, 40);
-    final taken = pool.sublist(pool.length - clamped);
+  static const leverStringMin = 19;
+  static const leverStringMax = 40;
+
+  /// Every string a lever harp layout can use: 40 strings, A♭1–E♭7, tuned to
+  /// E♭ major (levers disengaged). A layout is a contiguous window of it.
+  static final List<HarpStringModel> leverPool = _buildRange(
+    startOctave: 1, startNote: NoteName.a,
+    endOctave: 7,   endNote: NoteName.e,
+    flatNotes: {NoteName.e, NoteName.a, NoteName.b},
+  );
+
+  static const _leverPoolTop = 39; // E♭7
+  static const _leverA6 = 35;      // A♭6 ("1A♭")
+
+  /// Pool index of the top string for a string count when the user has not
+  /// picked their own range. The treble end is E♭7 except for 23 strings,
+  /// which runs G3–A♭6 ("4G"–"1A♭"), the common small lever harp compass.
+  static int leverDefaultTopIndex(int count) =>
+      count == 23 ? _leverA6 : _leverPoolTop;
+
+  /// Clamps [count] to 19–40 and [topIndex] (a [leverPool] index, `null` =
+  /// the default for the count) so the window fits the pool. Returns the
+  /// effective (count, topIndex).
+  static (int, int) leverRange(int count, int? topIndex) {
+    final c = count.clamp(leverStringMin, leverStringMax);
+    final top = (topIndex ?? leverDefaultTopIndex(c)).clamp(c - 1, _leverPoolTop);
+    return (c, top);
+  }
+
+  /// Lever (Celtic) harp: [count] strings (19–40) ending at [leverPool]
+  /// index [topIndex], or at [leverDefaultTopIndex] when it is `null`.
+  static List<HarpStringModel> leverHarp(int count, {int? topIndex}) {
+    final (c, top) = leverRange(count, topIndex);
+    final taken = leverPool.sublist(top - c + 1, top + 1);
     return List.generate(taken.length, (i) => HarpStringModel(
       index: i + 1,
       note: taken[i].note,
@@ -49,6 +72,9 @@ class HarpPresets {
       semitoneAdjust: taken[i].semitoneAdjust,
     ));
   }
+
+  /// Lever harp with [count] strings in its default range.
+  static List<HarpStringModel> leverHarpWithCount(int count) => leverHarp(count);
 
   /// Pedal (concert) harp: 47 strings, C♭1 – G♭7
   /// All pedals in flat position (C♭ major) — standard resting/practice tuning
@@ -61,9 +87,11 @@ class HarpPresets {
     },
   );
 
-  static List<HarpStringModel> stringsFor(HarpType type, {int leverStringCount = 34}) {
+  static List<HarpStringModel> stringsFor(HarpType type,
+      {int leverStringCount = 34, int? leverTopIndex}) {
     switch (type) {
-      case HarpType.leverHarp: return leverHarpWithCount(leverStringCount);
+      case HarpType.leverHarp:
+        return leverHarp(leverStringCount, topIndex: leverTopIndex);
       case HarpType.pedalHarp: return pedalHarp;
     }
   }

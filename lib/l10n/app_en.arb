@@ -54,6 +54,8 @@
     }
   },
   "settingsLeverStringCountLabel": "String count",
+  "settingsLeverLowestLabel": "Lowest string",
+  "settingsLeverHighestLabel": "Highest string",
   "settingsLeverStringCountValue": "{count} strings",
   "@settingsLeverStringCountValue": {
     "placeholders": {

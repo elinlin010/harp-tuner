@@ -138,6 +138,12 @@ class AppLocalizationsIt extends AppLocalizations {
   String get settingsLeverStringCountLabel => 'Numero di corde';
 
   @override
+  String get settingsLeverLowestLabel => 'Corda più grave';
+
+  @override
+  String get settingsLeverHighestLabel => 'Corda più acuta';
+
+  @override
   String settingsLeverStringCountValue(int count) {
     return '$count corde';
   }

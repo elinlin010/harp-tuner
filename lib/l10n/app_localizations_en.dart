@@ -138,6 +138,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsLeverStringCountLabel => 'String count';
 
   @override
+  String get settingsLeverLowestLabel => 'Lowest string';
+
+  @override
+  String get settingsLeverHighestLabel => 'Highest string';
+
+  @override
   String settingsLeverStringCountValue(int count) {
     return '$count strings';
   }

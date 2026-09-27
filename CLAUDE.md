@@ -58,12 +58,12 @@ lib/
 
 ## Key Patterns
 
-**State:** All state flows through `TunerState` / `TunerNotifier` in `tuner_provider.dart`. Key fields: `selectedHarp`, `leverStringCount` (19–40, default 34), `a4Hz` (430–450, default 440), `preferFlats`, `showOctave`, `tunerMode`, `referenceString`, `cents`, `isStale`. All user-facing settings are persisted via `SharedPreferences`.
+**State:** All state flows through `TunerState` / `TunerNotifier` in `tuner_provider.dart`. Key fields: `selectedHarp`, `leverStringCount` (19–40, default 34), `leverTopIndex` (lever top string as a `HarpPresets.leverPool` index; `null` = the count's default range), `a4Hz` (430–450, default 440), `preferFlats`, `showOctave`, `tunerMode`, `referenceString`, `cents`, `isStale`. All user-facing settings are persisted via `SharedPreferences`.
 
 **Frequency math:** `HarpStringModel.frequency` uses `440 * 2^((midi - 69) / 12)`. MIDI for C4 = 60. Pass `a4Hz` override via `frequencyAt(double a4Hz)`.
 
 **Harp string layouts:**
-- Lever harp: 19–40 strings (user-configurable), A♭1 up — `HarpPresets.leverHarpWithCount(count)`. Default 34 strings (A♭1–F6, E♭ major).
+- Lever harp: 19–40 strings, a window of the 40-string A♭1–E♭7 pool (E♭ major) — `HarpPresets.leverHarp(count, topIndex:)`. Default 34 strings (G2–E♭7). The user can move the lowest and highest string (see "Lever Harp String Layout").
 - Pedal harp: 47 strings, C♭1–G♭7, all pedals flat — `HarpPresets.pedalHarp`.
 - Lap harp was removed. `HarpType` has only `leverHarp` and `pedalHarp`.
 
@@ -149,7 +149,7 @@ All core features are shipped:
 - **Reference tone playback**: 8-layer harp acoustic synthesis in `TonePlayerService`; tones are precomputed and cached when entering reference mode
 - **Microphone permission**: `permission_handler` via a custom iOS method channel (`com.harptuner/mic_permission`) and Android manifest
 - **Reference mode**: tap a string to hear it and tune to it; gauge shows cents relative to that string
-- **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40), theme, language, showTuningReminder
+- **Settings**: preferFlats, showOctave, A4 calibration (430–450 Hz), lever string count (19–40) and lowest/highest string, theme, language, showTuningReminder
 - **Wood themes** (Maple, Spruce, Mahogany, Walnut): Maple is the default for new installs only. See "Themes" above.
 - **Store screenshots**: `tool/store_screenshots/generate.sh [locales…]` renders the real `TunerScreen` at App Store (6.9", 6.5", iPad 13") and Play (1080×1920) sizes into `store/screenshots/`. Needs `pip install pillow`; fonts are downloaded on first run.
 - **Tuning reminder**: on mic start, a floating snackbar prompts pedal harp users to set pedals to flat and lever harp users to disengage levers. Dismissed via "Got it" or mic stop. Toggle in settings (`showTuningReminder`, persisted via SharedPreferences key `tuner_show_tuning_reminder`).
@@ -161,7 +161,11 @@ VERSION file uses Flutter format `MAJOR.MINOR.PATCH+BUILD` (e.g. `1.0.6+6`), mat
 
 ## Lever Harp String Layout
 
-`HarpPresets.leverHarpWithCount` is treble-anchored: E♭7 is always the top string regardless of count. The bass note varies: 40 strings = A♭1, 34 strings (default) = G2, 19 strings = A♭4. The implementation uses `pool.sublist(pool.length - clamped)` — do not change to `pool.take(count)`, which would bass-anchor instead.
+A lever layout is a contiguous window of `HarpPresets.leverPool` (40 strings, A♭1–E♭7), given by a string count (19–40) and a top string (`TunerState.leverTopIndex`, a pool index).
+
+- **Default range** (`leverTopIndex == null`) is treble-anchored at E♭7, so the bass note varies: 40 strings = A♭1, 34 (default) = G2, 19 = A♭4. **Exception: 23 strings default to G3–A♭6 ("4G"–"1A♭")** — `HarpPresets.leverDefaultTopIndex`.
+- **Custom range:** the settings sheet's "Lowest string" / "Highest string" steppers call `setLeverRange(bottom, top)`; the count follows the span and stays within 19–40. The string-count slider keeps a custom top string and only moves it up when the pool runs out at the bass end. A range equal to the count's default is stored as `null`, so it keeps following the default.
+- Persisted as `tuner_lever_string_count` + `tuner_lever_top_index` (removed when default). Every `HarpPresets.stringsFor` call must pass both `leverStringCount` and `leverTopIndex`.
 
 ## ARB Placeholder Changes
 

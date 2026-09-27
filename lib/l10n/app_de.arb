@@ -54,6 +54,8 @@
     }
   },
   "settingsLeverStringCountLabel": "Saitenanzahl",
+  "settingsLeverLowestLabel": "Tiefste Saite",
+  "settingsLeverHighestLabel": "Höchste Saite",
   "settingsLeverStringCountValue": "{count} Saiten",
   "@settingsLeverStringCountValue": {
     "placeholders": {

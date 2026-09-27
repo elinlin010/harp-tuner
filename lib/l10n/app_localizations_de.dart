@@ -138,6 +138,12 @@ class AppLocalizationsDe extends AppLocalizations {
   String get settingsLeverStringCountLabel => 'Saitenanzahl';
 
   @override
+  String get settingsLeverLowestLabel => 'Tiefste Saite';
+
+  @override
+  String get settingsLeverHighestLabel => 'Höchste Saite';
+
+  @override
   String settingsLeverStringCountValue(int count) {
     return '$count Saiten';
   }

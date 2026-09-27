@@ -349,6 +349,18 @@ abstract class AppLocalizations {
   /// **'String count'**
   String get settingsLeverStringCountLabel;
 
+  /// No description provided for @settingsLeverLowestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lowest string'**
+  String get settingsLeverLowestLabel;
+
+  /// No description provided for @settingsLeverHighestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest string'**
+  String get settingsLeverHighestLabel;
+
   /// No description provided for @settingsLeverStringCountValue.
   ///
   /// In en, this message translates to:
