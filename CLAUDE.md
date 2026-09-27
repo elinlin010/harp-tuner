@@ -197,6 +197,12 @@ Changing `namespace` / `applicationId` in `build.gradle.kts` requires three matc
 
 The adaptive icon requires per-density foreground PNGs in each `drawable-<density>/` folder (not a single file). `mipmap-anydpi-v26/ic_launcher.xml` references `@drawable/ic_launcher_foreground` (resolves by density) and `@color/ic_launcher_background`. If the foreground PNG already has safe-zone padding baked in, do NOT add an `<inset>` in the XML — double-padding shrinks the icon visually. Use designer-provided pre-sized files rather than programmatic background removal, which produces washed-out results.
 
+## Build Tooling (Android Kotlin, iOS CocoaPods, vendored mic_stream)
+
+- **Android built-in Kotlin stays on.** `android/gradle.properties` sets `android.builtInKotlin=true` (AGP 9 compiles Kotlin itself). `device_info_plus` 13+ and `package_info_plus` 10+ only apply KGP on AGP < 9, so flipping it back to `false` breaks their Kotlin compilation. Do not re-add `kotlin-android` to the app module.
+- **iOS stays on CocoaPods.** `pubspec.yaml` sets `flutter: config: enable-swift-package-manager: false`. Under SPM, Firebase ships Firestore/gRPC/abseil/BoringSSL as prebuilt frameworks declaring `MinimumOSVersion 100.0`, which bypasses the Podfile's iOS 15.0 floor that App Store Connect validation relies on (#44, #45). Do not remove the opt-out; migrate to SPM in its own change, validated with a TestFlight upload. The plugins themselves (`mic_stream`, `permission_handler_apple` 9.6.1+) are already SPM-capable.
+- **`mic_stream` is vendored** at `third_party/mic_stream` via `dependency_overrides` (pub.dev 0.7.2 is unmaintained). Patches: Android dropped the dead v1-embedding `Registrar` import and the unused Kotlin stub (the registered class is the Java `com.code.aaron.micstream.MicStreamPlugin`), and `build.gradle` targets Gradle 9 / AGP 9 (no `jcenter()`, Java 17, compileSdk 36). iOS uses the SPM layout (`ios/mic_stream/Package.swift`, sources in `ios/mic_stream/Sources/mic_stream/`), shared by the podspec; the Swift class is `MicStreamPlugin` and the Objective-C shim is gone. Keep the override even if upstream fixes one of these.
+
 ## iOS PrivacyInfo.xcprivacy
 
 The file at `ios/Runner/PrivacyInfo.xcprivacy` must be added to the Xcode project (drag into Xcode navigator with "Add to target: Runner" checked). Placing the file on disk alone is insufficient — Xcode will not include it in the build without a project reference. This step must be done manually in Xcode.
