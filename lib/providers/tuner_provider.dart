@@ -143,6 +143,12 @@ class TunerNotifier extends Notifier<TunerState> {
   // iOS: below this the fundamental is weak and YIN can sit on the 2nd
   // harmonic for the whole note, so an upward octave run is never trusted.
   static const _kOctaveUpMinHz = 130.0;
+  // iOS: consecutive agreeing overtone frames (see _overtoneIos) before they
+  // count as a new note. Same length as the octave run.
+  static const _kOvertoneSwitchFrames = 5;
+  // iOS: how close a reading must sit to an overtone of the held note. An
+  // equal-tempered twelfth is 2¢ off ×3 and a major 17th is 14¢ off ×5.
+  static const _kOvertoneCents = 35.0;
   static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
   static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
@@ -175,6 +181,14 @@ class TunerNotifier extends Notifier<TunerState> {
   // the octave really changed (G4 → G5 plucked while G4 still rings, or a
   // note first acquired on its attack overtone), so the history re-anchors.
   final _octaveRun = <double>[];
+
+  // iOS corrector only: the current run of consecutive raw frames that sit on
+  // an overtone of the held note (×3, ×5 …; see _overtoneIos). On the bass
+  // strings YIN often reports the 3rd or 5th harmonic for a frame or two —
+  // D → A, E♭ → G — and two such frames used to pass as a genuine note change.
+  // They are dropped unless _kOvertoneSwitchFrames of them agree in a row
+  // (e.g. A3 really plucked while D2 still rings).
+  final _overtoneRun = <double>[];
 
   // Which platform's detection corrector to run. iOS and Android ship different,
   // independently-tuned pitch correctors (the algorithms diverged when Android's
@@ -322,6 +336,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _challengeCount = 0;
     _pendingFarHz = null;
     _octaveRun.clear();
+    _overtoneRun.clear();
     state = state.copyWith(isListening: false, clearPitch: true);
   }
 
@@ -413,6 +428,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _challengeCount = 0;
     _pendingFarHz = null;
     _octaveRun.clear();
+    _overtoneRun.clear();
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
 
@@ -644,6 +660,7 @@ class TunerNotifier extends Notifier<TunerState> {
         _challengeCount = 0;
         _pendingFarHz = null;
         _octaveRun.clear();
+        _overtoneRun.clear();
       } else if (_silenceCount == _kStaleFrames && !state.isStale) {
         // Sustained silence: dim the display to signal stale reading
         if (state.cents != null) state = state.copyWith(isStale: true);
@@ -674,6 +691,7 @@ class TunerNotifier extends Notifier<TunerState> {
         final corrected = _octaveCorrectIos(hz, med);
         if (corrected != null) {
           _pendingFarHz = null;
+          _overtoneRun.clear();
           if (_octaveRun.isNotEmpty &&
               (1200 * log(hz / _octaveRun.last) / ln2).abs() >= 150) {
             _octaveRun.clear();
@@ -694,12 +712,34 @@ class TunerNotifier extends Notifier<TunerState> {
           } else {
             _addToHistory(corrected);
           }
+        } else if (_overtoneIos(hz, med) && !_nearerReferenceIos(hz, med)) {
+          // An overtone of the held note (D2's 3rd harmonic reads as A, E♭'s
+          // 5th as G). Dropped like an outlier, and it breaks any pending far
+          // pair, so two overtone frames in a row can't pass as a note change.
+          // Only a sustained agreeing run re-anchors: a string really plucked
+          // at that pitch while the held one still rings. In reference mode a
+          // reading nearer the pinned string than the held note is that string
+          // being plucked, so it keeps the fast far-pair path.
+          _pendingFarHz = null;
+          _octaveRun.clear();
+          if (_overtoneRun.isNotEmpty &&
+              (1200 * log(hz / _overtoneRun.last) / ln2).abs() >= 150) {
+            _overtoneRun.clear();
+          }
+          _overtoneRun.add(hz);
+          if (_overtoneRun.length < _kOvertoneSwitchFrames) return;
+          _freqHistory.clear();
+          _overtoneRun.forEach(_addToHistory);
+          _overtoneRun.clear();
+          _challengeNote = null;
+          _challengeCount = 0;
         } else if (_pendingFarHz != null &&
             (1200 * log(hz / _pendingFarHz!) / ln2).abs() < 150) {
           // Second consecutive far frame agreeing with the first — a genuine
-          // note change, not a stray glitch. This is the only switch path when
-          // the previous string is still ringing: YIN keeps emitting pitched
-          // frames, so the first-silence reset never fires. Flush the stale
+          // note change, not a stray glitch. This is the main switch path when
+          // the previous string is still ringing (octave and overtone runs are
+          // the slower ones): YIN keeps emitting pitched frames, so the
+          // first-silence reset never fires. Flush the stale
           // history so the new note accumulates cleanly, and reset the
           // challenge counter so disjoint wrong-note bursts can't ratchet it
           // up across flushes. In auto mode the challenge gate below still
@@ -712,6 +752,7 @@ class TunerNotifier extends Notifier<TunerState> {
           _addToHistory(hz);
           _pendingFarHz = null;
           _octaveRun.clear();
+          _overtoneRun.clear();
           _challengeNote = null;
           _challengeCount = 0;
         } else {
@@ -720,11 +761,13 @@ class TunerNotifier extends Notifier<TunerState> {
           // it only counts if the very next frame agrees with it.
           _pendingFarHz = hz;
           _octaveRun.clear();
+          _overtoneRun.clear();
           return;
         }
       } else {
         _pendingFarHz = null;
         _octaveRun.clear();
+        _overtoneRun.clear();
         _addToHistory(hz);
       }
     } else {
@@ -1010,6 +1053,26 @@ class TunerNotifier extends Notifier<TunerState> {
       if (cents.abs() < 80) return candidate;
     }
     return null;
+  }
+
+  // iOS corrector: true when [hz] sits on an overtone of the held note at
+  // [reference] — its 3rd–6th harmonic, or the 3rd/5th harmonic of the octave
+  // below (×1.5, ×2.5), for when the bass fundamental is too weak for the mic
+  // and the history holds the 2nd harmonic. Upward only: a lower reading is a
+  // new, lower string. ×2 is the octave corrector's job.
+  bool _overtoneIos(double hz, double reference) {
+    for (final ratio in const [1.5, 2.5, 3.0, 4.0, 5.0, 6.0]) {
+      final cents = 1200 * log(hz / (reference * ratio)) / ln2;
+      if (cents.abs() < _kOvertoneCents) return true;
+    }
+    return false;
+  }
+
+  bool _nearerReferenceIos(double hz, double held) {
+    final ref = state.referenceString;
+    if (state.tunerMode != TunerMode.reference || ref == null) return false;
+    final refHz = ref.frequencyAt(state.a4Hz.toDouble());
+    return (log(hz / refHz)).abs() < (log(held / refHz)).abs();
   }
 
   // Android corrector (Play Store v1.1.11): pulls a reading that landed on a
