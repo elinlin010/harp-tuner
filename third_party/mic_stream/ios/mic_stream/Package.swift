@@ -1,6 +1,7 @@
 // swift-tools-version: 5.9
 // Swift Package Manager manifest (vendored patch; upstream mic_stream ships
 // CocoaPods only). Mirrors Flutter's plugin_swift_package_manager template.
+// The local FlutterFramework package it depends on needs Flutter >= 3.41.
 
 import PackageDescription
 

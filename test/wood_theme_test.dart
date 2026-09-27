@@ -13,6 +13,7 @@ import 'package:harp_tuner/widgets/mode_toggle.dart';
 import 'package:harp_tuner/widgets/string_visualizer.dart';
 import 'package:harp_tuner/widgets/tuner_gauge.dart';
 import 'package:harp_tuner/widgets/wood_surface.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // ignore_for_file: invalid_use_of_visible_for_testing_member
@@ -146,6 +147,55 @@ void main() {
       SharedPreferences.setMockInitialValues({});
       await resolveStartupTheme(isUpgrade: _updated);
       expect(await resolveStartupTheme(isUpgrade: _fresh), TunerThemes.linen);
+    });
+  });
+
+  // ── Default probe: install vs update time from package_info_plus ──────────
+
+  group('resolveStartupTheme install-time probe', () {
+    final installed = DateTime(2026, 9, 1, 12);
+
+    void mockPackageInfo({DateTime? installTime, DateTime? updateTime}) {
+      PackageInfo.setMockInitialValues(
+        appName: 'Harpie',
+        packageName: 'com.career010.harpie',
+        version: '1.4.2',
+        buildNumber: '31',
+        buildSignature: '',
+        installTime: installTime,
+        updateTime: updateTime,
+      );
+    }
+
+    // PackageInfo caches the mock statically; leave later tests with no
+    // install/update times (the probe then returns null, as it does off-device).
+    tearDown(mockPackageInfo);
+
+    test('update within 10 minutes of install is a fresh install', () async {
+      SharedPreferences.setMockInitialValues({});
+      mockPackageInfo(
+        installTime: installed,
+        updateTime: installed.add(const Duration(minutes: 1)),
+      );
+      expect(await resolveStartupTheme(), TunerThemes.maple);
+    });
+
+    test('update long after install is an existing user', () async {
+      SharedPreferences.setMockInitialValues({});
+      mockPackageInfo(
+        installTime: installed,
+        updateTime: installed.add(const Duration(hours: 1)),
+      );
+      expect(await resolveStartupTheme(), TunerThemes.linen);
+    });
+
+    test('missing install or update time keeps Linen', () async {
+      SharedPreferences.setMockInitialValues({});
+      mockPackageInfo(installTime: installed);
+      expect(await resolveStartupTheme(), TunerThemes.linen);
+      SharedPreferences.setMockInitialValues({});
+      mockPackageInfo(updateTime: installed);
+      expect(await resolveStartupTheme(), TunerThemes.linen);
     });
   });
 
