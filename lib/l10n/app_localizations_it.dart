@@ -60,7 +60,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get harpTypePedalHarp => 'Arpa a pedali';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 corde · C♭1–G♭7 · pos. bemolli';
+  String get harpTypePedalHarpSubtitle => '47 corde · 7C♭–0G♭ · pos. bemolli';
 
   @override
   String get settingsDarkModeToggle => 'Modalità scura';

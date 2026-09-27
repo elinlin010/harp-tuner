@@ -64,6 +64,7 @@ lib/
 
 **Harp string layouts:**
 - Lever harp: 19–40 strings, a window of the 40-string A♭1–E♭7 pool (E♭ major) — `HarpPresets.leverHarp(count, topIndex:)`. Default 34 strings (G2–E♭7). The user can move the lowest and highest string (see "Lever Harp String Layout").
+- **Settings show strings in harp notation** (register + note, e.g. "4G", "1A♭"), like the string rail and reference mode — never scientific pitch ("G3"). Use `HarpStringModel.label`.
 - Pedal harp: 47 strings, C♭1–G♭7, all pedals flat — `HarpPresets.pedalHarp`.
 - Lap harp was removed. `HarpType` has only `leverHarp` and `pedalHarp`.
 
@@ -136,7 +137,7 @@ In QA mode, flag any code that doesn't match `DESIGN.md`.
 
 **Touch targets: 44pt minimum, always opaque.** Wrap small tap surfaces in `GestureDetector(behavior: HitTestBehavior.opaque)` so taps on transparent areas still register. Add `Semantics(button: true, label: ...)` on icon-only buttons.
 
-**Accidentals (♭ ♮ ♯) — always `NoteText`, superscript top-right.** Every note name the app shows uses it: the gauge's big note, string labels ("3A♭"), and settings subtitles ("G2–E♭7 · E♭ maj", "e.g. B♭ instead of A♯"). Exception: a ♭ used as an icon in a primary label keeps full size.
+**Accidentals (♭ ♮ ♯) — always `NoteText`, superscript top-right.** Every note name the app shows uses it: the gauge's big note, string labels ("3A♭"), and settings subtitles ("5G–1E♭ · E♭ maj", "e.g. B♭ instead of A♯"). Exception: a ♭ used as an icon in a primary label keeps full size.
 - Outfit has no ♭/♯. Without a bundled font each platform substitutes a different fallback with different shapes and metrics. `assets/fonts/NoteAccidentals-*.ttf` is a ~2 KB-per-weight Noto Sans TC subset (♭♮♯ only, SIL OFL), declared in `pubspec.yaml`.
 - Position by **ink**, not the em box. These glyphs are full-width with the ink in the middle ~45%, and ♯'s ink sits lower in its box than ♭'s. `NoteText` holds the measured ink bounds; if you swap the font, re-measure them (fontTools `BoundsPen`).
 - flutter_test doesn't load pubspec fonts; the store-screenshot harness registers `NoteAccidentals` itself.

@@ -809,7 +809,7 @@ void main() {
       await tester.tap(stepBtns.first); // down: E♭7 → D7
       await tester.pump();
 
-      expect(find.descendant(of: highest, matching: find.text('D7')),
+      expect(find.descendant(of: highest, matching: find.text('1D')),
           findsOneWidget);
       expect(find.textContaining('33'), findsWidgets);
       expect(tester.takeException(), isNull);

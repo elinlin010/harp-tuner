@@ -60,7 +60,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get harpTypePedalHarp => '踏板豎琴';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 弦 · C♭1–G♭7 · 降音位';
+  String get harpTypePedalHarpSubtitle => '47 弦 · 7C♭–0G♭ · 降音位';
 
   @override
   String get settingsDarkModeToggle => '深色模式';
@@ -279,7 +279,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get harpTypePedalHarp => '踏板豎琴';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 弦 · C♭1–G♭7 · 降音位';
+  String get harpTypePedalHarpSubtitle => '47 弦 · 7C♭–0G♭ · 降音位';
 
   @override
   String get settingsDarkModeToggle => '深色模式';

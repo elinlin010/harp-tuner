@@ -466,14 +466,11 @@ String _harpSubtitle(HarpType type, AppLocalizations l10n,
     case HarpType.leverHarp:
       final strings =
           HarpPresets.leverHarp(leverStringCount, topIndex: leverTopIndex);
-      return l10n.harpTypeLeverHarpSubtitleFmt(strings.length,
-          _scientificName(strings.first), _scientificName(strings.last));
+      return l10n.harpTypeLeverHarpSubtitleFmt(
+          strings.length, strings.first.label, strings.last.label);
     case HarpType.pedalHarp: return l10n.harpTypePedalHarpSubtitle;
   }
 }
-
-/// Scientific pitch name, e.g. "E♭7".
-String _scientificName(HarpStringModel s) => '${s.noteWithAccidental}${s.octave}';
 
 // ── Settings bottom sheet ─────────────────────────────────────────────────────
 
@@ -1546,23 +1543,13 @@ class _LeverNoteStepperRow extends StatelessWidget {
             SizedBox(
               width: 72,
               child: Semantics(
-                label: '$label ${string.label} (${_scientificName(string)})',
+                label: '$label ${string.label}',
                 excludeSemantics: true,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    NoteText(
-                      string.label,
-                      textAlign: TextAlign.center,
-                      style: theme.sans(16,
-                          weight: FontWeight.w600, color: theme.inTune),
-                    ),
-                    NoteText(
-                      _scientificName(string),
-                      textAlign: TextAlign.center,
-                      style: theme.sans(11, color: theme.textSecondary),
-                    ),
-                  ],
+                child: NoteText(
+                  string.label,
+                  textAlign: TextAlign.center,
+                  style: theme.sans(16,
+                      weight: FontWeight.w600, color: theme.inTune),
                 ),
               ),
             ),
