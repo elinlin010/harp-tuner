@@ -206,7 +206,11 @@ class _StringCell extends StatelessWidget {
   // out. It keeps a fixed size and only animates opacity; growing it from
   // zero read as a box popping in. It lights up quickly and fades out
   // slowly, like a plucked string dying away.
+  //
+  // Wood themes glow gold (WoodFinish.stringGlow): their light-theme strings
+  // are dark, and a halo in the string's own colour dimmed instead of lit.
   Widget _glow(double height, bool reduceMotion) {
+    final glowColor = theme.wood?.stringGlow ?? stringColor;
     return AnimatedOpacity(
       opacity: isActive ? 1.0 : 0.0,
       duration: reduceMotion
@@ -222,12 +226,12 @@ class _StringCell extends StatelessWidget {
           // a denser outer ring (60%) so the hit string reads at a glance.
           boxShadow: [
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.60),
+              color: glowColor.withValues(alpha: 0.60),
               blurRadius: 18,
               spreadRadius: 6,
             ),
             BoxShadow(
-              color: stringColor.withValues(alpha: 0.60),
+              color: glowColor.withValues(alpha: 0.60),
               blurRadius: 32,
               spreadRadius: 10,
             ),

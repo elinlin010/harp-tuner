@@ -832,6 +832,84 @@ void main() {
           reason: 'reference gauge must re-lock without a silence gap');
     });
 
+    test('iOS: switches up an octave (G4 → G5) with no silence gap', () async {
+      // User-reported: plucking G5 while G4 still rang kept showing G4. Every
+      // G5 frame is an exact octave off the held G4, so the octave corrector
+      // folded it back down forever. A sustained run must re-anchor.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 392.0, 4); // G4 confirmed
+      expect(c.read(tunerProvider).closestNoteName, 'G4');
+      feed(n, 783.99, 10); // G5 plucked while G4 rings — no null frame
+      final s = c.read(tunerProvider);
+      expect(s.closestNoteName, 'G5',
+          reason: 'a sustained octave change must not stay folded onto G4');
+      expect(s.detectedHz, closeTo(783.99, 8.0));
+    });
+
+    test('iOS: switches down an octave (G5 → G4) with no silence gap', () async {
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 783.99, 4); // G5 confirmed
+      expect(c.read(tunerProvider).closestNoteName, 'G5');
+      feed(n, 392.0, 10); // G4 plucked while G5 rings
+      expect(c.read(tunerProvider).closestNoteName, 'G4');
+    });
+
+    test('iOS: a note acquired on its attack overtone settles to the '
+        'fundamental', () async {
+      // The pluck attack can read as the 2nd harmonic for the first frames.
+      // Instant acquisition locks onto it; once the true fundamental keeps
+      // coming the display must drop to the right octave, not stay high.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 783.99, 3); // attack reads G5
+      feed(n, 392.0, 10); // the string settles on G4
+      expect(c.read(tunerProvider).closestNoteName, 'G4');
+    });
+
+    test('iOS: an overtone flash shorter than the run keeps the octave',
+        () async {
+      // Four octave-off frames (still under the 5-frame run) interrupted by
+      // the held note: the held octave never gives way.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 392.0, 4); // G4
+      for (var i = 0; i < 3; i++) {
+        feed(n, 783.99, 4); // G5 overtone burst
+        feed(n, 392.0, 1); // G4 still the fundamental
+      }
+      expect(c.read(tunerProvider).closestNoteName, 'G4');
+      expect(c.read(tunerProvider).detectedHz, lessThan(500.0));
+    });
+
+    test('iOS: a bass string on its 2nd harmonic keeps the low octave',
+        () async {
+      // Below 130 Hz the fundamental is weak and YIN can sit on the 2nd
+      // harmonic for the rest of the note; an upward run is never trusted.
+      SharedPreferences.setMockInitialValues({});
+      final c = _container();
+      await Future.delayed(Duration.zero);
+      final n = c.read(tunerProvider.notifier)
+        ..setDetectionAlgoForTest(DetectionAlgo.ios);
+      feed(n, 98.0, 4); // G2
+      expect(c.read(tunerProvider).closestNoteName, 'G2');
+      feed(n, 196.0, 12); // YIN latched on the G3 harmonic
+      expect(c.read(tunerProvider).closestNoteName, 'G2');
+    });
+
     test('iOS: switches to a new note after a silence gap clears state', () async {
       // iOS resets detection state on the first silence frame, so a new note
       // plucked after the previous one decays acquires fresh.

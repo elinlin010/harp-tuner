@@ -200,6 +200,11 @@ class WoodFinish {
   /// Check mark on the selected theme swatch.
   final Color swatchCheck;
 
+  /// Glow around the active string. A bright gold light rather than the
+  /// string's own colour: the light wood strings are dark (red, near-black,
+  /// brown), and a halo in those colours reads as a shadow, not a highlight.
+  final Color stringGlow;
+
   const WoodFinish({
     required this.page,
     required this.gauge,
@@ -222,6 +227,7 @@ class WoodFinish {
     required this.neckEdgeBottom,
     required this.neckShadow,
     required this.swatchCheck,
+    required this.stringGlow,
   });
 }
 
@@ -523,6 +529,7 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFF9A7228),
       neckShadow: Color(0x4D5A3714),
       swatchCheck: Color(0xFF5E3F20),
+      stringGlow: Color(0xFFFFCF4A),
     ),
   );
 
@@ -578,6 +585,7 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFFD4AF5A),
       neckShadow: Color(0x59281405),
       swatchCheck: Color(0xFF5E3F20),
+      stringGlow: Color(0xFFFFCF4A),
     ),
   );
 
@@ -633,6 +641,7 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFFE6C66E),
       neckShadow: Color(0x80000000),
       swatchCheck: Color(0xFFF6DE92),
+      stringGlow: Color(0xFFFFDB78),
     ),
   );
 
@@ -688,6 +697,7 @@ class TunerThemes {
       neckEdgeBottom: Color(0xFFE6C66E),
       neckShadow: Color(0x80000000),
       swatchCheck: Color(0xFFF6DE92),
+      stringGlow: Color(0xFFFFDB78),
     ),
   );
 

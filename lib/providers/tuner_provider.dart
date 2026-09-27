@@ -137,6 +137,12 @@ class TunerNotifier extends Notifier<TunerState> {
   // the Play Store v1.1.11 corrector (2, tuned for slow-device note-skip).
   static const _challengeNeededIos     = 3;
   static const _challengeNeededAndroid = 2;
+  // iOS: consecutive agreeing octave-off frames (~230 ms) before the held
+  // octave gives way. Longer than an attack-overtone flash (2–3 frames).
+  static const _kOctaveSwitchFrames = 5;
+  // iOS: below this the fundamental is weak and YIN can sit on the 2nd
+  // harmonic for the whole note, so an upward octave run is never trusted.
+  static const _kOctaveUpMinHz = 130.0;
   static const _kStaleFrames    = 15;  // ~1.4s silence → dim display
   static const _kHoldFrames     = 22;  // ~2.0s silence → clear display
 
@@ -161,6 +167,14 @@ class TunerNotifier extends Notifier<TunerState> {
   // held pending. A genuine note change must show two consecutive agreeing
   // far frames before the history is flushed; a lone outlier is dropped.
   double? _pendingFarHz;
+
+  // iOS corrector only: the current run of consecutive raw frames that sit an
+  // exact octave off the history median. A short run is the string's own
+  // octave overtone (it flashes for a frame or two on the attack) and is
+  // folded back into the held octave. A run of _kOctaveSwitchFrames means
+  // the octave really changed (G4 → G5 plucked while G4 still rings, or a
+  // note first acquired on its attack overtone), so the history re-anchors.
+  final _octaveRun = <double>[];
 
   // Which platform's detection corrector to run. iOS and Android ship different,
   // independently-tuned pitch correctors (the algorithms diverged when Android's
@@ -307,6 +321,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _challengeNote = null;
     _challengeCount = 0;
     _pendingFarHz = null;
+    _octaveRun.clear();
     state = state.copyWith(isListening: false, clearPitch: true);
   }
 
@@ -397,6 +412,7 @@ class TunerNotifier extends Notifier<TunerState> {
     _challengeNote = null;
     _challengeCount = 0;
     _pendingFarHz = null;
+    _octaveRun.clear();
 
     final hz = string.frequencyAt(state.a4Hz.toDouble());
 
@@ -627,6 +643,7 @@ class TunerNotifier extends Notifier<TunerState> {
         _challengeNote = null;
         _challengeCount = 0;
         _pendingFarHz = null;
+        _octaveRun.clear();
       } else if (_silenceCount == _kStaleFrames && !state.isStale) {
         // Sustained silence: dim the display to signal stale reading
         if (state.cents != null) state = state.copyWith(isStale: true);
@@ -657,7 +674,26 @@ class TunerNotifier extends Notifier<TunerState> {
         final corrected = _octaveCorrectIos(hz, med);
         if (corrected != null) {
           _pendingFarHz = null;
-          _addToHistory(corrected);
+          if (_octaveRun.isNotEmpty &&
+              (1200 * log(hz / _octaveRun.last) / ln2).abs() >= 150) {
+            _octaveRun.clear();
+          }
+          _octaveRun.add(hz);
+          if (_octaveRun.length > _kOctaveSwitchFrames) _octaveRun.removeAt(0);
+          final upward = hz > med;
+          if (_octaveRun.length >= _kOctaveSwitchFrames &&
+              !(upward && med < _kOctaveUpMinHz)) {
+            // A sustained octave-off run is a real octave change, not an
+            // overtone flash. Re-anchor on the raw readings; the challenge
+            // gate below still has to pass before auto mode relabels.
+            _freqHistory.clear();
+            _octaveRun.forEach(_addToHistory);
+            _octaveRun.clear();
+            _challengeNote = null;
+            _challengeCount = 0;
+          } else {
+            _addToHistory(corrected);
+          }
         } else if (_pendingFarHz != null &&
             (1200 * log(hz / _pendingFarHz!) / ln2).abs() < 150) {
           // Second consecutive far frame agreeing with the first — a genuine
@@ -675,6 +711,7 @@ class TunerNotifier extends Notifier<TunerState> {
           _addToHistory(_pendingFarHz!);
           _addToHistory(hz);
           _pendingFarHz = null;
+          _octaveRun.clear();
           _challengeNote = null;
           _challengeCount = 0;
         } else {
@@ -682,10 +719,12 @@ class TunerNotifier extends Notifier<TunerState> {
           // transient) must not disturb the smoothing ring. Hold it pending;
           // it only counts if the very next frame agrees with it.
           _pendingFarHz = hz;
+          _octaveRun.clear();
           return;
         }
       } else {
         _pendingFarHz = null;
+        _octaveRun.clear();
         _addToHistory(hz);
       }
     } else {

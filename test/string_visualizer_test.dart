@@ -182,4 +182,42 @@ void main() {
       expect(offset(tester), closeTo(566 - 200, 0.5));
     });
   });
+
+  group('StringVisualizer — active-string glow colour', () {
+    // The glow is the only BoxShadow-with-spread in a cell; collect the
+    // colours of every shadow with a spread radius.
+    List<Color> glowColors(WidgetTester tester) => tester
+        .widgetList<Container>(find.byType(Container))
+        .map((c) => c.decoration)
+        .whereType<BoxDecoration>()
+        .expand((d) => d.boxShadow ?? const <BoxShadow>[])
+        .where((s) => s.spreadRadius > 0)
+        .map((s) => s.color.withValues(alpha: 1))
+        .toSet()
+        .toList();
+
+    for (final t in TunerThemes.all.where((t) => t.isWood)) {
+      testWidgets('${t.id}: glows gold, not the (dark) string colour', (
+        tester,
+      ) async {
+        await tester.pumpWidget(_viz(activeString: _first, theme: t));
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(glowColors(tester).toSet(), {
+          t.wood!.stringGlow.withValues(alpha: 1),
+        });
+      });
+    }
+
+    testWidgets('flat themes keep the string-colour glow', (tester) async {
+      const t = TunerThemes.linen;
+      await tester.pumpWidget(_viz(activeString: _first, theme: t));
+      await tester.pump(const Duration(milliseconds: 400));
+      // Every cell carries its glow (faded out when inactive), each in its
+      // own string colour.
+      expect(glowColors(tester).toSet(), {
+        for (final c in [t.stringC, t.stringF, t.stringNatural])
+          c.withValues(alpha: 1),
+      });
+    });
+  });
 }
