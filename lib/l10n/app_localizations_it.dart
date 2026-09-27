@@ -135,7 +135,7 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get settingsLeverStringCountLabel => 'Numero di corde';
+  String get settingsLeverStringCountLabel => 'Corde';
 
   @override
   String get settingsLeverLowestLabel => 'Corda più grave';

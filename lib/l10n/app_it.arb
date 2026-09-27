@@ -53,7 +53,7 @@
       "topNote": { "type": "String" }
     }
   },
-  "settingsLeverStringCountLabel": "Numero di corde",
+  "settingsLeverStringCountLabel": "Corde",
   "settingsLeverLowestLabel": "Corda più grave",
   "settingsLeverHighestLabel": "Corda più acuta",
   "settingsLeverRangeLabel": "Ambito",
