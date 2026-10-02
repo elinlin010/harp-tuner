@@ -60,7 +60,7 @@ class AppLocalizationsIt extends AppLocalizations {
   String get harpTypePedalHarp => 'Arpa a pedali';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 corde · C♭1–G♭7 · pos. bemolli';
+  String get harpTypePedalHarpSubtitle => '47 corde · 7C♭–0G♭ · pos. bemolli';
 
   @override
   String get settingsDarkModeToggle => 'Modalità scura';
@@ -135,7 +135,16 @@ class AppLocalizationsIt extends AppLocalizations {
   }
 
   @override
-  String get settingsLeverStringCountLabel => 'Numero di corde';
+  String get settingsLeverStringCountLabel => 'Corde';
+
+  @override
+  String get settingsLeverLowestLabel => 'Corda più grave';
+
+  @override
+  String get settingsLeverHighestLabel => 'Corda più acuta';
+
+  @override
+  String get settingsLeverRangeLabel => 'Ambito';
 
   @override
   String settingsLeverStringCountValue(int count) {

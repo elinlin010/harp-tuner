@@ -210,7 +210,7 @@ abstract class AppLocalizations {
   /// No description provided for @harpTypePedalHarpSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'47 strings · C♭1–G♭7 · flat pos.'**
+  /// **'47 strings · 7C♭–0G♭ · flat pos.'**
   String get harpTypePedalHarpSubtitle;
 
   /// No description provided for @settingsDarkModeToggle.
@@ -348,6 +348,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'String count'**
   String get settingsLeverStringCountLabel;
+
+  /// No description provided for @settingsLeverLowestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Lowest string'**
+  String get settingsLeverLowestLabel;
+
+  /// No description provided for @settingsLeverHighestLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest string'**
+  String get settingsLeverHighestLabel;
+
+  /// No description provided for @settingsLeverRangeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Range'**
+  String get settingsLeverRangeLabel;
 
   /// No description provided for @settingsLeverStringCountValue.
   ///

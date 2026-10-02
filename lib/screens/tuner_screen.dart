@@ -278,7 +278,9 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
     });
 
     final harpStrings = tuner.selectedHarp != null
-        ? HarpPresets.stringsFor(tuner.selectedHarp!, leverStringCount: tuner.leverStringCount)
+        ? HarpPresets.stringsFor(tuner.selectedHarp!,
+            leverStringCount: tuner.leverStringCount,
+            leverTopIndex: tuner.leverTopIndex)
         : <HarpStringModel>[];
 
     // In reference mode the active string is the pinned reference string;
@@ -458,52 +460,17 @@ String _harpName(HarpType type, AppLocalizations l10n) {
   }
 }
 
-String _harpSubtitle(HarpType type, AppLocalizations l10n, {int leverStringCount = 34}) {
+String _harpSubtitle(HarpType type, AppLocalizations l10n,
+    {int leverStringCount = 34, int? leverTopIndex}) {
   switch (type) {
     case HarpType.leverHarp:
-      return l10n.harpTypeLeverHarpSubtitleFmt(leverStringCount, _leverBottomNote(leverStringCount), _kLeverTopNote);
+      final strings =
+          HarpPresets.leverHarp(leverStringCount, topIndex: leverTopIndex);
+      return l10n.harpTypeLeverHarpSubtitleFmt(
+          strings.length, strings.first.label, strings.last.label);
     case HarpType.pedalHarp: return l10n.harpTypePedalHarpSubtitle;
   }
 }
-
-// Pool: A♭1(0), B♭1(1), C2(2)…B♭2(8), C3(9)…B♭3(15), C4(16)…B♭4(22),
-//       C5(23)…B♭5(29), C6(30)…B♭6(36), C7(37), D7(38), E♭7(39).
-// Treble end is fixed at E♭7 (index 39); the bottom note index is 40 - count.
-
-// Bottom note for each count (index = 40 - count, so count=40→index 0=A♭1,
-// count=34→index 6=G2, count=19→index 21=A♭4).
-const _kLeverBottomNotes = [
-  'A♭1', // 40 — full range
-  'B♭1', // 39
-  'C2',  // 38
-  'D2',  // 37
-  'E♭2', // 36
-  'F2',  // 35
-  'G2',  // 34 — default
-  'A♭2', // 33
-  'B♭2', // 32
-  'C3',  // 31
-  'D3',  // 30
-  'E♭3', // 29
-  'F3',  // 28
-  'G3',  // 27
-  'A♭3', // 26
-  'B♭3', // 25
-  'C4',  // 24
-  'D4',  // 23
-  'E♭4', // 22
-  'F4',  // 21
-  'G4',  // 20
-  'A♭4', // 19 — minimum
-];
-
-String _leverBottomNote(int count) {
-  final idx = (40 - count.clamp(19, 40)).clamp(0, _kLeverBottomNotes.length - 1);
-  return _kLeverBottomNotes[idx];
-}
-
-// Top note is always E♭7 (the treble end is fixed).
-const _kLeverTopNote = 'E♭7';
 
 // ── Settings bottom sheet ─────────────────────────────────────────────────────
 
@@ -658,7 +625,8 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                   _InstrumentRow(
                     label: _harpName(type, l10n),
                     subtitle: _harpSubtitle(type, l10n,
-                        leverStringCount: tuner.leverStringCount),
+                        leverStringCount: tuner.leverStringCount,
+                        leverTopIndex: tuner.leverTopIndex),
                     selected: tuner.selectedHarp == type,
                     onTap: () =>
                         ref.read(tunerProvider.notifier).setSelectedHarp(type),
@@ -677,6 +645,16 @@ class _SettingsSheetState extends ConsumerState<_SettingsSheet> {
                             .setLeverStringCount(v),
                         theme: theme,
                       ),
+                    ),
+                  if (type == HarpType.leverHarp &&
+                      tuner.selectedHarp == HarpType.leverHarp)
+                    _LeverRangeRow(
+                      count: tuner.leverStringCount,
+                      topIndex: tuner.leverTopIndex,
+                      onChanged: (bottom, top) => ref
+                          .read(tunerProvider.notifier)
+                          .setLeverRange(bottom, top),
+                      theme: theme,
                     ),
                 ],
               ],
@@ -1409,6 +1387,7 @@ class _TrianglePainter extends CustomPainter {
 
 // ── Lever string count slider ─────────────────────────────────────────────────
 
+/// Label, slider and value on one line.
 class _LeverStringCountRow extends StatelessWidget {
   final int count;
   final ValueChanged<int> onChanged;
@@ -1424,29 +1403,21 @@ class _LeverStringCountRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  l10n.settingsLeverStringCountLabel,
-                  style: theme.sans(16, weight: FontWeight.w600,
-                      color: theme.textPrimary),
-                ),
-              ),
-              Text(
-                l10n.settingsLeverStringCountValue(count),
-                style: theme.sans(16, weight: FontWeight.w600,
-                    color: theme.inTune),
-              ),
-            ],
+    final label = l10n.settingsLeverStringCountLabel;
+    return Row(
+      children: [
+        Flexible(
+          flex: 0,
+          child: Text(
+            label,
+            style: theme.sans(16,
+                weight: FontWeight.w600, color: theme.textPrimary),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
-          const SizedBox(height: 4),
-          SliderTheme(
+        ),
+        Expanded(
+          child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: theme.inTune,
               inactiveTrackColor: theme.surfaceRim,
@@ -1458,21 +1429,125 @@ class _LeverStringCountRow extends StatelessWidget {
             ),
             child: Slider(
               value: count.toDouble(),
-              min: 19,
-              max: 40,
-              divisions: 21,
+              min: HarpPresets.leverStringMin.toDouble(),
+              max: HarpPresets.leverStringMax.toDouble(),
+              divisions:
+                  HarpPresets.leverStringMax - HarpPresets.leverStringMin,
+              semanticFormatterCallback: (v) =>
+                  '$label ${l10n.settingsLeverStringCountValue(v.round())}',
               onChanged: (v) => onChanged(v.round()),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('19', style: theme.sans(11, color: theme.textSecondary)),
-              Text('40', style: theme.sans(11, color: theme.textSecondary)),
-            ],
+        ),
+        Text(
+          l10n.settingsLeverStringCountValue(count),
+          style: theme.sans(16, weight: FontWeight.w600, color: theme.inTune),
+          maxLines: 1,
+        ),
+      ],
+    );
+  }
+}
+
+// ── Lever range (lowest – highest string) ─────────────────────────────────────
+
+/// One row: label, then the lowest and highest string, each with ◀ ▶ that
+/// move it one diatonic string. The string count follows the span (19–40).
+class _LeverRangeRow extends StatelessWidget {
+  final int count;
+  final int? topIndex;
+  final void Function(int bottomIndex, int topIndex) onChanged;
+  final TunerThemeData theme;
+
+  const _LeverRangeRow({
+    required this.count,
+    required this.topIndex,
+    required this.onChanged,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final (c, top) = HarpPresets.leverRange(count, topIndex);
+    final bottom = top - c + 1;
+    final pool = HarpPresets.leverPool;
+    final canGrow = c < HarpPresets.leverStringMax;
+    final canShrink = c > HarpPresets.leverStringMin;
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            l10n.settingsLeverRangeLabel,
+            style: theme.sans(16,
+                weight: FontWeight.w600, color: theme.textPrimary),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
-        ],
-      ),
+        ),
+        _LeverNoteStepper(
+          key: const ValueKey('lever-lowest'),
+          semanticLabel: l10n.settingsLeverLowestLabel,
+          string: pool[bottom],
+          onDown: bottom > 0 && canGrow
+              ? () => onChanged(bottom - 1, top)
+              : null,
+          onUp: canShrink ? () => onChanged(bottom + 1, top) : null,
+          theme: theme,
+        ),
+        Text('–', style: theme.sans(16, color: theme.textSecondary)),
+        _LeverNoteStepper(
+          key: const ValueKey('lever-highest'),
+          semanticLabel: l10n.settingsLeverHighestLabel,
+          string: pool[top],
+          onDown: canShrink ? () => onChanged(bottom, top - 1) : null,
+          onUp: top < pool.length - 1 && canGrow
+              ? () => onChanged(bottom, top + 1)
+              : null,
+          theme: theme,
+        ),
+      ],
+    );
+  }
+}
+
+class _LeverNoteStepper extends StatelessWidget {
+  final String semanticLabel;
+  final HarpStringModel string;
+  final VoidCallback? onDown;
+  final VoidCallback? onUp;
+  final TunerThemeData theme;
+
+  const _LeverNoteStepper({
+    super.key,
+    required this.semanticLabel,
+    required this.string,
+    required this.onDown,
+    required this.onUp,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _StepBtn(pointRight: false, onTap: onDown, theme: theme),
+        SizedBox(
+          width: 44,
+          child: Semantics(
+            label: '$semanticLabel ${string.label}',
+            excludeSemantics: true,
+            child: NoteText(
+              string.label,
+              textAlign: TextAlign.center,
+              style: theme.sans(16,
+                  weight: FontWeight.w600, color: theme.inTune),
+            ),
+          ),
+        ),
+        _StepBtn(pointRight: true, onTap: onUp, theme: theme),
+      ],
     );
   }
 }

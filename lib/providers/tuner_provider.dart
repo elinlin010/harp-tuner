@@ -32,6 +32,9 @@ class TunerState {
   final bool showOctave;
   final int a4Hz;
   final int leverStringCount;
+  /// Top lever string as a [HarpPresets.leverPool] index; `null` = the
+  /// default range for [leverStringCount] (see [HarpPresets.leverDefaultTopIndex]).
+  final int? leverTopIndex;
   final HarpType? selectedHarp;
   final TunerMode tunerMode;
   final HarpStringModel? referenceString;
@@ -50,6 +53,7 @@ class TunerState {
     this.showOctave = false,
     this.a4Hz = 440,
     this.leverStringCount = 34,
+    this.leverTopIndex,
     this.selectedHarp,
     this.tunerMode = TunerMode.auto,
     this.referenceString,
@@ -69,6 +73,8 @@ class TunerState {
     bool? showOctave,
     int? a4Hz,
     int? leverStringCount,
+    int? leverTopIndex,
+    bool clearLeverTopIndex = false,
     HarpType? selectedHarp,
     bool clearSelectedHarp = false,
     TunerMode? tunerMode,
@@ -91,6 +97,8 @@ class TunerState {
       showOctave: showOctave ?? this.showOctave,
       a4Hz: a4Hz ?? this.a4Hz,
       leverStringCount: leverStringCount ?? this.leverStringCount,
+      leverTopIndex:
+          clearLeverTopIndex ? null : (leverTopIndex ?? this.leverTopIndex),
       selectedHarp: clearSelectedHarp ? null : (selectedHarp ?? this.selectedHarp),
       tunerMode: tunerMode ?? this.tunerMode,
       referenceString: clearReferenceString ? null : (referenceString ?? this.referenceString),
@@ -157,11 +165,12 @@ class TunerNotifier extends Notifier<TunerState> {
   static const _kShowOctaveKey        = 'tuner_show_octave';
   static const _kHarpTypeKey          = 'tuner_harp_type';
   static const _kLeverStringCountKey  = 'tuner_lever_string_count';
+  static const _kLeverTopIndexKey     = 'tuner_lever_top_index';
   static const _kShowTuningReminderKey = 'tuner_show_tuning_reminder';
   static const _kA4HzMin = 430;
   static const _kA4HzMax = 450;
-  static const _kLeverStringMin = 19;
-  static const _kLeverStringMax = 40;
+  static const _kLeverStringMin = HarpPresets.leverStringMin;
+  static const _kLeverStringMax = HarpPresets.leverStringMax;
 
   final _freqHistory = <double>[];
   int _silenceCount = 0;
@@ -243,6 +252,7 @@ class TunerNotifier extends Notifier<TunerState> {
       final savedOctave         = _prefs!.getBool(_kShowOctaveKey);
       final savedHarpType       = _prefs!.getString(_kHarpTypeKey);
       final savedLeverCount     = _prefs!.getInt(_kLeverStringCountKey);
+      final savedLeverTop       = _prefs!.getInt(_kLeverTopIndexKey);
       final savedShowReminder   = _prefs!.getBool(_kShowTuningReminderKey);
 
       HarpType? harpType = HarpType.leverHarp; // default on first launch
@@ -262,6 +272,11 @@ class TunerNotifier extends Notifier<TunerState> {
             ? savedLeverCount.clamp(_kLeverStringMin, _kLeverStringMax)
             : state.leverStringCount,
       );
+      if (savedLeverTop != null) {
+        final (count, top) =
+            HarpPresets.leverRange(state.leverStringCount, savedLeverTop);
+        state = state.copyWith(leverStringCount: count, leverTopIndex: top);
+      }
     } catch (e) {
       debugPrint('TunerNotifier: failed to load prefs: $e');
     }
@@ -545,7 +560,8 @@ class TunerNotifier extends Notifier<TunerState> {
         // Harp mode: note name is the harp string label (unchanged when a4Hz
         // shifts); recalculate cents against the calibrated string frequency.
         final harpStrings = HarpPresets.stringsFor(
-            state.selectedHarp!, leverStringCount: state.leverStringCount);
+            state.selectedHarp!, leverStringCount: state.leverStringCount,
+            leverTopIndex: state.leverTopIndex);
         final closest = MusicUtils.closestString(state.detectedHz!, harpStrings);
         if (closest != null) {
           state = state.copyWith(
@@ -580,12 +596,46 @@ class TunerNotifier extends Notifier<TunerState> {
     }
   }
 
+  /// Changes the string count. A range the user picked keeps its top string
+  /// (moving up only if the pool runs out at the bass end); the default range
+  /// follows the count's own default.
   Future<void> setLeverStringCount(int count) async {
-    final clamped = count.clamp(_kLeverStringMin, _kLeverStringMax);
-    state = state.copyWith(leverStringCount: clamped);
+    final custom = state.leverTopIndex != null;
+    final (clamped, top) =
+        HarpPresets.leverRange(count, state.leverTopIndex);
+    await _setLeverLayout(clamped, custom ? top : null);
+  }
+
+  /// Sets the lowest and highest lever strings as [HarpPresets.leverPool]
+  /// indices. Ignored when the span falls outside 19–40 strings. The range
+  /// is stored as the user's own from then on, even when it matches a
+  /// count's default, so the count slider keeps its top string.
+  Future<void> setLeverRange(int bottomIndex, int topIndex) async {
+    final count = topIndex - bottomIndex + 1;
+    if (bottomIndex < 0 ||
+        topIndex >= HarpPresets.leverPool.length ||
+        count < _kLeverStringMin ||
+        count > _kLeverStringMax) {
+      return;
+    }
+    await _setLeverLayout(count, topIndex);
+  }
+
+  /// [custom] is the user's top string, or `null` for the count's default.
+  Future<void> _setLeverLayout(int count, int? custom) async {
+    state = state.copyWith(
+      leverStringCount: count,
+      leverTopIndex: custom,
+      clearLeverTopIndex: custom == null,
+    );
     try {
       _prefs ??= await SharedPreferences.getInstance();
-      await _prefs!.setInt(_kLeverStringCountKey, clamped);
+      await _prefs!.setInt(_kLeverStringCountKey, count);
+      if (custom == null) {
+        await _prefs!.remove(_kLeverTopIndexKey);
+      } else {
+        await _prefs!.setInt(_kLeverTopIndexKey, custom);
+      }
     } catch (e) {
       debugPrint('TunerNotifier: failed to save leverStringCount: $e');
     }
@@ -803,6 +853,7 @@ class TunerNotifier extends Notifier<TunerState> {
       final harpStrings = HarpPresets.stringsFor(
         state.selectedHarp!,
         leverStringCount: state.leverStringCount,
+        leverTopIndex: state.leverTopIndex,
       );
       final closest = MusicUtils.closestString(stableHz, harpStrings);
       if (closest == null) return;
@@ -972,6 +1023,7 @@ class TunerNotifier extends Notifier<TunerState> {
       final harpStrings = HarpPresets.stringsFor(
         state.selectedHarp!,
         leverStringCount: state.leverStringCount,
+        leverTopIndex: state.leverTopIndex,
       );
       final closest = MusicUtils.closestString(stableHz, harpStrings);
       if (closest == null) return;

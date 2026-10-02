@@ -785,6 +785,35 @@ void main() {
       }
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets('highest-string stepper lowers the top string', (tester) async {
+      tester.view.physicalSize = const Size(1080, 1920);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(_screen(prefs: {
+        'tuner_harp_type': 'leverHarp',
+        'tuner_lever_string_count': 34,
+      }));
+      await _settle(tester);
+      await _openSettingsSheet(tester);
+
+      final highest = find.byKey(const ValueKey('lever-highest'));
+      await tester.ensureVisible(highest);
+      final stepBtns = find.descendant(
+        of: highest,
+        matching: find.byWidgetPredicate(
+            (w) => w is SizedBox && w.width == 36.0 && w.height == 48.0),
+      );
+      await tester.tap(stepBtns.first); // down: E♭7 → D7
+      await tester.pump();
+
+      expect(find.descendant(of: highest, matching: find.text('1D')),
+          findsOneWidget);
+      expect(find.textContaining('33'), findsWidgets);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   // ── TunerScreen — ref.listen snackbar reminder paths ─────────────────────

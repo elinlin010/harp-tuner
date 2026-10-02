@@ -60,7 +60,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get harpTypePedalHarp => 'Pedal Harp';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 strings · C♭1–G♭7 · flat pos.';
+  String get harpTypePedalHarpSubtitle => '47 strings · 7C♭–0G♭ · flat pos.';
 
   @override
   String get settingsDarkModeToggle => 'Dark mode';
@@ -136,6 +136,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLeverStringCountLabel => 'String count';
+
+  @override
+  String get settingsLeverLowestLabel => 'Lowest string';
+
+  @override
+  String get settingsLeverHighestLabel => 'Highest string';
+
+  @override
+  String get settingsLeverRangeLabel => 'Range';
 
   @override
   String settingsLeverStringCountValue(int count) {

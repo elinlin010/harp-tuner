@@ -60,7 +60,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get harpTypePedalHarp => '踏板豎琴';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 弦 · C♭1–G♭7 · 降音位';
+  String get harpTypePedalHarpSubtitle => '47 弦 · 7C♭–0G♭ · 降音位';
 
   @override
   String get settingsDarkModeToggle => '深色模式';
@@ -135,6 +135,15 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settingsLeverStringCountLabel => '弦數';
+
+  @override
+  String get settingsLeverLowestLabel => '最低音弦';
+
+  @override
+  String get settingsLeverHighestLabel => '最高音弦';
+
+  @override
+  String get settingsLeverRangeLabel => '音域';
 
   @override
   String settingsLeverStringCountValue(int count) {
@@ -273,7 +282,7 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
   String get harpTypePedalHarp => '踏板豎琴';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 弦 · C♭1–G♭7 · 降音位';
+  String get harpTypePedalHarpSubtitle => '47 弦 · 7C♭–0G♭ · 降音位';
 
   @override
   String get settingsDarkModeToggle => '深色模式';
@@ -348,6 +357,15 @@ class AppLocalizationsZhTw extends AppLocalizationsZh {
 
   @override
   String get settingsLeverStringCountLabel => '弦數';
+
+  @override
+  String get settingsLeverLowestLabel => '最低音弦';
+
+  @override
+  String get settingsLeverHighestLabel => '最高音弦';
+
+  @override
+  String get settingsLeverRangeLabel => '音域';
 
   @override
   String settingsLeverStringCountValue(int count) {

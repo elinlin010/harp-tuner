@@ -17,7 +17,7 @@
   "harpTypeLeverHarp": "撥鍵豎琴",
   "harpTypeLeverHarpSubtitle": "34 弦 · A♭1–F6 · 降E大調",
   "harpTypePedalHarp": "踏板豎琴",
-  "harpTypePedalHarpSubtitle": "47 弦 · C♭1–G♭7 · 降音位",
+  "harpTypePedalHarpSubtitle": "47 弦 · 7C♭–0G♭ · 降音位",
   "settingsDarkModeToggle": "深色模式",
   "settingsThemeLabel": "主題",
   "settingsLanguageLabel": "語言",
@@ -54,6 +54,9 @@
     }
   },
   "settingsLeverStringCountLabel": "弦數",
+  "settingsLeverLowestLabel": "最低音弦",
+  "settingsLeverHighestLabel": "最高音弦",
+  "settingsLeverRangeLabel": "音域",
   "settingsLeverStringCountValue": "{count} 弦",
   "@settingsLeverStringCountValue": {
     "placeholders": {

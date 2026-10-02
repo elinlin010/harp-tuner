@@ -60,7 +60,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get harpTypePedalHarp => 'Pedalharfe';
 
   @override
-  String get harpTypePedalHarpSubtitle => '47 Saiten · C♭1–G♭7 · Flache Lage';
+  String get harpTypePedalHarpSubtitle => '47 Saiten · 7C♭–0G♭ · Flache Lage';
 
   @override
   String get settingsDarkModeToggle => 'Dunkelmodus';
@@ -136,6 +136,15 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsLeverStringCountLabel => 'Saitenanzahl';
+
+  @override
+  String get settingsLeverLowestLabel => 'Tiefste Saite';
+
+  @override
+  String get settingsLeverHighestLabel => 'Höchste Saite';
+
+  @override
+  String get settingsLeverRangeLabel => 'Umfang';
 
   @override
   String settingsLeverStringCountValue(int count) {
