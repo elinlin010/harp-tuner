@@ -166,6 +166,7 @@ class TunerNotifier extends Notifier<TunerState> {
   static const _kHarpTypeKey          = 'tuner_harp_type';
   static const _kLeverStringCountKey  = 'tuner_lever_string_count';
   static const _kLeverTopIndexKey     = 'tuner_lever_top_index';
+  static const _kLeverRangeMigratedKey = 'tuner_lever_range_migrated';
   static const _kShowTuningReminderKey = 'tuner_show_tuning_reminder';
   static const _kA4HzMin = 430;
   static const _kA4HzMax = 450;
@@ -252,7 +253,7 @@ class TunerNotifier extends Notifier<TunerState> {
       final savedOctave         = _prefs!.getBool(_kShowOctaveKey);
       final savedHarpType       = _prefs!.getString(_kHarpTypeKey);
       final savedLeverCount     = _prefs!.getInt(_kLeverStringCountKey);
-      final savedLeverTop       = _prefs!.getInt(_kLeverTopIndexKey);
+      var savedLeverTop         = _prefs!.getInt(_kLeverTopIndexKey);
       final savedShowReminder   = _prefs!.getBool(_kShowTuningReminderKey);
 
       HarpType? harpType = HarpType.leverHarp; // default on first launch
@@ -272,6 +273,16 @@ class TunerNotifier extends Notifier<TunerState> {
             ? savedLeverCount.clamp(_kLeverStringMin, _kLeverStringMax)
             : state.leverStringCount,
       );
+      if (_prefs!.getBool(_kLeverRangeMigratedKey) != true) {
+        // Installs from before the lever range setting laid 23 strings out
+        // as 4D–1E♭ (E♭7 on top). Keep that for them as a picked range
+        // rather than moving them to the new 4G–1A♭ default.
+        if (savedLeverCount == 23 && savedLeverTop == null) {
+          savedLeverTop = HarpPresets.leverPool.length - 1;
+          await _prefs!.setInt(_kLeverTopIndexKey, savedLeverTop);
+        }
+        await _prefs!.setBool(_kLeverRangeMigratedKey, true);
+      }
       if (savedLeverTop != null) {
         final (count, top) =
             HarpPresets.leverRange(state.leverStringCount, savedLeverTop);

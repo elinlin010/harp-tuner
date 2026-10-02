@@ -176,4 +176,54 @@ void main() {
       expect(s.leverTopIndex, top);
     });
   });
+
+  group('TunerNotifier lever range migration', () {
+    test('a pre-range 23-string install keeps 4D–1E♭', () async {
+      SharedPreferences.setMockInitialValues({'tuner_lever_string_count': 23});
+      final c = await _container();
+      final s = c.read(tunerProvider);
+      expect(s.leverStringCount, 23);
+      expect(
+          _labels(HarpPresets.leverHarp(23, topIndex: s.leverTopIndex)),
+          ['4D', '1E♭']);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getInt('tuner_lever_top_index'), 39);
+      expect(prefs.getBool('tuner_lever_range_migrated'), isTrue);
+    });
+
+    test('other pre-range counts keep following their default', () async {
+      SharedPreferences.setMockInitialValues({'tuner_lever_string_count': 34});
+      final c = await _container();
+      expect(c.read(tunerProvider).leverTopIndex, isNull);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.containsKey('tuner_lever_top_index'), isFalse);
+      expect(prefs.getBool('tuner_lever_range_migrated'), isTrue);
+    });
+
+    test('23 strings chosen after the migration get 4G–1A♭', () async {
+      SharedPreferences.setMockInitialValues({
+        'tuner_lever_string_count': 23,
+        'tuner_lever_range_migrated': true,
+      });
+      final c = await _container();
+      final s = c.read(tunerProvider);
+      expect(s.leverTopIndex, isNull);
+      expect(
+          _labels(HarpPresets.leverHarp(23, topIndex: s.leverTopIndex)),
+          ['4G', '1A♭']);
+    });
+
+    test('a fresh install that picks 23 strings gets 4G–1A♭', () async {
+      SharedPreferences.setMockInitialValues({});
+      final c = await _container();
+      await c.read(tunerProvider.notifier).setLeverStringCount(23);
+      expect(c.read(tunerProvider).leverTopIndex, isNull);
+
+      // Next launch: the migration already ran, so nothing changes.
+      final c2 = await _container();
+      final s = c2.read(tunerProvider);
+      expect(s.leverStringCount, 23);
+      expect(s.leverTopIndex, isNull);
+    });
+  });
 }
