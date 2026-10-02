@@ -103,17 +103,40 @@ void main() {
       expect(s.leverTopIndex, isNull);
     });
 
-    test('a range equal to the default is stored as the default', () async {
-      SharedPreferences.setMockInitialValues({'tuner_lever_top_index': 20});
+    test('a picked range stays custom even when it matches a default',
+        () async {
+      SharedPreferences.setMockInitialValues({});
       final c = await _container();
+      final top = _poolIndex(NoteName.a, 6);
       // 23 strings G3–A♭6 is exactly the 23-string default.
-      await c.read(tunerProvider.notifier).setLeverRange(
-          _poolIndex(NoteName.g, 3), _poolIndex(NoteName.a, 6));
+      await c.read(tunerProvider.notifier)
+          .setLeverRange(_poolIndex(NoteName.g, 3), top);
       final s = c.read(tunerProvider);
       expect(s.leverStringCount, 23);
-      expect(s.leverTopIndex, isNull);
+      expect(s.leverTopIndex, top);
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.containsKey('tuner_lever_top_index'), isFalse);
+      expect(prefs.getInt('tuner_lever_top_index'), top);
+    });
+
+    test('a custom top survives the slider passing through 23', () async {
+      SharedPreferences.setMockInitialValues({});
+      final c = await _container();
+      final n = c.read(tunerProvider.notifier);
+      final a6 = _poolIndex(NoteName.a, 6);
+      await n.setLeverRange(a6 - 29, a6); // 30 strings ending at A♭6
+      for (final count in [23, 24, 23, 30]) {
+        await n.setLeverStringCount(count);
+        expect(c.read(tunerProvider).leverTopIndex, a6, reason: '$count');
+      }
+
+      final eb7 = HarpPresets.leverPool.length - 1;
+      await n.setLeverRange(eb7 - 22, eb7); // 23 strings ending at E♭7
+      await n.setLeverStringCount(24);
+      await n.setLeverStringCount(23);
+      expect(
+          _labels(HarpPresets.leverHarp(23,
+              topIndex: c.read(tunerProvider).leverTopIndex)),
+          ['4D', '1E♭']);
     });
 
     test('setLeverStringCount keeps a custom top string', () async {

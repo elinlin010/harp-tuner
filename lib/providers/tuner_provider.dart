@@ -261,12 +261,7 @@ class TunerNotifier extends Notifier<TunerState> {
       if (savedLeverTop != null) {
         final (count, top) =
             HarpPresets.leverRange(state.leverStringCount, savedLeverTop);
-        final custom = _customTopOrNull(count, top);
-        state = state.copyWith(
-          leverStringCount: count,
-          leverTopIndex: custom,
-          clearLeverTopIndex: custom == null,
-        );
+        state = state.copyWith(leverStringCount: count, leverTopIndex: top);
       }
     } catch (e) {
       debugPrint('TunerNotifier: failed to load prefs: $e');
@@ -589,13 +584,16 @@ class TunerNotifier extends Notifier<TunerState> {
   /// (moving up only if the pool runs out at the bass end); the default range
   /// follows the count's own default.
   Future<void> setLeverStringCount(int count) async {
+    final custom = state.leverTopIndex != null;
     final (clamped, top) =
         HarpPresets.leverRange(count, state.leverTopIndex);
-    await _setLeverLayout(clamped, top);
+    await _setLeverLayout(clamped, custom ? top : null);
   }
 
   /// Sets the lowest and highest lever strings as [HarpPresets.leverPool]
-  /// indices. Ignored when the span falls outside 19–40 strings.
+  /// indices. Ignored when the span falls outside 19–40 strings. The range
+  /// is stored as the user's own from then on, even when it matches a
+  /// count's default, so the count slider keeps its top string.
   Future<void> setLeverRange(int bottomIndex, int topIndex) async {
     final count = topIndex - bottomIndex + 1;
     if (bottomIndex < 0 ||
@@ -607,11 +605,8 @@ class TunerNotifier extends Notifier<TunerState> {
     await _setLeverLayout(count, topIndex);
   }
 
-  static int? _customTopOrNull(int count, int top) =>
-      top == HarpPresets.leverDefaultTopIndex(count) ? null : top;
-
-  Future<void> _setLeverLayout(int count, int top) async {
-    final custom = _customTopOrNull(count, top);
+  /// [custom] is the user's top string, or `null` for the count's default.
+  Future<void> _setLeverLayout(int count, int? custom) async {
     state = state.copyWith(
       leverStringCount: count,
       leverTopIndex: custom,
