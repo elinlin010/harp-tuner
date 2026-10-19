@@ -273,6 +273,7 @@ class TunerNotifier extends Notifier<TunerState> {
         preferFlats: savedFlats ?? state.preferFlats,
         showOctave: savedOctave ?? state.showOctave,
         selectedHarp: harpType,
+        clearSelectedHarp: harpType == null,
         showTuningReminder: savedShowReminder ?? state.showTuningReminder,
         leverStringCount: savedLeverCount != null
             ? savedLeverCount.clamp(_kLeverStringMin, _kLeverStringMax)

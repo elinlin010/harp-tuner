@@ -9,17 +9,20 @@ import 'support/fake_screen_wake.dart';
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 
 class _FakeNotifier extends TunerNotifier {
+  _FakeNotifier([this._initial]);
+  final TunerState? _initial;
+
   @override
   TunerState build() {
     final s = super.build();
     injectServicesForTest(screenWake: FakeScreenWake());
-    return s;
+    return _initial ?? s;
   }
 }
 
-Future<ProviderContainer> _container() async {
+Future<ProviderContainer> _container({TunerState? initial}) async {
   final c = ProviderContainer(
-    overrides: [tunerProvider.overrideWith(() => _FakeNotifier())],
+    overrides: [tunerProvider.overrideWith(() => _FakeNotifier(initial))],
   );
   addTearDown(c.dispose);
   c.read(tunerProvider);
@@ -69,6 +72,13 @@ void main() {
 
       final reopened = await _container();
       expect(reopened.read(tunerProvider).selectedHarp, HarpType.leverHarp);
+    });
+
+    test('"none" clears a harp already in state when prefs load', () async {
+      SharedPreferences.setMockInitialValues({'tuner_harp_type': 'none'});
+      final c = await _container(
+          initial: const TunerState(selectedHarp: HarpType.leverHarp));
+      expect(c.read(tunerProvider).selectedHarp, isNull);
     });
   });
 }
