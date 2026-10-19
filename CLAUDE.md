@@ -58,7 +58,7 @@ lib/
 
 ## Key Patterns
 
-**State:** All state flows through `TunerState` / `TunerNotifier` in `tuner_provider.dart`. Key fields: `selectedHarp`, `leverStringCount` (19–40, default 34), `leverTopIndex` (lever top string as a `HarpPresets.leverPool` index; `null` = the count's default range), `a4Hz` (430–450, default 440), `preferFlats`, `showOctave`, `tunerMode`, `referenceString`, `cents`, `isStale`. All user-facing settings are persisted via `SharedPreferences`.
+**State:** All state flows through `TunerState` / `TunerNotifier` in `tuner_provider.dart`. Key fields: `selectedHarp`, `leverStringCount` (19–40, default 34), `leverTopIndex` (lever top string as a `HarpPresets.leverPool` index; `null` = the count's default range), `a4Hz` (430–450, default 440), `preferFlats`, `showOctave`, `tunerMode`, `referenceString`, `cents`, `isStale`. All user-facing settings are persisted via `SharedPreferences`. `selectedHarp` is stored in `tuner_harp_type`; "None" is stored as the string `'none'`, never by removing the key — a missing key means first launch and defaults to the lever harp.
 
 **Frequency math:** `HarpStringModel.frequency` uses `440 * 2^((midi - 69) / 12)`. MIDI for C4 = 60. Pass `a4Hz` override via `frequencyAt(double a4Hz)`.
 
