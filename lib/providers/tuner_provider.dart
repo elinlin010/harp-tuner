@@ -164,6 +164,9 @@ class TunerNotifier extends Notifier<TunerState> {
   static const _kPreferFlatsKey       = 'tuner_prefer_flats';
   static const _kShowOctaveKey        = 'tuner_show_octave';
   static const _kHarpTypeKey          = 'tuner_harp_type';
+  // Stored under _kHarpTypeKey when the user picks "None". A missing key
+  // means first launch (→ lever harp), so "None" must be stored explicitly.
+  static const _kHarpTypeNone         = 'none';
   static const _kLeverStringCountKey  = 'tuner_lever_string_count';
   static const _kLeverTopIndexKey     = 'tuner_lever_top_index';
   static const _kLeverRangeMigratedKey = 'tuner_lever_range_migrated';
@@ -257,7 +260,9 @@ class TunerNotifier extends Notifier<TunerState> {
       final savedShowReminder   = _prefs!.getBool(_kShowTuningReminderKey);
 
       HarpType? harpType = HarpType.leverHarp; // default on first launch
-      if (savedHarpType != null) {
+      if (savedHarpType == _kHarpTypeNone) {
+        harpType = null;
+      } else if (savedHarpType != null) {
         try {
           harpType = HarpType.values.firstWhere((e) => e.name == savedHarpType);
         } catch (_) {}
@@ -268,6 +273,7 @@ class TunerNotifier extends Notifier<TunerState> {
         preferFlats: savedFlats ?? state.preferFlats,
         showOctave: savedOctave ?? state.showOctave,
         selectedHarp: harpType,
+        clearSelectedHarp: harpType == null,
         showTuningReminder: savedShowReminder ?? state.showTuningReminder,
         leverStringCount: savedLeverCount != null
             ? savedLeverCount.clamp(_kLeverStringMin, _kLeverStringMax)
@@ -682,7 +688,7 @@ class TunerNotifier extends Notifier<TunerState> {
     try {
       _prefs ??= await SharedPreferences.getInstance();
       if (harp == null) {
-        await _prefs!.remove(_kHarpTypeKey);
+        await _prefs!.setString(_kHarpTypeKey, _kHarpTypeNone);
       } else {
         await _prefs!.setString(_kHarpTypeKey, harp.name);
         await _prefs!.setBool(_kPreferFlatsKey, true);
