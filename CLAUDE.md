@@ -208,6 +208,15 @@ The adaptive icon requires per-density foreground PNGs in each `drawable-<densit
 - **iOS stays on CocoaPods.** `pubspec.yaml` sets `flutter: config: enable-swift-package-manager: false`. Under SPM, Firebase ships Firestore/gRPC/abseil/BoringSSL as prebuilt frameworks declaring `MinimumOSVersion 100.0`, which bypasses the Podfile's iOS 15.0 floor that App Store Connect validation relies on (#44, #45). Do not remove the opt-out; migrate to SPM in its own change, validated with a TestFlight upload. The plugins themselves (`mic_stream`, `permission_handler_apple` 9.6.1+) are already SPM-capable.
 - **`mic_stream` is vendored** at `third_party/mic_stream` via `dependency_overrides` (pub.dev 0.7.2 is unmaintained). Patches: Android dropped the dead v1-embedding `Registrar` import and the unused Kotlin stub (the registered class is the Java `com.code.aaron.micstream.MicStreamPlugin`), and `build.gradle` targets Gradle 9 / AGP 9 (no `jcenter()`, Java 17, compileSdk 36). iOS uses the SPM layout (`ios/mic_stream/Package.swift`, sources in `ios/mic_stream/Sources/mic_stream/`), shared by the podspec; the Swift class is `MicStreamPlugin` and the Objective-C shim is gone. Keep the override even if upstream fixes one of these.
 
+## App Store Connect Text (IMPORTANT)
+
+App Store Connect will not save "What's New", Promotional Text or other listing fields that contain ♭ ♮ ♯ (U+266D–U+266F). This applies only to store text — the app itself keeps using ♭/♯ via `NoteText`.
+
+- Write flats in note names with a plain "b": `Ab1`, `Eb7`, `4G–1Ab`.
+- When the text is about the symbols themselves, use words: "flat and sharp signs" / "Be- und Kreuzvorzeichen" / "les bémols et les dièses" / "i simboli di bemolle e diesis" / 「降記號與升記號」.
+- Also no emoji. Promotional Text is 170 characters max; What's New is 4000.
+- Write store text for the App Store version currently live, not the last build — users skip the versions in between.
+
 ## iOS PrivacyInfo.xcprivacy
 
 The file at `ios/Runner/PrivacyInfo.xcprivacy` must be added to the Xcode project (drag into Xcode navigator with "Add to target: Runner" checked). Placing the file on disk alone is insufficient — Xcode will not include it in the build without a project reference. This step must be done manually in Xcode.
