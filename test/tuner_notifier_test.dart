@@ -20,8 +20,8 @@ class _FakeNotifier extends TunerNotifier {
     // Only the wakelock is stubbed; these tests exercise the real pitch path.
     injectServicesForTest(screenWake: FakeScreenWake());
     if (_overrideState != null) {
-      state = _overrideState!;
-      return _overrideState!;
+      state = _overrideState;
+      return _overrideState;
     }
     return s;
   }
