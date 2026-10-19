@@ -231,3 +231,7 @@ Key routing rules:
 - Architecture review → invoke plan-eng-review
 - Save progress, checkpoint, resume → invoke context-save
 - Code quality, health check → invoke health
+
+## Android CI (GitHub Actions)
+
+`.github/workflows/android.yml` runs `flutter analyze` + `flutter test`, then builds a release APK and AAB on every PR, push to `main`, `v*` tag, and manual run (Actions → Android → Run workflow). Download them from the run's **Artifacts**; a `v*` tag also attaches them to a GitHub Release. Release signing comes from repo secrets `ANDROID_KEYSTORE_BASE64` (`base64 -w0 upload.jks`), `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`; the step writes `android/key.properties` at build time. Without them the build falls back to the debug key (installable, not uploadable to Play).

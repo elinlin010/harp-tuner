@@ -109,8 +109,8 @@ class _FakeServiceNotifier extends TunerNotifier {
         tonePlayer: _fakePlayer,
         screenWake: _fakeScreenWake);
     if (_override != null) {
-      state = _override!;
-      return _override!;
+      state = _override;
+      return _override;
     }
     return s;
   }
