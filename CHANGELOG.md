@@ -2,6 +2,15 @@
 
 All notable changes to Harp Tuner are documented here.
 
+## [1.5.0+34] - 2026-10-19
+
+### Added
+- Lever harp: you can now choose the lowest and highest string, not just the number of strings. Settings → Instrument has a one-line Range row (◀ 4G ▶ – ◀ 1A♭ ▶), and the string count follows the range you pick (19–40 strings, anywhere from A♭1 to E♭7). The string-count slider keeps your top string and only moves it when the bass end runs out. Settings show strings in harp notation (e.g. "4G", "1A♭"), like the string row.
+- Lever harp: 23 strings now default to 4G–1A♭ (G3–A♭6). If you already used 23 strings, you keep your 4D–1E♭ layout.
+
+### Fixed
+- Choosing **None** as the instrument is now remembered when you reopen the app. Before, it went back to the lever harp on every launch. If you use None, select it once more after updating.
+
 ## [1.4.4+33] - 2026-09-27
 
 ### Fixed
