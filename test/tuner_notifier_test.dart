@@ -81,24 +81,25 @@ void main() {
 
   // ── toggleShowOctave ─────────────────────────────────────────────────────
 
-  group('TunerNotifier.toggleShowOctave', () {
-    test('toggles showOctave from false to true', () async {
-      SharedPreferences.setMockInitialValues({});
-      final c = _container();
-      await Future.delayed(Duration.zero);
-      expect(c.read(tunerProvider).showOctave, isFalse);
-      await c.read(tunerProvider.notifier).toggleShowOctave();
-      expect(c.read(tunerProvider).showOctave, isTrue);
-    });
-
-    test('toggles showOctave back to false', () async {
-      SharedPreferences.setMockInitialValues({});
-      final c = _container(overrideState: const TunerState(showOctave: true));
-      await Future.delayed(Duration.zero);
-      await c.read(tunerProvider.notifier).toggleShowOctave();
-      expect(c.read(tunerProvider).showOctave, isFalse);
-    });
-  });
+// Disabled with toggleShowOctave (see tuner_provider.dart).
+//   group('TunerNotifier.toggleShowOctave', () {
+//     test('toggles showOctave from false to true', () async {
+//       SharedPreferences.setMockInitialValues({});
+//       final c = _container();
+//       await Future.delayed(Duration.zero);
+//       expect(c.read(tunerProvider).showOctave, isFalse);
+//       await c.read(tunerProvider.notifier).toggleShowOctave();
+//       expect(c.read(tunerProvider).showOctave, isTrue);
+//     });
+//
+//     test('toggles showOctave back to false', () async {
+//       SharedPreferences.setMockInitialValues({});
+//       final c = _container(overrideState: const TunerState(showOctave: true));
+//       await Future.delayed(Duration.zero);
+//       await c.read(tunerProvider.notifier).toggleShowOctave();
+//       expect(c.read(tunerProvider).showOctave, isFalse);
+//     });
+//   });
 
   // ── togglePreferFlats ────────────────────────────────────────────────────
 

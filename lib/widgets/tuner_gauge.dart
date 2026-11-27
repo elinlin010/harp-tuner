@@ -16,6 +16,11 @@ const _kInTuneCents = 15.0;
 class TunerGauge extends StatefulWidget {
   final double? cents;
   final String? noteName;
+
+  /// Chromatic (scientific) octave of [noteName], e.g. 4 for A♭4. Shown as a
+  /// small subscript beside the note. Null when the note name already carries
+  /// its own trailing octave digits (no-harp mode) or there is no note.
+  final int? octave;
   final bool isListening;
   final bool isStale;
   final TunerThemeData theme;
@@ -24,6 +29,7 @@ class TunerGauge extends StatefulWidget {
     super.key,
     this.cents,
     this.noteName,
+    this.octave,
     required this.isListening,
     this.isStale = false,
     required this.theme,
@@ -282,6 +288,7 @@ class _TunerGaugeState extends State<TunerGauge> with TickerProviderStateMixin {
                                   fit: BoxFit.scaleDown,
                                   child: _SignalReadout(
                                     noteName: widget.noteName ?? '—',
+                                    octave: widget.octave,
                                     theme: widget.theme,
                                     isInTune: isInTune,
                                     isFlat: isFlat,
@@ -666,6 +673,7 @@ class _IdleReadout extends StatelessWidget {
 
 class _SignalReadout extends StatelessWidget {
   final String noteName;
+  final int? octave;
   final TunerThemeData theme;
   final bool isInTune;
   final bool isFlat;
@@ -673,6 +681,7 @@ class _SignalReadout extends StatelessWidget {
 
   const _SignalReadout({
     required this.noteName,
+    this.octave,
     required this.theme,
     required this.isInTune,
     required this.isFlat,
@@ -690,6 +699,11 @@ class _SignalReadout extends StatelessWidget {
     final match = _noteRe.firstMatch(noteName);
     final noteLetter = match?.group(2) ?? noteName;
     final noteAcc = match?.group(3) ?? '';
+    // Chromatic octave: trailing digits of a no-harp name ("A♭4"), else the
+    // octave handed in for a harp string (whose label uses harp registers).
+    final trailing = match?.group(4) ?? '';
+    final octaveText =
+        trailing.isNotEmpty ? trailing : (octave?.toString() ?? '');
 
     final isWood = theme.isWood;
 
@@ -783,9 +797,27 @@ class _SignalReadout extends StatelessWidget {
                 style: theme
                     .sans(letterSize, weight: letterWeight, color: letterColor)
                     .copyWith(height: 1),
-                child: NoteText(
-                  '$noteLetter$noteAcc',
-                  accidentalScale: accScale,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    NoteText(
+                      '$noteLetter$noteAcc',
+                      accidentalScale: accScale,
+                    ),
+                    // Chromatic octave as a small subscript, bottom-right.
+                    if (octaveText.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 10),
+                        child: Text(
+                          octaveText,
+                          style: theme
+                              .sans(40,
+                                  weight: letterWeight, color: letterColor)
+                              .copyWith(height: 1),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

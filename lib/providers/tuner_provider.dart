@@ -526,16 +526,17 @@ class TunerNotifier extends Notifier<TunerState> {
 
   // ── Settings ────────────────────────────────────────────────────────────────
 
-  Future<void> toggleShowOctave() async {
-    final newVal = !state.showOctave;
-    state = state.copyWith(showOctave: newVal);
-    try {
-      _prefs ??= await SharedPreferences.getInstance();
-      await _prefs!.setBool(_kShowOctaveKey, newVal);
-    } catch (e) {
-      debugPrint('TunerNotifier: failed to save showOctave: $e');
-    }
-  }
+// Disabled: the gauge always shows the chromatic octave, so this toggle is unused. Re-enable with a settings row (l10n.settingsShowOctaveToggle) if users ask to hide it.
+//   Future<void> toggleShowOctave() async {
+//     final newVal = !state.showOctave;
+//     state = state.copyWith(showOctave: newVal);
+//     try {
+//       _prefs ??= await SharedPreferences.getInstance();
+//       await _prefs!.setBool(_kShowOctaveKey, newVal);
+//     } catch (e) {
+//       debugPrint('TunerNotifier: failed to save showOctave: $e');
+//     }
+//   }
 
   Future<void> togglePreferFlats() async {
     final newPreferFlats = !state.preferFlats;
