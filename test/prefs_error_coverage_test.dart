@@ -95,9 +95,10 @@ void main() {
       SharedPreferences.setMockInitialValues({});
     });
 
-    test('toggleShowOctave catch (line 364)', () async {
-      await container.read(tunerProvider.notifier).toggleShowOctave();
-    });
+// Disabled with toggleShowOctave (see tuner_provider.dart).
+//     test('toggleShowOctave catch (line 364)', () async {
+//       await container.read(tunerProvider.notifier).toggleShowOctave();
+//     });
 
     test('togglePreferFlats catch (line 389)', () async {
       await container.read(tunerProvider.notifier).togglePreferFlats();

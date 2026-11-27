@@ -11,6 +11,7 @@ import 'package:harp_tuner/widgets/tuner_gauge.dart';
 Widget _gauge({
   double? cents,
   String? noteName,
+  int? octave,
   bool isListening = true,
   TunerThemeData theme = TunerThemes.linen,
 }) {
@@ -25,6 +26,7 @@ Widget _gauge({
         child: TunerGauge(
           cents: cents,
           noteName: noteName,
+          octave: octave,
           isListening: isListening,
           theme: theme,
         ),
@@ -46,6 +48,29 @@ String _semValue(WidgetTester tester, String label) {
 }
 
 void main() {
+  group('TunerGauge — chromatic octave', () {
+    testWidgets('shows the octave passed for a harp-label note',
+        (tester) async {
+      await tester.pumpWidget(
+          _gauge(cents: 0, noteName: '3A♭', octave: 4));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('4'), findsOneWidget);
+    });
+
+    testWidgets('shows trailing octave of a chromatic note name',
+        (tester) async {
+      await tester.pumpWidget(_gauge(cents: 0, noteName: 'C5'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('5'), findsOneWidget);
+    });
+
+    testWidgets('no octave text when none is available', (tester) async {
+      await tester.pumpWidget(_gauge(cents: 0, noteName: 'C'));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('4'), findsNothing);
+    });
+  });
+
   group('TunerGauge — in-tune / flat / sharp state derivation', () {
     testWidgets('cents=0 → in-tune: both bulbs inactive', (tester) async {
       await tester.pumpWidget(_gauge(cents: 0, noteName: 'C4'));

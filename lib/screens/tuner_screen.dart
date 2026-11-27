@@ -292,6 +292,15 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
 
     // The note name shown on the gauge always matches the active string.
     final noteName = tuner.closestNoteName;
+    // Chromatic octave of that string (harp labels carry a register number
+    // instead, so the octave comes from the string model).
+    int? noteOctave;
+    for (final s in harpStrings) {
+      if (s.label == noteName) {
+        noteOctave = s.octave;
+        break;
+      }
+    }
 
     return Scaffold(
       backgroundColor: theme.bg,
@@ -380,6 +389,7 @@ class _TunerScreenState extends ConsumerState<TunerScreen>
                 child: TunerGauge(
                   cents: tuner.cents,
                   noteName: noteName,
+                  octave: noteOctave,
                   isListening: tuner.isListening,
                   isStale: tuner.isStale,
                   theme: theme,
